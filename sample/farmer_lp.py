@@ -6,18 +6,16 @@ License: GPL v3
 
 from pyomo.environ import *
 
-# global setting
-SOLVER = "cplex"
 
 
-def farmer_lp():
+def farmer_lp(solver="cplex"):
     # concrete model
     instance = ConcreteModel(name="Farmer_LP")
 
     # set
-    instance.plants = ["wheat", "corn", "beet"]
-    instance.action = ["buy", "sell"]
-    instance.price = ["high", "low"]
+    instance.plants = ("wheat", "corn", "beet")
+    instance.action = ("buy", "sell")
+    instance.price = ("high", "low")
 
     # decision variables
     instance.area = Var(instance.plants, within=NonNegativeReals)
@@ -68,7 +66,7 @@ def farmer_lp():
     instance.min_cost_objective = Objective(rule=min_cost_rule,
                                             sense=minimize)
     # solve
-    opt = SolverFactory(SOLVER)
+    opt = SolverFactory(solver)
     results = opt.solve(instance)
     instance.solutions.load_from(results)
     display(instance)
