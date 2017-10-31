@@ -7,9 +7,22 @@ License: GPL v3
 import sys
 
 
-def main():
-    recs = iter(sys.stdin.readlines())
+def farmer_rp():
+    """
+    recourse problem
+    :return:
+    """
 
+def farmer_ws():
+    """
+    wait-and-see model
+    """
+
+
+def farmer_eev():
+    """
+    expected expected value model
+    """
 
 if __name__ == '__main__':
-    main()
+    farmer_rp()
