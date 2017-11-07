@@ -27,7 +27,7 @@ def farmer_lp(solver="cplex"):
 
     # constraint
     def area_rule(model):
-        return sum(instance.area[pdx] for pdx in instance.plants) <= 500
+        return sum(model.area[pdx] for pdx in model.plants) <= 500
 
     instance.area_constraint = Constraint(rule=area_rule)
 
