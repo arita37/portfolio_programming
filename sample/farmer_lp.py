@@ -4,8 +4,9 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
-from pyomo.environ import *
-
+from pyomo.environ import (ConcreteModel, Var, NonNegativeReals,
+                           Constraint, Objective, SolverFactory, display,
+                           minimize)
 
 
 def farmer_lp(solver="cplex"):
