@@ -112,7 +112,7 @@ cpdef heuristic_moment_matching(
         cubic_err, best_cub_err = INFINITY, INFINITY
 
         # loop until errMom converge
-        for _ in xrange(max_start_iter):
+        for _ in range(max_start_iter):
             # each random variable consists of n_scenario random sample
             tmp_out = np.random.rand(n_scenario)
 
@@ -120,11 +120,11 @@ cpdef heuristic_moment_matching(
             ey = y_moments[rv, :]
 
             # loop until cubic transform converge
-            for cub_iter in xrange(max_cubic_iter):
+            for cub_iter in range(max_cubic_iter):
 
                 # 1~12th moments of the random samples
                 ex = np.asarray([(tmp_out ** (idx + 1)).mean()
-                                 for idx in xrange(12)])
+                                 for idx in range(12)])
 
                 # find corresponding cubic parameters
                 x_init = np.array([0., 1., 0., 0.])
@@ -165,7 +165,7 @@ cpdef heuristic_moment_matching(
     c_lower = la.cholesky(tgt_corrs)
 
     # main iteration, break when converge
-    for main_iter in xrange(max_main_iter):
+    for main_iter in range(max_main_iter):
         if moments_err < max_moment_err and corrs_err < max_corr_err:
             break
 
@@ -185,7 +185,7 @@ cpdef heuristic_moment_matching(
         # after Cholesky decompsition ,the corr_err converges,
         # but the moment error may enlarge, hence it requires
         # cubic transform
-        for rv in xrange(n_rv):
+        for rv in range(n_rv):
             cubic_err = INFINITY
             tmp_out = out_mtx[rv, :]
             ey = y_moments[rv, :]
@@ -193,7 +193,7 @@ cpdef heuristic_moment_matching(
             # loop until cubic transform erro converge
             for cub_iter in range(max_cubic_iter):
                 ex = np.asarray([(tmp_out ** (idx + 1)).mean()
-                                 for idx in xrange(12)])
+                                 for idx in range(12)])
                 X_init = np.array([0., 1., 0., 0.])
                 out = spopt.leastsq(cubic_function, X_init, args=(ex, ey),
                                     full_output=True, ftol=1E-12, xtol=1E-12)
@@ -375,7 +375,7 @@ cdef error_statistics(cnp.ndarray[FLOAT_t, ndim=2] out_mtx,
         double moments_err = INFINITY, corrs_err = INFINITY
         int idx
 
-    for idx in xrange(4):
+    for idx in range(4):
         out_moments[:, idx] = (out_mtx ** (idx + 1)).mean(axis=1)
 
     moments_err = rmse(out_moments, tgt_moments)
