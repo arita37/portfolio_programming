@@ -194,8 +194,8 @@ cpdef heuristic_moment_matching(
             for cub_iter in range(max_cubic_iter):
                 ex = np.asarray([(tmp_out ** (idx + 1)).mean()
                                  for idx in range(12)])
-                X_init = np.array([0., 1., 0., 0.])
-                out = spopt.leastsq(cubic_function, X_init, args=(ex, ey),
+                x_init = np.array([0., 1., 0., 0.])
+                out = spopt.leastsq(cubic_function, x_init, args=(ex, ey),
                                     full_output=True, ftol=1E-12, xtol=1E-12)
                 cubic_params = out[0]
                 cubic_err = np.sum(out[2]['fvec'] ** 2)
