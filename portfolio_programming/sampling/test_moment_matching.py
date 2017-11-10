@@ -75,9 +75,11 @@ def test_unbiased_HMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
     np.testing.assert_array_almost_equal(tgt_corrs, res_corrs, precision)
 
 
-def test_moments():
-    """ test equation of 1~4 th moments of scipy and padnas """
-    n_rv, n_sample = 50, 100
+def test_moments(n_rv=50, n_sample=100):
+    """
+    test equation of 1~4 th moments of scipy and padnas
+    """
+
     data = np.random.rand(n_rv, n_sample)
     pd_data = pd.DataFrame(data)
 
@@ -114,16 +116,15 @@ def test_moments():
     np.testing.assert_array_almost_equal(tgt_corrs, pd_corrs)
 
 
-def test_skew():
-    """ test equation of skew in scipy """
-    n = 100
-    x = np.random.rand(n)
+def test_skew(n_sample=100):
+    """ test skew equation in scipy """
+    x = np.random.rand(n_sample)
 
     # biased estimator
     b_skew = spstats.skew(x, bias=True)
 
-    s3 = sum((v - x.mean()) ** 3 for v in x) / n
-    s2 = sum((v - x.mean()) ** 2 for v in x) / n
+    s3 = sum((v - x.mean()) ** 3 for v in x) / n_sample
+    s2 = sum((v - x.mean()) ** 2 for v in x) / n_sample
     b_skew2 = s3 / np.power(s2, 1.5)
     print("biased skew:", b_skew2)
     np.testing.assert_allclose(b_skew, b_skew2)
@@ -131,23 +132,23 @@ def test_skew():
     # unbiased estimator
     ub_skew = spstats.skew(x, bias=False)
 
-    s3 = sum((v - x.mean()) ** 3 for v in x) / n
-    s2 = sum((v - x.mean()) ** 2 for v in x) / (n - 1)
-    ub_skew2 = s3 / np.power(s2, 1.5) * n * n / (n - 1) / (n - 2)
+    s3 = sum((v - x.mean()) ** 3 for v in x) / n_sample
+    s2 = sum((v - x.mean()) ** 2 for v in x) / (n_sample - 1)
+    ub_skew2 = s3 / np.power(s2, 1.5) * n_sample * n_sample / (
+    n_sample - 1) / (n_sample - 2)
     print("ub biased skew:", ub_skew2)
     np.testing.assert_allclose(ub_skew, ub_skew2)
 
 
-def test_kurtosis():
-    """ test equation of kurtosis in scipy """
-    n = 100
-    x = np.random.rand(n)
+def test_kurtosis(n_sample=100):
+    """ test kurtosis equation  in scipy """
+    x = np.random.rand(n_sample)
 
     # biased estimator
     b_kurt = spstats.kurtosis(x, bias=True)
 
-    k4 = sum((v - x.mean()) ** 4 for v in x) / n
-    k2 = sum((v - x.mean()) ** 2 for v in x) / n
+    k4 = sum((v - x.mean()) ** 4 for v in x) / n_sample
+    k2 = sum((v - x.mean()) ** 2 for v in x) / n_sample
     b_kurt2 = k4 / k2 ** 2 - 3
     print("biased kurtosis:", b_kurt2)
     np.testing.assert_allclose(b_kurt, b_kurt2)
@@ -155,16 +156,17 @@ def test_kurtosis():
     # unbiased estimator
     ub_kurt = spstats.kurtosis(x, bias=False)
 
-    k4 = sum((v - x.mean()) ** 4 for v in x) / n
-    k2 = sum((v - x.mean()) ** 2 for v in x) / n
-    ub_kurt2 = 1.0 / (n - 2) / (n - 3) * (
-        (n ** 2 - 1.0) * k4 / k2 ** 2.0 - 3 * (n - 1) ** 2.0)
+    k4 = sum((v - x.mean()) ** 4 for v in x) / n_sample
+    k2 = sum((v - x.mean()) ** 2 for v in x) / n_sample
+    ub_kurt2 = 1.0 / (n_sample - 2) / (n_sample - 3) * (
+        (n_sample ** 2 - 1.0) * k4 / k2 ** 2.0 - 3 * (n_sample - 1) ** 2.0)
     print("ubbiased kurtosis:", ub_kurt2)
 
-    k2 = sum((v - x.mean()) ** 2 for v in x) / (n - 1)
-    ub_kurt3 = 1 / (n - 2) / (n - 3) * (
-        (n ** 2 - 1.0) * (n / (n - 1)) ** 2. * k4 / k2 ** 2.0 - 3 * (
-            n - 1) ** 2.0)
+    k2 = sum((v - x.mean()) ** 2 for v in x) / (n_sample - 1)
+    ub_kurt3 = 1 / (n_sample - 2) / (n_sample - 3) * (
+        (n_sample ** 2 - 1.0) * (
+        n_sample / (n_sample - 1)) ** 2. * k4 / k2 ** 2.0 - 3 * (
+            n_sample - 1) ** 2.0)
     print("ubbiased kurtosis:", ub_kurt3)
     np.testing.assert_allclose(ub_kurt, ub_kurt2)
     np.testing.assert_allclose(ub_kurt, ub_kurt3)
