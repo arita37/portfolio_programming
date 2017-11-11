@@ -11,7 +11,7 @@ import pandas as pd
 def Sharpe(series):
     """
     Sharpe ratio
-    note: the numpy std() function is the population estimator
+    note the numpy std() function is the population estimator
 
     Parameters:
     ---------------
