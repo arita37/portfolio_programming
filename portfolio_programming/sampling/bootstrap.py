@@ -23,7 +23,6 @@ def bootstrap(series):
     samples: list or numpy.array, samples has the same length as input data
 
     """
-
     n_period = len(series)
     s_indices = np.random.randint(0, n_period, n_period)
     samples = series[s_indices]
