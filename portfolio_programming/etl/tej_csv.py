@@ -8,7 +8,6 @@ transforming TEJ's stock csv to pandas panel data
 from datetime import date
 from time import time
 from glob import glob
-import csv
 import os
 import numpy as np
 import pandas as pd
@@ -24,7 +23,7 @@ def data_strip(data):
     return data.strip()
 
 
-def tej_csv_to_panel(symbols, csv_dir, panel_dir):
+def tej_csv_to_df(symbols, csv_dir, df_dir):
     """
     extract data from csv
 
@@ -34,19 +33,19 @@ def tej_csv_to_panel(symbols, csv_dir, panel_dir):
         list of stock symbols given in data directory
     csv_dir : string
         csv file directory of symbols
-    panel_dir : string
-        pandas pandel output directory
+    df_dir : string
+        pandas dataframe output directory
 
     Returns:
     --------------
-    pandas.panel
+    pandas.frame
 
     """
     t0 = time()
     csvs = glob(os.path.join(csv_dir, '*.csv'))
-    for rdx, csv in enumerate(csvs):
-        symbol = csv[csv.rfind(os.sep) + 1:csv.rfind('.')]
-        df = pd.read_csv(open(csv),
+    for rdx, csv_name in enumerate(csvs):
+        symbol = csv_name[csv_name.rfind(os.sep) + 1:csv_name.rfind('.')]
+        df = pd.read_csv(open(csv_name),
                          index_col=("year_month_day",),
                          parse_dates=True,
                          dtype={
@@ -74,22 +73,22 @@ def tej_csv_to_panel(symbols, csv_dir, panel_dir):
         fout_path = os.path.join(panel_dir, '{}_panel.pkl'.format(symbol))
         df.to_pickle(fout_path)
 
-        print ("[{}/{}]{}.csv to panel OK, {:.3f} secs".format(
+        print("[{}/{}]{}.csv to panel OK, {:.3f} secs".format(
             rdx + 1, len(csvs), symbol, time() - t0))
 
-    print ("csv_to_pkl OK, {:.3f} secs".format(time() - t0))
+    print("csv_to_pkl OK, {:.3f} secs".format(time() - t0))
 
 
-def dataframe_to_panel(symbols=EXP_SYMBOLS):
+def dataframe_to_panel(symbols, df_dir):
     """
     aggregating and trimming data to a panel file
     """
     t0 = time()
     start_date = date(2004, 1, 1)
-    end_date = END_DATE
+    end_date = date(2017, 6, 30)
 
     # load first df to read the periods
-    fin_path = os.path.join(SYMBOLS_PKL_DIR, "{}_df.pkl".format(symbols[0]))
+    fin_path = os.path.join(df_dir, "{}_df.pkl".format(symbols[0]))
     df = pd.read_pickle(fin_path)
 
     # get trans_dates and columns
@@ -107,7 +106,7 @@ def dataframe_to_panel(symbols=EXP_SYMBOLS):
     for sdx, symbol in enumerate(symbols):
         t1 = time()
         # read df
-        fin_path = os.path.join(SYMBOLS_PKL_DIR, "{}_df.pkl".format(symbol))
+        fin_path = os.path.join(df_dir, "{}_df.pkl".format(symbol))
         trimmed_df = pd.read_pickle(fin_path).loc[start_date:end_date]
 
         # rename columns
@@ -119,28 +118,25 @@ def dataframe_to_panel(symbols=EXP_SYMBOLS):
         pnl.loc[:, symbol, :] = trimmed_df.ix[:, ('close_price',
                                                   'simple_roi')].T
 
-        print ("[{}/{}] {} load to panel OK, {:.3f} secs".format(
+        print("[{}/{}] {} load to panel OK, {:.3f} secs".format(
             sdx, len(symbols), symbol, time() - t1))
 
     # # fill na with 0
     # pnl = pnl.fillna(0)
 
     # output data file path
-    fout_path = os.path.join(SYMBOLS_PKL_DIR,
+    fout_path = os.path.join(df_dir,
                              'TAIEX_2005_largest50cap_panel.pkl')
     pnl.to_pickle(fout_path)
 
-    print ("all exp_symbols load to panel OK, {:.3f} secs".format(time() - t0))
+    print("all exp_symbols load to panel OK, {:.3f} secs".format(time() - t0))
 
+
+def run_tej_csv_to_panel():
+    import portfolio_programming as pp
+    print (pp.PROJECT_DIR)
 
 
 if __name__ == '__main__':
     pass
-    # csv_to_pkl()
-    # dataframe_to_panel()
-    # plot_exp_symbol_roi(plot_kind='line')
-    # plot_exp_symbol_roi(plot_kind='hist')
-    # plot_exp_symbol_roi(plot_kind='kde')
-    # exp_symbols_statistics()
-    # verify_symbol_csv()
-    generating_scenarios(10, 60)
+    run_tej_csv_to_panel()
