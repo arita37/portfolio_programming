@@ -16,12 +16,13 @@ def bootstrap(series):
 
     Parameters:
     ---------------
-    series: list or numpy.array with length n_period
+    series : array-like
+        data series with length n_period
 
     Returns:
     ---------------
-    samples: list or numpy.array, samples has the same length as input data
-
+    array-like
+        samples has the same length as input data
     """
     n_period = len(series)
     s_indices = np.random.randint(0, n_period, n_period)
@@ -37,13 +38,16 @@ def stationary_bootstrap(series, q_value=0.5):
 
     Parameters:
     ---------------
-    series: list or numpy.array with length n_period
-    q_value: float, a parameter for controlling the sample block size.
+    series : array-like
+        data series with length n_period
+    q_value : float
+        a parameter for controlling the sample block size.
         if q_value = 0.5, it means block size = 1/Q = 2.
 
     Returns:
     ---------------
-    samples: list or numpy.array, samples has the same length as input dat
+    array-like
+        samples has the same length as input data
 
     """
     n_period = len(series)

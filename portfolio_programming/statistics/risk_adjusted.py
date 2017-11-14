@@ -15,7 +15,13 @@ def Sharpe(series):
 
     Parameters:
     ---------------
-    series: list or numpy.array, ROI series
+    series: array-like
+        return of investment (ROI) series
+
+    Returns:
+    ----------
+    float
+        Sharpe ratio
     """
     s = np.asarray(series)
     try:
@@ -32,8 +38,15 @@ def Sortino_full(series, mar=0):
 
     Parameters:
     ---------------
-    series: list or numpy.array, ROI series
-    mar: float, minimum acceptable return, usually set to 0
+    series : array-like
+        return of investment (ROI) series
+    mar : float
+        minimum acceptable return, usually set to 0
+
+    Returns:
+    ----------
+    float
+        Sortino_full ratio
     """
     s = np.asarray(series)
     mean = s.mean()
@@ -52,8 +65,15 @@ def Sortino_partial(series, mar=0):
 
     Parameters:
     ---------------
-    series: list or numpy.array, ROI series
-    mar: float, minimum acceptable return, usually set to 0
+    series : array-like
+        return of investment (ROI) series
+    mar : float
+        minimum acceptable return, usually set to 0
+
+    Returns:
+    ----------
+    float
+        Sortino_partial ratio
     """
     s = np.asarray(series)
     mean = s.mean()
@@ -78,7 +98,13 @@ def maximum_drawdown(series):
 
     Parameters:
     ---------------
-    series: list or numpy.array, ROI series
+    series : array-like
+        return of investment (ROI) series
+
+    Returns:
+    ---------
+    float
+        maximum dropdown in the series
     """
     s = np.asarray(series)
     peak = pd.expanding_max(s)

@@ -14,13 +14,14 @@ def DTW(S1, S2, window=5):
     
     Parameters:
     --------------
-    S1: numpy.array
-    S2: numpy.array
+    S1 : array-like
+    S2 : array-like
     window: positive integer
 
     Returns:
     ---------------
-    DTW distance: positiv3e integer
+    positive integer
+        DTW distance
     """
     S1, S2 = np.asarray(S1), np.asarray(S2)
     window = max(window, abs(S1.size - S2.size))

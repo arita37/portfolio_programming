@@ -4,7 +4,7 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
-import sys
+
 import numpy as np
 import scipy.spatial.distance as spdist
 
@@ -18,14 +18,15 @@ def distance_correlation(S1, S2):
 
     Parameters:
     --------------
-    S1: numpy.array
-    S2: numpy.array
+    S1 : array-like
+    S2 : array-like
 
     if dimension of S1 or S2 >=2, then row: data, column: feature
 
     Returns:
     ---------------
-    coefficient: positive float
+    dictionary
+
     """
     S1, S2 = np.asarray(S1), np.asarray(S2)
 
@@ -75,15 +76,15 @@ def dcor_test(S1, S2):
 
     Parameters:
     --------------
-    S1: numpy.array
-    S2: numpy.array
+    S1 : array-like
+    S2 :array-like
 
     if dimension of S1 or S2 >=2,
     then row: data, column: feature
 
     Returns:
     ---------------
-    coefficient: positive float
+    dictionary
 
     """
     S1, S2 = np.asarray(S1), np.asarray(S2)

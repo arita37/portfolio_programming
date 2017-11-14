@@ -12,15 +12,21 @@ def Black_Scholes(S, K, Tmt, r, sigma):
 
     Parameters:
     -----------------------------------------------
-    S: spot price of the underlying asset
-    K: strike price
-    Tmt: time to maturity date (day)
-    r: risk-free rate (continuous rate)
-    sigma: (implied) volatility
+    S : float
+        spot price of the underlying asset
+    K : float
+        strike price
+    Tmt : positive integer
+        time to maturity date (day)
+    r : float
+        risk-free rate (continuous rate)
+    sigma : float
+        (implied) volatility
 
-    Return:
+    Returns:
     -------------------------------
-    return: current call and put option prices
+    (float, float)
+        current call and put option prices
     """
     # transform day to year
     T = Tmt / 365.

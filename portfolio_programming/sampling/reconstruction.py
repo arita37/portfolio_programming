@@ -18,14 +18,17 @@ def reconstruction(series, tau, m):
 
     Parameters:
     ---------------
-    series: list or numpy.array with length n_period
-    tau: positive integer, delayed index
-    :m: positive integer, dimension of phase space
+    series :  array-like
+        series with length n_period
+    tau : positive integer
+        delayed index
+    m : positive integer
+        dimension of phase space
         
     Returns
     ---------------
-    phase: 2-dimension array of reconstructed space.
-
+    2d-array
+        2-dimension array of reconstructed space.
    """
     if tau <= 0 or m <= 0 or not isinstance(series, pd.Series):
         raise ValueError(
