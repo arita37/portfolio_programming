@@ -10,9 +10,11 @@ import os
 node_name = platform.node()
 
 if node_name == 'X220':
+    # windows 10
     PROJECT_DIR = r'C:\Users\chen1\Documents\workspace_pycharm\portfolio_programming'
     TMP_DIR = r'e:'
 else:
+    # ubuntu linux 16.04
     PROJECT_DIR = r'/home/chenhh/workspace_pycharm/portfolio_programming'
     TMP_DIR = r'/tmp'
 
