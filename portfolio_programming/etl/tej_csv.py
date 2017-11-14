@@ -5,22 +5,12 @@ License: GPL v3
 
 transforming TEJ's stock csv to pandas panel data
 """
-from datetime import date
+
+import datetime as dt
 from time import time
-from glob import glob
 import os
 import numpy as np
 import pandas as pd
-
-
-def cp950_to_utf8(data):
-    """ utility function in parsing csv """
-    return data.strip().decode('cp950')
-
-
-def data_strip(data):
-    """ utility function in parsing csv """
-    return data.strip()
 
 
 def tej_csv_to_df(symbols, csv_dir, df_dir):
@@ -38,7 +28,7 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
 
     Returns:
     --------------
-    pandas.frame
+    list of pandas.dataframe
 
     """
     t0 = time()
@@ -47,12 +37,13 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
         csv_name = os.path.join(csv_dir, "{}.csv".format(symbol))
         print(csv_name)
         df = pd.read_csv(open(csv_name),
-                         index_col=("year_month_day",),
-                         parse_dates=True,
+                         index_col='year_month_day',
+                         parse_dates=True,  # parse the index column
+
                          dtype={
                              'symbol': str,
                              'abbreviation': str,
-                             'year_month_day': date,
+                             'year_month_day': str,
                              'open_price': np.float,
                              'high_price': np.float,
                              'low_price': np.float,
@@ -65,8 +56,9 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
                              'continuous_roi_%': np.float,
                          },
                          converters={
-                             'symbol': data_strip,
-                             'abbreviation': cp950_to_utf8,
+                             'symbol': lambda x: x.strip(),
+                             'abbreviation': lambda x: x.strip(),
+
                          },
                          )
 
