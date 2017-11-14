@@ -25,6 +25,8 @@ def DTW(S1, S2, window=5):
     """
     S1, S2 = np.asarray(S1), np.asarray(S2)
     window = max(window, abs(S1.size - S2.size))
+
+    # boundary condition
     mtx = np.ones((S1.size + 1, S2.size + 1)) * np.inf
     mtx[0, 0] = 0.
 
