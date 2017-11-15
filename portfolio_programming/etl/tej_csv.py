@@ -28,14 +28,13 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
 
     Returns:
     --------------
-    list of pandas.dataframe
+    list of pandas.dataframe files
 
     """
     t0 = time()
 
     for rdx, symbol in enumerate(symbols):
         csv_name = os.path.join(csv_dir, "{}.csv".format(symbol))
-        print(csv_name)
         df = pd.read_csv(open(csv_name),
                          index_col='year_month_day',
                          parse_dates=True,  # parse the index column
@@ -63,22 +62,34 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
                          )
 
         # output data file path
-        fout_path = os.path.join(df_dir, '{}_panel.pkl'.format(symbol))
+        fout_path = os.path.join(df_dir, '{}_df.pkl'.format(symbol))
         df.to_pickle(fout_path)
 
-        print("[{}/{}]{}.csv to panel OK, {:.3f} secs".format(
+        print("[{}/{}]{}.csv to dataframe OK, {:.4f} secs".format(
             rdx + 1, len(symbols), symbol, time() - t0))
 
-    print("csv_to_pkl OK, {:.3f} secs".format(time() - t0))
+    print("csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
 
 
-def dataframe_to_panel(symbols, df_dir):
+def dataframe_to_panel(symbols, df_dir, start_date, end_date):
     """
-    aggregating and trimming data to a panel file
+    aggregating and trimming dataframe of stock to a panel file
+
+    Parameters:
+    --------------
+    symbols : list
+        list of stock symbols given in data directory
+    df_dir : string
+        pandas dataframe  directory
+    start_date, end_date : datatime.date
+        the start and end dates in the panel
+
+    Returns:
+    ---------
+    pandas.panel
+
     """
     t0 = time()
-    start_date = date(2004, 1, 1)
-    end_date = date(2017, 6, 30)
 
     # load first df to read the periods
     fin_path = os.path.join(df_dir, "{}_df.pkl".format(symbols[0]))
@@ -89,7 +100,7 @@ def dataframe_to_panel(symbols, df_dir):
     trans_dates.name = 'trans_dates'
     minor_indices = ['close_price', 'simple_roi']
 
-    # setting panel
+    # setting panel (date, symbol, indices)
     pnl = pd.Panel(
         np.zeros((len(trans_dates), len(symbols), len(minor_indices))),
         items=trans_dates,
@@ -112,14 +123,14 @@ def dataframe_to_panel(symbols, df_dir):
                                                   'simple_roi')].T
 
         print("[{}/{}] {} load to panel OK, {:.3f} secs".format(
-            sdx, len(symbols), symbol, time() - t1))
+            sdx + 1, len(symbols), symbol, time() - t1))
 
     # # fill na with 0
     # pnl = pnl.fillna(0)
 
     # output data file path
     fout_path = os.path.join(df_dir,
-                             'TAIEX_2005_largest50cap_panel.pkl')
+                             'TAIEX_20050103_50largest_listed_market_cap_panel.pkl')
     pnl.to_pickle(fout_path)
 
     print("all exp_symbols load to panel OK, {:.3f} secs".format(time() - t0))
@@ -138,10 +149,13 @@ def run_tej_csv_to_panel():
     csv_dir = os.path.join(pp.DATA_DIR, 'tej_csv')
     df_dir = pp.TMP_DIR
 
+    start_date = dt.date(2005, 1, 3)
+    end_date = dt.date(2017, 6, 30)
+
     # run
     tej_csv_to_df(symbols, csv_dir, df_dir)
+    dataframe_to_panel(symbols, df_dir, start_date, end_date)
 
 
 if __name__ == '__main__':
-    pass
     run_tej_csv_to_panel()
