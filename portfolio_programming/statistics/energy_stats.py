@@ -9,7 +9,7 @@ import numpy as np
 import scipy.spatial.distance as spdist
 
 
-def distance_correlation(S1, S2):
+def distance_correlation(s1, s2):
     """
     http://en.wikipedia.org/wiki/Distance_correlation
     http://cran.r-project.org/web/packages/energy/energy.pdf
@@ -28,24 +28,24 @@ def distance_correlation(S1, S2):
     dictionary
 
     """
-    S1, S2 = np.asarray(S1), np.asarray(S2)
+    s1, s2 = np.asarray(s1), np.asarray(s2)
 
-    if not S1.shape[:-1]:
+    if not s1.shape[:-1]:
         # 1D array
-        S1 = S1[:, np.newaxis]
+        s1 = s1[:, np.newaxis]
 
-    if not S2.shape[:-1]:
+    if not s2.shape[:-1]:
         # 1D array
-        S2 = S2[:, np.newaxis]
+        s2 = s2[:, np.newaxis]
 
-    assert S1.shape[0] == S2.shape[0]
+    assert s1.shape[0] == s2.shape[0]
 
     # pairwise distance
-    a = spdist.squareform(spdist.pdist(S1))
+    a = spdist.squareform(spdist.pdist(s1))
     a_row_mean = a.mean(axis=0)
     a_mean = a.mean()
 
-    b = spdist.squareform(spdist.pdist(S2))
+    b = spdist.squareform(spdist.pdist(s2))
     b_row_mean = b.mean(axis=0)
     b_mean = b.mean()
 
@@ -67,7 +67,7 @@ def distance_correlation(S1, S2):
     return {"dcor": dcor, "dcov": dcov, "dvar1": dvar1, "dvar2": dvar2}
 
 
-def dcor_test(S1, S2):
+def dcor_test(s1, s2):
     """
     http://en.wikipedia.org/wiki/Distance_correlation
     http://cran.r-project.org/web/packages/energy/energy.pdf
@@ -87,25 +87,25 @@ def dcor_test(S1, S2):
     dictionary
 
     """
-    S1, S2 = np.asarray(S1), np.asarray(S2)
+    s1, s2 = np.asarray(s1), np.asarray(s2)
 
-    if S1.ndim == 1:
+    if s1.ndim == 1:
         # 1D array
-        S1 = S1[:, np.newaxis]
+        s1 = s1[:, np.newaxis]
 
-    if S2.ndim == 1:
+    if s2.ndim == 1:
         # 1D array
-        S2 = S2[:, np.newaxis]
+        s2 = s2[:, np.newaxis]
 
-    assert S1.shape[0] == S2.shape[0]
-    n_samples = S1.shape[0]
+    assert s1.shape[0] == s2.shape[0]
+    n_samples = s1.shape[0]
 
     # pairwise distance (a_col_mean == a_row_mean)
-    a = spdist.squareform(spdist.pdist(S1))
+    a = spdist.squareform(spdist.pdist(s1))
     a_row_mean = a.mean(axis=0)
     a_mean = a.mean()
 
-    b = spdist.squareform(spdist.pdist(S2))
+    b = spdist.squareform(spdist.pdist(s2))
     b_row_mean = b.mean(axis=0)
     b_mean = b.mean()
 
