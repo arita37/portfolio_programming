@@ -10,7 +10,10 @@ mathematical programming for risky asset portfolio
     - pandas
     - pyomo
     - cython
-    - noses
     
-It requires R and Rpy2 for testing some functions.
++ optional packages:
+    - nose
+    - rpy2 (with R)
+    
+It requires R and rpy2 for testing some functions.
 
