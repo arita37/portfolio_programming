@@ -10,7 +10,7 @@ import pandas as pd
 import logging
 
 from portfolio_programming.simulation.mixin import (PortfolioReportMixin,
-                                                    ValidPortfolioParameterMixin)
+                                                    ValidMixin)
 
 
 class StagewisePortfolioSP(ValidPortfolioParameterMixin,
@@ -99,20 +99,30 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
         # valid number of symbols
         self.valid_dimension("n_stock", len(candidate_symbols),
                              risk_rois.shape[1])
+
         self.candidate_symbols = candidate_symbols
+
+        self.valid_positive_value("max_portfolio_size", max_portfolio_size)
+        self.max_portfolio_size = max_portfolio_size
+
         self.risk_rois = risk_rois
         self.risk_free_rois = risk_free_rois
 
-        # valid number of symbols
         self.valid_dimension("n_stock", len(candidate_symbols),
                              len(initial_risk_wealth))
+
+        self.valid_positive_list(
+            ("initial_risk_wealth", initial_risk_free_wealth))
         self.initial_risk_wealth = initial_risk_wealth
+
+        self.valid_positive_value("initial_risk_free_wealth",
+                                  initial_risk_free_wealth)
         self.initial_risk_free_wealth = initial_risk_free_wealth
 
-        # valid transaction fee
+        self.valid_rang_value("buy_trans_fee", buy_trans_fee, 0, 1)
         self.buy_trans_fee = buy_trans_fee
-        self.valid_trans_fee(buy_trans_fee)
-        self.valid_trans_fee(sell_trans_fee)
+
+        self.valid_trans_fee("sell_trans_fee", sell_trans_fee, 0, 1)
         self.sell_trans_fee = sell_trans_fee
 
         self.verbose = verbose
@@ -161,8 +171,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
         # generatiing scenario error count, shape: (n_exp_period,)
         self.gen_scenario_fail = pd.Series(np.zeros(
             self.n_exp_period).astype(np.bool),
-           index=self.exp_risk_rois.index)
-
+                                           index=self.exp_risk_rois.index)
 
     def valid_specific_parameters(self, *args, **kwargs):
         """
@@ -178,7 +187,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
 
         Returns:
         ----------------------------
-        estimated_risk_rois: pandas.DataFrame, shape: (n_stock, n_scenario)
+        pandas.DataFrame, shape: (n_stock, n_scenario)
         """
         raise NotImplementedError('get_estimated_rois')
 
@@ -216,16 +225,8 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
         """
         raise NotImplementedError('get_simulation_name')
 
-    def get_trading_func_name(self, *args, **kwargs):
-        """
-        Returns:
-        ------------
-        string
-            Function name of the class
-        """
-        raise NotImplementedError('get_trading_func_name')
-
-    def set_specific_period_action(self, *args, **kwargs):
+    def set_specific_action(self, *args, **kwargs):
+        """ Set specific action in each period. """
         pass
 
     def add_results_to_reports(self, reports, *args, **kwargs):
@@ -250,7 +251,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
         allocated_risk_free_wealth = self.initial_risk_free_wealth
 
         # count of generating scenario error
-        estimated_risk_roi_error_count = 0
+        gen_scenario_error_cnt = 0
 
         for tdx in range(self.n_exp_period):
             t1 = time()
@@ -260,9 +261,9 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
                     tdx=tdx,
                     trans_date=self.exp_risk_rois.index[tdx],
                     n_stock=self.n_stock,
-                    window_length=self.rolling_horizon,
+                    rolling_horizon=self.rolling_horizon,
                     n_scenario=self.n_scenario,
-                    bias=self.bias_estimator)
+                    bias_estimator=self.bias_estimator)
 
             except ValueError as e:
                 print("generating scenario error: {}, {}".format(
@@ -291,7 +292,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
                     allocated_risk_free_wealth=allocated_risk_free_wealth
                 )
                 # record results
-                self.set_specific_period_action(tdx=tdx, results=results)
+                self.set_specific_action(tdx=tdx, results=results)
 
                 # buy and sell according results, shape: (n_stock, )
                 buy_amounts = results["buy_amounts"]
@@ -304,7 +305,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
                                         index=self.candidate_symbols)
                 sell_amounts = pd.Series(np.zeros(self.n_stock),
                                          index=self.candidate_symbols)
-                estimated_risk_roi_error_count += 1
+                gen_scenario_error_cnt += 1
 
             # record buy and sell amounts
             self.buy_amounts_df.iloc[tdx] = buy_amounts
@@ -343,7 +344,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
                 tdx + 1, self.n_exp_period,
                 self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
                 func_name,
-                estimated_risk_roi_error_count,
+                gen_scenario_error_cnt,
                 (self.risk_wealth_df.iloc[tdx].sum() +
                  self.risk_free_wealth.iloc[tdx]),
                 time() - t1))

@@ -10,4 +10,6 @@ mathematical programming for risky asset portfolio
     - pandas
     - pyomo
     - cython
+    - arch (pip install git+https://github.com/bashtage/arch.git)
+
 
