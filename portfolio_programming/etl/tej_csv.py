@@ -98,7 +98,8 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date):
     # get trans_dates and columns
     trans_dates = df[start_date:end_date].index
     trans_dates.name = 'trans_dates'
-    minor_indices = ['close_price', 'simple_roi']
+    minor_indices = ['open_price', 'high_price', 'low_price', 'close_price',
+                     'volume', 'simple_roi']
 
     # setting panel (date, symbol, indices)
     pnl = pd.Panel(
@@ -118,8 +119,14 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date):
         trimmed_df.rename(columns={r'simple_roi_%': 'simple_roi'},
                           inplace=True)
 
+        trimmed_df.rename(columns={r'volume_1000_shares': 'volume'},
+                          inplace=True)
+
+        print (trimmed_df.columns)
         # note: pnl.loc[:, symbol, :], shape: (columns, n_exp_period)
-        pnl.loc[:, symbol, :] = trimmed_df.ix[:, ('close_price',
+        pnl.loc[:, symbol, :] = trimmed_df.ix[:, ('open_price', 'high_price',
+                                                  'low_price', 'close_price',
+                                                  'volume',
                                                   'simple_roi')].T
 
         print("[{}/{}] {} load to panel OK, {:.3f} secs".format(
@@ -149,12 +156,13 @@ def run_tej_csv_to_panel():
     csv_dir = os.path.join(pp.DATA_DIR, 'tej_csv')
     df_dir = pp.TMP_DIR
 
-    start_date = dt.date(2005, 1, 3)
-    end_date = dt.date(2017, 6, 30)
+    # manual setting
+    trim_start_date = dt.date(2005, 1, 3)
+    trim_end_date = dt.date(2017, 6, 30)
 
     # run
     tej_csv_to_df(symbols, csv_dir, df_dir)
-    dataframe_to_panel(symbols, df_dir, start_date, end_date)
+    dataframe_to_panel(symbols, df_dir, trim_start_date, trim_end_date)
 
 
 if __name__ == '__main__':
