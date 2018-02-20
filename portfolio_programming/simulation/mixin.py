@@ -118,7 +118,7 @@ class ValidMixin(object):
                                            lower_bound))
 
     @staticmethod
-    def valid_positive_value(name, value):
+    def valid_nonnegative_value(name, value):
         """
         Parameter:
         -------------
@@ -127,11 +127,25 @@ class ValidMixin(object):
         value : integer or float
         """
         if value < 0:
+            raise ValueError("The {}'s value {} should be nonnegative.".format(
+                name, value))
+
+
+    @staticmethod
+    def valid_positive_value(name, value):
+        """
+        Parameter:
+        -------------
+        name: string
+            name of the value
+        value : integer or float
+        """
+        if value <= 0:
             raise ValueError("The {}'s value {} should be positive.".format(
                 name, value))
 
     @staticmethod
-    def valid_positive_list(name, values):
+    def valid_nonnegative_list(name, values):
         """
         Parameter:
         -------------

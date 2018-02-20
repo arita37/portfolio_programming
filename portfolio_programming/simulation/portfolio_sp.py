@@ -9,13 +9,14 @@ import numpy as np
 import pandas as pd
 import logging
 
-from portfolio_programming.simulation.mixin import (PortfolioReportMixin,
-                                                    ValidMixin)
+from portfolio_programming.simulation.mixin import (
+    PortfolioReportMixin, ValidMixin)
 
 
-class StagewisePortfolioSP(ValidPortfolioParameterMixin,
-                           PortfolioReportMixin):
-    def __init__(self, candidate_symbols,
+class BaseStagewisePortfolioSP(ValidMixin,
+                               PortfolioReportMixin):
+    def __init__(self,
+                 candidate_symbols,
                  max_portfolio_size,
                  risk_rois,
                  risk_free_rois,
@@ -47,7 +48,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
             The return of all stocks in the given intervals.
             The n_exp_period should be subset of the n_period.
 
-        risk_free_rois : pandas.series, shape: (n_exp_period, )
+        risk_free_rois : pandas.series or numpy.array, shape: (n_exp_period, )
             The return of risk-free asset, usually all zeros.
 
         initial_risk_wealth : pandas.series, shape: (n_stock,)
@@ -96,14 +97,20 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
             The scenario-generating function may fail in generating
             scenarios in some periods.
         """
-        # valid number of symbols
         self.valid_dimension("n_stock", len(candidate_symbols),
                              risk_rois.shape[1])
 
+        self.n_stock = len(candidate_symbols)
         self.candidate_symbols = candidate_symbols
+        self.periods = risk_rois.index
 
-        self.valid_positive_value("max_portfolio_size", max_portfolio_size)
+        self.valid_nonnegative_value("max_portfolio_size", max_portfolio_size)
         self.max_portfolio_size = max_portfolio_size
+
+        if max_portfolio_size > self.n_stock:
+            raise ValueError("The portfolio size {} can't large than the "
+                             "size of candidate set. {}.".format(
+                                max_portfolio_size, self.n_stock))
 
         self.risk_rois = risk_rois
         self.risk_free_rois = risk_free_rois
@@ -111,12 +118,12 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
         self.valid_dimension("n_stock", len(candidate_symbols),
                              len(initial_risk_wealth))
 
-        self.valid_positive_list(
+        self.valid_nonnegative_list(
             ("initial_risk_wealth", initial_risk_free_wealth))
         self.initial_risk_wealth = initial_risk_wealth
 
-        self.valid_positive_value("initial_risk_free_wealth",
-                                  initial_risk_free_wealth)
+        self.valid_nonnegative_value("initial_risk_free_wealth",
+                                     initial_risk_free_wealth)
         self.initial_risk_free_wealth = initial_risk_free_wealth
 
         self.valid_rang_value("buy_trans_fee", buy_trans_fee, 0, 1)
@@ -141,6 +148,8 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
         self.rolling_horizon = int(rolling_horizon)
         self.n_scenario = int(n_scenario)
         self.bias_estimator = bias_estimator
+        self.report_path = report_path
+
         self.start_date_idx = self.risk_rois.index.get_loc(
             self.exp_risk_rois.index[0])
 
@@ -266,7 +275,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
                     bias_estimator=self.bias_estimator)
 
             except ValueError as e:
-                print("generating scenario error: {}, {}".format(
+                logging.warning("generating scenario error: {}, {}".format(
                     self.exp_risk_rois.index[tdx], e))
                 self.gen_scenario_fail[tdx] = True
 
@@ -339,11 +348,11 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
             allocated_risk_wealth = self.risk_wealth_df.iloc[tdx]
             allocated_risk_free_wealth = self.risk_free_wealth.iloc[tdx]
 
-            print("[{}/{}] {} {} OK, scenario err cnt:{} "
-                  "cur_wealth:{:.2f}, {:.3f} secs".format(
+            logging.info("[{}/{}] {} {} OK, scenario err cnt:{} "
+                         "cur_wealth:{:.2f}, {:.3f} secs".format(
                 tdx + 1, self.n_exp_period,
                 self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
-                func_name,
+                simulation_name,
                 gen_scenario_error_cnt,
                 (self.risk_wealth_df.iloc[tdx].sum() +
                  self.risk_free_wealth.iloc[tdx]),
@@ -385,7 +394,7 @@ class StagewisePortfolioSP(ValidPortfolioParameterMixin,
         # user specified  additional elements to reports
         reports = self.add_results_to_reports(reports)
 
-        print("{} OK n_stock:{}, [{}-{}], {:.4f}.secs".format(
+        logging.info("{} OK n_stock:{}, [{}-{}], {:.4f}.secs".format(
             simulation_name, self.n_stock,
             self.exp_risk_rois.index[0],
             self.exp_risk_rois.index[edx],

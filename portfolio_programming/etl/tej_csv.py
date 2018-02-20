@@ -71,7 +71,7 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
     print("csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
 
 
-def dataframe_to_panel(symbols, df_dir, start_date, end_date):
+def dataframe_to_panel(symbols, df_dir, start_date, end_date, fout_path):
     """
     aggregating and trimming dataframe of stock to a panel file
 
@@ -122,7 +122,6 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date):
         trimmed_df.rename(columns={r'volume_1000_shares': 'volume'},
                           inplace=True)
 
-        print (trimmed_df.columns)
         # note: pnl.loc[:, symbol, :], shape: (columns, n_exp_period)
         pnl.loc[:, symbol, :] = trimmed_df.ix[:, ('open_price', 'high_price',
                                                   'low_price', 'close_price',
@@ -136,8 +135,6 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date):
     # pnl = pnl.fillna(0)
 
     # output data file path
-    fout_path = os.path.join(df_dir,
-                             'TAIEX_20050103_50largest_listed_market_cap_panel.pkl')
     pnl.to_pickle(fout_path)
 
     print("all exp_symbols load to panel OK, {:.3f} secs".format(time() - t0))
@@ -147,10 +144,7 @@ def run_tej_csv_to_panel():
     import portfolio_programming as pp
     import json
 
-    symbol_file = os.path.join(pp.DATA_DIR,
-                               'TAIEX_20050103_50largest_listed_market_cap.json')
-
-    with open(symbol_file) as fin:
+    with open(pp.TAIEX_SYMBOL_JSON) as fin:
         symbols = json.load(fin)
 
     csv_dir = os.path.join(pp.DATA_DIR, 'tej_csv')
@@ -162,7 +156,9 @@ def run_tej_csv_to_panel():
 
     # run
     tej_csv_to_df(symbols, csv_dir, df_dir)
-    dataframe_to_panel(symbols, df_dir, trim_start_date, trim_end_date)
+
+    dataframe_to_panel(symbols, df_dir, trim_start_date, trim_end_date,
+                       pp.TAIEX_PANEL_PKL)
 
 
 if __name__ == '__main__':
