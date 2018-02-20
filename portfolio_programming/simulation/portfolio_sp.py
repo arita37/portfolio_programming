@@ -177,10 +177,17 @@ class BaseStagewisePortfolioSP(ValidMixin,
             minor_axis=self.exp_risk_rois.columns
         )
 
-        # generatiing scenario error count, shape: (n_exp_period,)
+        # generating scenario error count, shape: (n_exp_period,)
         self.gen_scenario_fail = pd.Series(np.zeros(
             self.n_exp_period).astype(np.bool),
                                            index=self.exp_risk_rois.index)
+
+        # estimated CVaR and VARs
+        self.risks = pd.DataFrame(
+                np.zeros(self.n_exp_period, 2),
+                index=self.exp_risk_rois.index,
+                columns=('CVaR', 'VaR'))
+
 
     def valid_specific_parameters(self, *args, **kwargs):
         """

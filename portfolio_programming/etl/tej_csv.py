@@ -40,8 +40,8 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
                          parse_dates=True,  # parse the index column
 
                          dtype={
-                             'symbol': str,
-                             'abbreviation': str,
+                             # 'symbol': str,
+                             # 'abbreviation': str,
                              'year_month_day': str,
                              'open_price': np.float,
                              'high_price': np.float,

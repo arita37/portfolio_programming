@@ -10,7 +10,6 @@ Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v2
 """
 
-from __future__ import division
 from time import time
 import os
 import numpy as np
@@ -21,6 +20,8 @@ from pyomo.environ import *
 from PySPPortfolio.pysp_portfolio import *
 from scenario.c_moment_matching import heuristic_moment_matching
 from base_model import (SPTradingPortfolio, )
+import portfolio_programming as pp
+
 
 cimport numpy as cnp
 ctypedef cnp.float64_t FLOAT_t
@@ -38,7 +39,7 @@ def min_cvar_sp_portfolio(symbols,
                           double predict_risk_free_roi,
                           int n_scenario,
                           scenario_probs=None,
-                          str solver=DEFAULT_SOLVER,
+                          str solver=pp.DEFAULT_SOLVER,
                           int verbose=False):
     """
     2nd-stage minimize conditional value at risk stochastic programming
@@ -140,7 +141,7 @@ def min_cvar_sp_portfolio(symbols,
     # objective
     def cvar_objective_rule(model):
         scenario_expectation = sum(model.Ys[sdx] * model.scenario_probs[sdx]
-                                    for sdx in xrange(n_scenario))
+                                    for sdx in range(n_scenario))
         return model.Z - 1. / (1. - model.alpha) * scenario_expectation
 
     instance.cvar_objective = Objective(rule=cvar_objective_rule,
@@ -151,7 +152,7 @@ def min_cvar_sp_portfolio(symbols,
     results = opt.solve(instance)
     instance.solutions.load_from(results)
     print ("Y:{}, VaR:{}, CVaR{}".format(
-        [instance.Ys[sdx].value for sdx in xrange(n_scenario)],
+        [instance.Ys[sdx].value for sdx in range(n_scenario)],
         instance.Z.value,
         instance.cvar_objective,
     ))
@@ -161,9 +162,9 @@ def min_cvar_sp_portfolio(symbols,
 
     # buy and sell amounts
     buy_amounts = pd.Series([instance.buy_amounts[mdx].value
-                             for mdx in xrange(n_stock)], index=symbols)
+                             for mdx in range(n_stock)], index=symbols)
     sell_amounts = pd.Series([instance.sell_amounts[mdx].value
-                              for mdx in xrange(n_stock)], index=symbols)
+                              for mdx in range(n_stock)], index=symbols)
 
     # value at risk (estimated)
     cdef double estimated_var = instance.Z.value
@@ -300,7 +301,7 @@ class MinCVaRSPPortfolio(SPTradingPortfolio):
             corr_mtx = np.corrcoef(hist_data.T)
 
             # scenarios shape: (n_stock, n_scenario)
-            for idx, error_order in enumerate(xrange(-3, 0)):
+            for idx, error_order in enumerate(range(-3, 0)):
                 # if the HMM is not converge, relax the tolerance error
                 try:
                     max_moment_err = 10**error_order
@@ -468,7 +469,7 @@ def min_cvar_sp_portfolio2(symbols,
     # objective
     def cvar_objective_rule(model):
         scenario_expectation = sum(model.Ys[sdx] * model.scenario_probs[sdx]
-                                    for sdx in xrange(n_scenario))
+                                    for sdx in range(n_scenario))
         return model.Z - 1. / (1. - model.alpha) * scenario_expectation
 
     instance.cvar_objective = Objective(rule=cvar_objective_rule,
@@ -484,9 +485,9 @@ def min_cvar_sp_portfolio2(symbols,
 
     # buy and sell amounts
     buy_amounts = pd.Series([instance.buy_amounts[mdx].value
-                             for mdx in xrange(n_stock)], index=symbols)
+                             for mdx in range(n_stock)], index=symbols)
     sell_amounts = pd.Series([instance.sell_amounts[mdx].value
-                              for mdx in xrange(n_stock)], index=symbols)
+                              for mdx in range(n_stock)], index=symbols)
 
     # value at risk (estimated)
     cdef double estimated_var = instance.Z.value
@@ -541,7 +542,7 @@ def min_cvar_sp_portfolio2(symbols,
 
     estimated_eev_cvar_arr = np.zeros(n_scenario)
     # EEV
-    for sdx in xrange(n_scenario):
+    for sdx in range(n_scenario):
         scen_roi = predict_risk_rois[:, sdx]
         portfolio_value = (
             sum((1+scen_roi[mdx])* instance.risk_wealth[mdx].value
@@ -716,7 +717,7 @@ class MinCVaRSPPortfolio2(SPTradingPortfolio):
             corr_mtx = np.corrcoef(hist_data.T)
 
             # scenarios shape: (n_stock, n_scenario)
-            for idx, error_order in enumerate(xrange(-3, 0)):
+            for idx, error_order in enumerate(range(-3, 0)):
                 # if the HMM is not converge, relax the tolerance error
                 try:
                     max_moment_err = 10**error_order

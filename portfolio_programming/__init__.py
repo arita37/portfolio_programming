@@ -25,3 +25,6 @@ TAIEX_SYMBOL_JSON = os.path.join(DATA_DIR,
 
 TAIEX_PANEL_PKL = os.path.join(TMP_DIR,
                              'TAIEX_20050103_50largest_listed_market_cap_panel.pkl')
+
+# solver
+DEFAULT_SOLVER = 'cplex'
