@@ -11,5 +11,8 @@ mathematical programming for risky asset portfolio
     - pyomo
     - cython
     - arch (pip install git+https://github.com/bashtage/arch.git)
+    
++ optional packages:
+    - pytorch
 
 
