@@ -26,22 +26,23 @@ class BaseStagewisePortfolioSP(ValidMixin,
                  sell_trans_fee=0.004425,
                  start_date=dt.date(2005, 1, 3),
                  end_date=dt.date(2014, 12, 31),
-                 rolling_horizon=200,
+                 rolling_window_size=200,
                  n_scenario=200,
                  bias_estimator=False,
                  report_path=r'.',
                  verbose=False):
         """
-        stagewise portfolio stochastic programming
+        stagewise portfolio stochastic programming base model
 
         Parameters:
         -------------
         candidate_symbols : list of symbols,
-            The size of the candidate set is  n_stock.
+            The size of the candidate set is n_stock.
 
         max_portfolio_size : positive integer
             The max number of stock we can invest in the portfolio.
-            If the max_portfolio_size == n_stock, it degenerates to the
+            The model is the mixed integer linear programming, however,
+            if the max_portfolio_size == n_stock, it degenerates to the
             linear programming.
 
         risk_rois : pandas.DataFrame, shape: (n_period, n_stock)
@@ -69,7 +70,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         end_date : datetime.date
              The last trading date (not the calendar day) of simulation.
 
-        rolling_horizon : positive integer
+        rolling_window_size : positive integer
             The historical trading days for estimating statistics.
 
         n_scenario : positive integer
@@ -88,15 +89,20 @@ class BaseStagewisePortfolioSP(ValidMixin,
         wealth_df : pandas.DataFrame, shape: (n_exp_period, n_stock+1)
             The risky and risk-free assets wealth in each period of the
             simulation.
+            The risk-free asset locates in column 0.
 
         amount_pnl : pandas.Panel, shape: (3, n_exp_period, n_stock+1)
             Buying, selling and transaction fee amount of each asset in each
-            period of the             simulation.
+            period of the simulation.
 
         gen_scenario_fail : pandas.Series, shape: (n_exp_period,)
             The scenario-generating function may fail in generating
             scenarios in some periods.
+
+        risks: pandas.DataFrame, shape: (n_exp_period, 2)
+            The estimated CVaR and VaR in the simulation.
         """
+
         self.valid_dimension("n_stock", len(candidate_symbols),
                              risk_rois.shape[1])
 
@@ -145,7 +151,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         self.n_stock = self.exp_risk_rois.shape[1]
 
         # date index in total data
-        self.rolling_horizon = int(rolling_horizon)
+        self.rolling_horizon = int(rolling_window_size)
         self.n_scenario = int(n_scenario)
         self.bias_estimator = bias_estimator
         self.report_path = report_path
@@ -153,7 +159,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         self.start_date_idx = self.risk_rois.index.get_loc(
             self.exp_risk_rois.index[0])
 
-        if self.start_date_idx < rolling_horizon:
+        if self.start_date_idx < rolling_window_size:
             raise ValueError('There is no enough data for estimating '
                              'parameters.')
 
