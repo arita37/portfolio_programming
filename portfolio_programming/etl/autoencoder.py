@@ -5,6 +5,7 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 https://github.com/SherlockLiao/pytorch-beginner/blob/master/08-AutoEncoder/simple_autoencoder.py
 """
 
+import time
 import pandas as pd
 import torch
 import torchvision
@@ -17,7 +18,7 @@ from torchvision.utils import save_image
 import portfolio_programming as pp
 
 
-def AE(n_epochs=100, batch_size=20, learning_rate=1e-3):
+def AE(n_epochs=1000, batch_size=60, learning_rate=1e-3):
     # Dimensions: 3090 (items) x 50 (major_axis) x 6 (minor_axis)
     # Items axis: 2005-01-03 00:00:00 to 2017-06-30 00:00:00
     pnl = pd.read_pickle(pp.TAIEX_PANEL_PKL)
@@ -64,17 +65,23 @@ def AE(n_epochs=100, batch_size=20, learning_rate=1e-3):
             x = self.decoder(x)
             return x
 
-    model = autoencoder()
+    model = autoencoder().cuda()
+    print(model)
+    #model = autoencoder()
     criterion = nn.MSELoss()
+    #criterion = nn.L1Loss()
+    #criterion = nn.KLDivLoss()
     optimizer = torch.optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     for epoch in range(n_epochs):
+        t_start = time.time()
         for bdx in range(n_batch):
             sdx = bdx * batch_size
             edx = sdx + batch_size
-            rois = pnl.ix[sdx:edx, :, 'simple_roi']
-            input = Variable(torch.FloatTensor(rois.values.T))
+            rois = pnl.ix[sdx:edx, :, 'simple_roi'] 
+            input = Variable(torch.FloatTensor(rois.values.T)).cuda()
+            #input = Variable(torch.FloatTensor(rois.values.T))
             # ===================forward=====================
             output = model(input)
             loss = criterion(output, input)
@@ -83,8 +90,8 @@ def AE(n_epochs=100, batch_size=20, learning_rate=1e-3):
             loss.backward()
             optimizer.step()
         # ===================log========================
-        print('epoch [{}/{}], loss:{:.8f}'
-              .format(epoch + 1, n_epochs, loss.data[0]))
+        print('epoch [{}/{}], loss:{:.8f} {:.4f} secs'
+              .format(epoch + 1, n_epochs, loss.data[0], time.time()-t_start))
         # if epoch % 10 == 0:
         #     pic = to_img(output.cpu().data)
         #     save_image(pic, './mlp_img/image_{}.png'.format(epoch))
