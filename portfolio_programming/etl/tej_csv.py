@@ -156,7 +156,6 @@ def run_tej_csv_to_panel():
 
     # run
     tej_csv_to_df(symbols, csv_dir, df_dir)
-
     dataframe_to_panel(symbols, df_dir, trim_start_date, trim_end_date,
                        pp.TAIEX_PANEL_PKL)
 
