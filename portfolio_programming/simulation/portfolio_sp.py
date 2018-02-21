@@ -3,18 +3,21 @@
 Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
+
 import datetime as dt
-from time import time
+import time
 import numpy as np
 import pandas as pd
 import logging
 
 from portfolio_programming.simulation.mixin import (
-    PortfolioReportMixin, ValidMixin)
+    PortfolioSPReportMixin, ValidMixin)
+
+import portfolio_programming as pp
 
 
 class BaseStagewisePortfolioSP(ValidMixin,
-                               PortfolioReportMixin):
+                               PortfolioSPReportMixin):
     def __init__(self,
                  candidate_symbols,
                  max_portfolio_size,
@@ -24,8 +27,8 @@ class BaseStagewisePortfolioSP(ValidMixin,
                  initial_risk_free_wealth,
                  buy_trans_fee=0.001425,
                  sell_trans_fee=0.004425,
-                 start_date=dt.date(2005, 1, 3),
-                 end_date=dt.date(2014, 12, 31),
+                 sim_start_date=pp.SIM_START_DATE,
+                 sim_end_date=pp.SIM_END_DATE,
                  rolling_window_size=200,
                  n_scenario=200,
                  bias_estimator=False,
@@ -89,19 +92,22 @@ class BaseStagewisePortfolioSP(ValidMixin,
         wealth_df : pandas.DataFrame, shape: (n_exp_period, n_stock+1)
             The risky and risk-free assets wealth in each period of the
             simulation.
-            The risk-free asset locates in column 0.
+            The risk-free asset symbol is self.risk_free_symbol
 
-        amount_pnl : pandas.Panel, shape: (3, n_exp_period, n_stock+1)
+        amount_pnl : pandas.Panel, shape: (n_exp_period. n_stock+1, 3)
             Buying, selling and transaction fee amount of each asset in each
             period of the simulation.
 
-        gen_scenario_fail : pandas.Series, shape: (n_exp_period,)
+
+        estimated_risks: pandas.DataFrame, shape: (n_exp_period, 3)
+            The estimated CVaR, VaR and number of gen_scenario_fail in
+            the simulation.
             The scenario-generating function may fail in generating
             scenarios in some periods.
 
-        risks: pandas.DataFrame, shape: (n_exp_period, 2)
-            The estimated CVaR and VaR in the simulation.
         """
+
+        self.risk_free_symbol = 'risk_free'
 
         self.valid_dimension("n_stock", len(candidate_symbols),
                              risk_rois.shape[1])
@@ -116,7 +122,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         if max_portfolio_size > self.n_stock:
             raise ValueError("The portfolio size {} can't large than the "
                              "size of candidate set. {}.".format(
-                                max_portfolio_size, self.n_stock))
+                max_portfolio_size, self.n_stock))
 
         self.risk_rois = risk_rois
         self.risk_free_rois = risk_free_rois
@@ -132,34 +138,36 @@ class BaseStagewisePortfolioSP(ValidMixin,
                                      initial_risk_free_wealth)
         self.initial_risk_free_wealth = initial_risk_free_wealth
 
-        self.valid_rang_value("buy_trans_fee", buy_trans_fee, 0, 1)
+        self.valid_range_value("buy_trans_fee", buy_trans_fee, 0, 1)
         self.buy_trans_fee = buy_trans_fee
 
-        self.valid_trans_fee("sell_trans_fee", sell_trans_fee, 0, 1)
+        self.valid_range_value("sell_trans_fee", sell_trans_fee, 0, 1)
         self.sell_trans_fee = sell_trans_fee
 
         self.verbose = verbose
 
         # .loc() will contain the end_date element
-        self.valid_trans_date(start_date, end_date)
-        self.exp_risk_rois = risk_rois.loc[start_date:end_date]
-        self.exp_risk_free_rois = risk_free_rois.loc[start_date:end_date]
-        self.n_exp_period = self.exp_risk_rois.shape[0]
-        self.exp_start_date = self.exp_risk_rois.index[0]
-        self.exp_end_date = self.exp_risk_rois.index[self.n_exp_period - 1]
+        self.valid_trans_date(sim_start_date, sim_end_date)
 
-        self.n_stock = self.exp_risk_rois.shape[1]
+        self.sim_risk_rois = risk_rois.loc[sim_start_date:sim_end_date]
+        self.sim_risk_free_rois = risk_free_rois.loc[
+                                  sim_start_date:sim_end_date]
+        self.n_exp_period = self.sim_risk_rois.shape[0]
+        self.sim_start_date = self.sim_risk_rois.index[0]
+        self.sim_end_date = self.sim_risk_rois.index[self.n_exp_period - 1]
+
+        self.n_stock = self.sim_risk_rois.shape[1]
 
         # date index in total data
-        self.rolling_horizon = int(rolling_window_size)
+        self.rolling_window_size = int(rolling_window_size)
         self.n_scenario = int(n_scenario)
         self.bias_estimator = bias_estimator
         self.report_path = report_path
 
-        self.start_date_idx = self.risk_rois.index.get_loc(
-            self.exp_risk_rois.index[0])
+        self.sim_start_date_idx = self.risk_rois.index.get_loc(
+            self.sim_risk_rois.index[0])
 
-        if self.start_date_idx < rolling_window_size:
+        if self.sim_start_date_idx < rolling_window_size:
             raise ValueError('There is no enough data for estimating '
                              'parameters.')
 
@@ -167,33 +175,27 @@ class BaseStagewisePortfolioSP(ValidMixin,
         self.valid_specific_parameters()
 
         # results data
-        # wealth DataFrame, shape: (n_exp_period, n_stock)
+        # wealth DataFrame, shape: (n_exp_period, n_stock+1)
         self.wealth_df = pd.DataFrame(
             np.zeros((self.n_exp_period, self.n_stock)),
-            index=self.exp_risk_rois.index,
-            columns=self.exp_risk_rois.columns
+            index=self.sim_risk_rois.index,
+            columns=candidate_symbols + [self.risk_free_symbol, ]
         )
 
         # buying,selling, and transaction_free amount panel,
-        # shape: (buy or sell, n_exp_period, n_stock)
+        # shape: (n_exp_period, n_stock+1, 3)
         self.amounts_pnl = pd.Panel(
-            np.zeros((2, self.n_exp_period, self.n_stock)),
-            index=("buy", "sell", "trans_fee"),
-            major_axis=self.exp_risk_rois.index,
-            minor_axis=self.exp_risk_rois.columns
+            np.zeros((self.n_exp_period, self.n_stock + 1, 3)),
+            index=self.sim_risk_rois.index,
+            major_axis=self.candidate_symbols + [self.risk_free_symbol, ],
+            minor_axis=("buy", "sell", "trans_fee"),
         )
 
-        # generating scenario error count, shape: (n_exp_period,)
-        self.gen_scenario_fail = pd.Series(np.zeros(
-            self.n_exp_period).astype(np.bool),
-                                           index=self.exp_risk_rois.index)
-
-        # estimated CVaR and VARs
-        self.risks = pd.DataFrame(
-                np.zeros(self.n_exp_period, 2),
-                index=self.exp_risk_rois.index,
-                columns=('CVaR', 'VaR'))
-
+        # estimated CVaR, VARs, and gen_scenario_fail
+        self.estimated_risks = pd.DataFrame(
+            np.zeros(self.n_exp_period, 3),
+            index=self.sim_risk_rois.index,
+            columns=('CVaR', 'VaR', 'gen_scenario_fail'))
 
     def valid_specific_parameters(self, *args, **kwargs):
         """
@@ -213,7 +215,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         """
         raise NotImplementedError('get_estimated_rois')
 
-    def get_estimated_risk_free_rois(self, *arg, **kwargs):
+    def get_estimated_risk_free_roi(self, *arg, **kwargs):
         """
         estimating next period risk free asset rois,
         implemented by user, and it should return a float number.
@@ -251,7 +253,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         """ Set specific action in each period. """
         pass
 
-    def add_results_to_reports(self, reports, *args, **kwargs):
+    def add_to_reports(self, reports, *args, **kwargs):
         """ add Additional results to reports after a simulation """
         return reports
 
@@ -263,7 +265,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         ----------------
         standard report
         """
-        t0 = time()
+        t0 = time.time()
 
         # get simulation name
         simulation_name = self.get_simulation_name()
@@ -272,62 +274,72 @@ class BaseStagewisePortfolioSP(ValidMixin,
         allocated_risk_wealth = self.initial_risk_wealth
         allocated_risk_free_wealth = self.initial_risk_free_wealth
 
-        # count of generating scenario error
-        gen_scenario_error_cnt = 0
-
+        gen_scenario_cnt = 0
         for tdx in range(self.n_exp_period):
-            t1 = time()
-            # estimating next period rois, shape: (n_stock, n_scenario)
+            t1 = time.time()
+            curr_date = self.sim_risk_rois.index[tdx]
+
+            # flag of generating scenario error
+            gen_scenario_failed = False
+
+            # estimating next period risky rois, shape: (n_stock, n_scenario)
             try:
+                # the scenario generation may be failed
                 estimated_risk_rois = self.get_estimated_risk_rois(
                     tdx=tdx,
-                    trans_date=self.exp_risk_rois.index[tdx],
+                    trans_date=curr_date,
                     n_stock=self.n_stock,
-                    rolling_horizon=self.rolling_horizon,
+                    rolling_horizon=self.rolling_window_size,
                     n_scenario=self.n_scenario,
                     bias_estimator=self.bias_estimator)
 
             except ValueError as e:
                 logging.warning("generating scenario error: {}, {}".format(
-                    self.exp_risk_rois.index[tdx], e))
-                self.gen_scenario_fail[tdx] = True
+                    curr_date, e))
+                gen_scenario_failed = True
+                gen_scenario_cnt += 1
 
-            estimated_risk_free_rois = self.get_estimated_risk_free_rois(
+            # estimating next period risk_free roi, return float
+            estimated_risk_free_roi = self.get_estimated_risk_free_roi(
                 tdx=tdx,
-                trans_date=self.exp_risk_rois.index[tdx],
+                trans_date=curr_date,
                 n_stock=self.n_stock,
-                window_length=self.rolling_horizon,
+                window_length=self.rolling_window_size,
                 n_scenario=self.n_scenario,
                 bias=self.bias_estimator)
 
-            # generating scenarios success
+            # generating risky_roi scenarios success
             # using new scenarios in the SP
-            if not self.gen_scenario_fail[tdx]:
-
+            if not gen_scenario_failed:
                 # determining the buy and sell amounts
-                results = self.get_current_buy_sell_amounts(
+                pg_results = self.get_current_buy_sell_amounts(
                     tdx=tdx,
-                    trans_date=self.exp_risk_rois.index[tdx],
+                    trans_date=curr_date,
                     estimated_risk_rois=estimated_risk_rois,
-                    estimated_risk_free_roi=estimated_risk_free_rois,
+                    estimated_risk_free_roi=estimated_risk_free_roi,
                     allocated_risk_wealth=allocated_risk_wealth,
                     allocated_risk_free_wealth=allocated_risk_free_wealth
                 )
                 # record results
-                self.set_specific_action(tdx=tdx, results=results)
+                # self.set_specific_action(tdx=tdx, results=results)
 
-                # buy and sell according results, shape: (n_stock, )
-                buy_amounts = results["buy_amounts"]
-                sell_amounts = results["sell_amounts"]
+                # # buy and sell according results, shape: (n_stock, )
+                buy_amounts = pg_results["buy_amounts"]
+                sell_amounts = pg_results["sell_amounts"]
+                estimated_var = pg_results["estimated_var"]
+                estimated_cvar = pg_results["estimated_var"]
 
             # generating scenarios failed, and no action in this period
             else:
+                self.estimated_risks.loc[curr_date, 'gen_scenario_fail'] = 1
+
                 # buy and sell nothing, shape:(n_stock, )
                 buy_amounts = pd.Series(np.zeros(self.n_stock),
                                         index=self.candidate_symbols)
                 sell_amounts = pd.Series(np.zeros(self.n_stock),
                                          index=self.candidate_symbols)
-                gen_scenario_error_cnt += 1
+                estimated_var = 0
+                estimated_cvar = 0
 
             # record buy and sell amounts
             self.buy_amounts_df.iloc[tdx] = buy_amounts
@@ -337,8 +349,8 @@ class BaseStagewisePortfolioSP(ValidMixin,
             buy_amounts_sum = buy_amounts.sum()
             sell_amounts_sum = sell_amounts.sum()
             self.trans_fee_loss += (
-                buy_amounts_sum * self.buy_trans_fee +
-                sell_amounts_sum * self.sell_trans_fee
+                    buy_amounts_sum * self.buy_trans_fee +
+                    sell_amounts_sum * self.sell_trans_fee
             )
 
             # buy and sell amounts consider the transaction cost
@@ -347,14 +359,15 @@ class BaseStagewisePortfolioSP(ValidMixin,
 
             # capital allocation
             self.risk_wealth_df.iloc[tdx] = (
-                (1 + self.exp_risk_rois.iloc[tdx]) *
-                allocated_risk_wealth +
-                self.buy_amounts_df.iloc[tdx] - self.sell_amounts_df.iloc[tdx]
+                    (1 + self.sim_risk_rois.iloc[tdx]) *
+                    allocated_risk_wealth +
+                    self.buy_amounts_df.iloc[tdx] - self.sell_amounts_df.iloc[
+                        tdx]
             )
             self.risk_free_wealth.iloc[tdx] = (
-                (1 + self.exp_risk_free_rois.iloc[tdx]) *
-                allocated_risk_free_wealth -
-                total_buy + total_sell
+                    (1 + self.sim_risk_free_rois.iloc[tdx]) *
+                    allocated_risk_free_wealth -
+                    total_buy + total_sell
             )
 
             # update wealth
@@ -364,7 +377,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
             logging.info("[{}/{}] {} {} OK, scenario err cnt:{} "
                          "cur_wealth:{:.2f}, {:.3f} secs".format(
                 tdx + 1, self.n_exp_period,
-                self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
+                self.sim_risk_rois.index[tdx].strftime("%Y%m%d"),
                 simulation_name,
                 gen_scenario_error_cnt,
                 (self.risk_wealth_df.iloc[tdx].sum() +
@@ -380,8 +393,8 @@ class BaseStagewisePortfolioSP(ValidMixin,
         reports = self.get_performance_report(
             simulation_name,
             self.candidate_symbols,
-            self.exp_risk_rois.index[0],
-            self.exp_risk_rois.index[edx],
+            self.sim_risk_rois.index[0],
+            self.sim_risk_rois.index[edx],
             self.buy_trans_fee,
             self.sell_trans_fee,
             (self.initial_risk_wealth.sum() + self.initial_risk_free_wealth),
@@ -393,7 +406,7 @@ class BaseStagewisePortfolioSP(ValidMixin,
         )
 
         # model additional elements to reports
-        reports['window_length'] = self.rolling_horizon
+        reports['window_length'] = self.rolling_window_size
         reports['n_scenario'] = self.n_scenario
         reports['buy_amounts_df'] = self.buy_amounts_df
         reports['sell_amounts_df'] = self.sell_amounts_df
@@ -402,15 +415,15 @@ class BaseStagewisePortfolioSP(ValidMixin,
             self.gen_scenario_fail.sum()
 
         # add simulation time
-        reports['simulation_time'] = time() - t0
+        reports['simulation_time'] = time.time() - t0
 
         # user specified  additional elements to reports
-        reports = self.add_results_to_reports(reports)
+        reports = self.add_to_reports(reports)
 
         logging.info("{} OK n_stock:{}, [{}-{}], {:.4f}.secs".format(
             simulation_name, self.n_stock,
-            self.exp_risk_rois.index[0],
-            self.exp_risk_rois.index[edx],
-            time() - t0))
+            self.sim_risk_rois.index[0],
+            self.sim_risk_rois.index[edx],
+            time.time() - t0))
 
         return reports

@@ -12,21 +12,24 @@ from portfolio_programming.statistics.risk_adjusted import (
     Sharpe, Sortino_full, Sortino_partial, maximum_drawdown)
 
 
-class PortfolioReportMixin(object):
+class PortfolioSPReportMixin(object):
     @staticmethod
     def get_performance_report(
-            simulation_name, symbols, start_date,
+            simulation_name, symbols, risk_free_symbol, start_date,
             end_date, buy_trans_fee, sell_trans_fee,
             initial_wealth, final_wealth, n_exp_period,
-            trans_fee_loss, wealth_df):
+            trans_fee_loss, wealth_df, amount_pnl,
+            estimated_risks
+        ):
         """
-        standard reports
+       simulation reports
 
         Parameters:
         ------------------
         simulation_name : string
         symbols: list of string
             the candidate symbols in the simulation
+        risk_free_symbol: string
         start_date, end_date: datetime.date
             the starting and ending days of the simulation
         buy_trans_fee, sell_trans_fee: float
@@ -37,6 +40,14 @@ class PortfolioReportMixin(object):
         wealth_df: pandas.DataFrame, shape:(n_exp_period, n_stock + 1)
             the wealth series of each symbols in the simulation.
             It includes the risky and risk-free asset.
+        amount_pnl : pandas.Panel, shape: (n_exp_period, n_stock+1, 3)
+            Buying, selling and transaction fee amount of each asset in each
+            period of the simulation.
+        estimated_risks: pandas.DataFrame, shape: (n_exp_period, 3)
+            The estimated CVaR, VaR and gen_scenario fail count in the
+            simulation.
+            The scenario-generating function may fail in generating
+            scenarios in some periods.
         """
         reports = dict()
 
@@ -44,6 +55,7 @@ class PortfolioReportMixin(object):
         reports['os_uname'] = "|".join(platform.uname())
         reports['simulation_name'] = simulation_name
         reports['symbols'] = symbols
+        reports['risk_free_symbol'] = risk_free_symbol
         reports['start_date'] = start_date
         reports['end_date'] = end_date
         reports['buy_trans_fee'] = buy_trans_fee
@@ -53,6 +65,8 @@ class PortfolioReportMixin(object):
         reports['n_exp_period'] = n_exp_period
         reports['trans_fee_loss'] = trans_fee_loss
         reports['wealth_df'] = wealth_df
+        reports['amount_pnl'] = amount_pnl
+        reports['estimated_risks'] = estimated_risks
 
         # analysis
         reports['n_stock'] = len(symbols)

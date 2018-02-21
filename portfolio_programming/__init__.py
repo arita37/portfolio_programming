@@ -6,7 +6,9 @@ License: GPL v3
 
 import platform
 import os
+import datetime as dt
 
+# data storage
 node_name = platform.node()
 
 if node_name == 'X220':
@@ -28,3 +30,7 @@ TAIEX_PANEL_PKL = os.path.join(TMP_DIR,
 
 # solver
 DEFAULT_SOLVER = 'cplex'
+
+# simulation
+SIM_START_DATE = dt.date(2005, 1, 3)
+SIM_END_DATE = dt.date(2014, 12, 31)

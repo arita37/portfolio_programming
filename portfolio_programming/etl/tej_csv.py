@@ -15,7 +15,7 @@ import pandas as pd
 
 def tej_csv_to_df(symbols, csv_dir, df_dir):
     """
-    extract data from csv
+    extract data from csv, and transforms the csv to dataframe
 
     Parameters:
     --------------

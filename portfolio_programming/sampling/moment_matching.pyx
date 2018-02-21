@@ -23,16 +23,12 @@ import scipy.optimize as spopt
 import scipy.stats as spstats
 from time import time
 
-cimport numpy as cnp
 from numpy.math cimport INFINITY
-
-ctypedef cnp.float64_t FLOAT_t
-ctypedef cnp.intp_t INTP_t
-
+cimport numpy as cnp
 
 cpdef heuristic_moment_matching(
-        cnp.ndarray[FLOAT_t, ndim=2] tgt_moments,
-        cnp.ndarray[FLOAT_t, ndim=2] tgt_corrs,
+        cnp.ndarray[cnp.float64_t, ndim=2] tgt_moments,
+        cnp.ndarray[cnp.float64_t, ndim=2] tgt_corrs,
         int n_scenario=200,
         int bias=False,
         double max_moment_err=1e-3,
@@ -61,7 +57,7 @@ cpdef heuristic_moment_matching(
 
     # parameters
     cdef:
-        INTP_t n_rv = tgt_moments.shape[0]
+        cnp.intp_t n_rv = tgt_moments.shape[0]
 
         # iteration for find good start samples
         int max_start_iter = 5
@@ -73,21 +69,22 @@ cpdef heuristic_moment_matching(
         int max_main_iter = 20
 
         # out mtx, for storing scenarios
-        cnp.ndarray[FLOAT_t, ndim=2] out_mtx = np.zeros((n_rv, n_scenario))
+        cnp.ndarray[cnp.float64_t, ndim=2] out_mtx = np.zeros(
+            (n_rv, n_scenario))
 
         # to generate samples Y with zero mean, and unit variance,
         # shape: (n_rv, 4)
-        cnp.ndarray[FLOAT_t, ndim=2] y_moments = np.zeros((n_rv, 4))
+        cnp.ndarray[cnp.float64_t, ndim=2] y_moments = np.zeros((n_rv, 4))
 
         double cubic_err, best_cub_err
         double moment_err, corrs_err
         int cub_iter, idx
 
-        cnp.ndarray[FLOAT_t, ndim=1] ex = np.empty(4)
-        cnp.ndarray[FLOAT_t, ndim=1] ey = np.empty(12)
-        cnp.ndarray[FLOAT_t, ndim=1] tmp_out = np.zeros(n_scenario)
-        cnp.ndarray[FLOAT_t, ndim=1] x_init
-        cnp.ndarray[FLOAT_t, ndim=2] c_lower, out_corrs, co_inv, l_vec
+        cnp.ndarray[cnp.float64_t, ndim=1] ex = np.empty(4)
+        cnp.ndarray[cnp.float64_t, ndim=1] ey = np.empty(12)
+        cnp.ndarray[cnp.float64_t, ndim=1] tmp_out = np.zeros(n_scenario)
+        cnp.ndarray[cnp.float64_t, ndim=1] x_init
+        cnp.ndarray[cnp.float64_t, ndim=2] c_lower, out_corrs, co_inv, l_vec
 
         double ns = float(n_scenario)
         double ns_m1 = ns - 1.
@@ -225,7 +222,8 @@ cpdef heuristic_moment_matching(
     out_mtx = (out_mtx * tgt_moments[:, 1][:, np.newaxis] +
                tgt_moments[:, 0][:, np.newaxis])
 
-    cdef cnp.ndarray[FLOAT_t, ndim=2] out_central_moments = np.empty((n_rv, 4))
+    cdef cnp.ndarray[cnp.float64_t, ndim=2] out_central_moments = np.empty(
+        (n_rv, 4))
     out_central_moments[:, 0] = out_mtx.mean(axis=1)
     if bias:
         out_central_moments[:, 1] = out_mtx.std(axis=1)
@@ -270,10 +268,9 @@ cpdef heuristic_moment_matching(
             time() - t0))
     return out_mtx
 
-
-cpdef cubic_function(cnp.ndarray[FLOAT_t, ndim=1] cubic_params,
-                     cnp.ndarray[FLOAT_t, ndim=1] sample_moments,
-                     cnp.ndarray[FLOAT_t, ndim=1] tgt_moments):
+cpdef cubic_function(cnp.ndarray[cnp.float64_t, ndim=1] cubic_params,
+                     cnp.ndarray[cnp.float64_t, ndim=1] sample_moments,
+                     cnp.ndarray[cnp.float64_t, ndim=1] tgt_moments):
     """
     Parameters:
     ----------------
@@ -288,7 +285,7 @@ cpdef cubic_function(cnp.ndarray[FLOAT_t, ndim=1] cubic_params,
         double c2, c3, c4
         double d2, d3, d4
         double ab, ac, ad, acd, bd, bc, bcd, cd
-        cnp.ndarray[FLOAT_t, ndim=1] ex, ey
+        cnp.ndarray[cnp.float64_t, ndim=1] ex, ey
         double v1, v2, v3, v4
 
     a, b, c, d = cubic_params
@@ -358,9 +355,9 @@ cpdef cubic_function(cnp.ndarray[FLOAT_t, ndim=1] cubic_params,
 
     return v1, v2, v3, v4
 
-cdef error_statistics(cnp.ndarray[FLOAT_t, ndim=2] out_mtx,
-                      cnp.ndarray[FLOAT_t, ndim=2] tgt_moments,
-                      cnp.ndarray[FLOAT_t, ndim=2] tgt_corrs):
+cdef error_statistics(cnp.ndarray[cnp.float64_t, ndim=2] out_mtx,
+                      cnp.ndarray[cnp.float64_t, ndim=2] tgt_moments,
+                      cnp.ndarray[cnp.float64_t, ndim=2] tgt_corrs):
     """
     Parameters:
     ----------------
@@ -369,9 +366,9 @@ cdef error_statistics(cnp.ndarray[FLOAT_t, ndim=2] out_mtx,
     tgt_corrs: numpy.array, shape: (n_rv, n_rv)
     """
     cdef:
-        INTP_t n_rv = out_mtx.shape[0]
-        cnp.ndarray[FLOAT_t, ndim=2] out_moments = np.zeros((n_rv, 4))
-        cnp.ndarray[FLOAT_t, ndim=2] out_corrs = np.corrcoef(out_mtx)
+        cnp.intp_t n_rv = out_mtx.shape[0]
+        cnp.ndarray[cnp.float64_t, ndim=2] out_moments = np.zeros((n_rv, 4))
+        cnp.ndarray[cnp.float64_t, ndim=2] out_corrs = np.corrcoef(out_mtx)
         double moments_err = INFINITY, corrs_err = INFINITY
         int idx
 
@@ -383,8 +380,8 @@ cdef error_statistics(cnp.ndarray[FLOAT_t, ndim=2] out_mtx,
 
     return moments_err, corrs_err
 
-cdef rmse(cnp.ndarray[FLOAT_t, ndim=2] src_arr,
-          cnp.ndarray[FLOAT_t, ndim=2] tgt_arr):
+cdef rmse(cnp.ndarray[cnp.float64_t, ndim=2] src_arr,
+          cnp.ndarray[cnp.float64_t, ndim=2] tgt_arr):
     """
     root mean square error of two arrays
 

@@ -7,7 +7,7 @@
 
 """
 Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v2
+License: GPL v3
 """
 
 from time import time
@@ -17,11 +17,9 @@ import pandas as pd
 import scipy.stats as spstats
 from pyomo.environ import *
 
-from PySPPortfolio.pysp_portfolio import *
-from scenario.c_moment_matching import heuristic_moment_matching
-from base_model import (SPTradingPortfolio, )
 import portfolio_programming as pp
-
+import portfolio_programming.sampling.moment_matching as mm
+from .portfolio_sp import (BaseStagewisePortfolioSP, )
 
 cimport numpy as cnp
 ctypedef cnp.float64_t FLOAT_t
