@@ -9,10 +9,10 @@ import numpy as np
 import scipy.stats as spstats
 import pandas as pd
 from portfolio_programming.sampling.moment_matching import (
-    heuristic_moment_matching as HMM)
+    heuristic_moment_matching as HeMM)
 
 
-def test_biased_HMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
+def test_biased_HeMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
     """
     The default standard deviation, skewness, and kurtosis of numpy methods
     are biased estimator.
@@ -29,8 +29,8 @@ def test_biased_HMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
     tgt_corrs = np.corrcoef(data)
 
     t0 = time()
-    scenarios = HMM(tgt_moments, tgt_corrs, n_scenario, bias=True)
-    print("biased HMM (n_rv, n_scenario):({}, {}) used {:.4f} secs".format(
+    scenarios = HeMM(tgt_moments, tgt_corrs, n_scenario, bias=True)
+    print("biased HeMM (n_rv, n_scenario):({}, {}) used {:.4f} secs".format(
         n_rv, n_scenario, time() - t0))
 
     # scenario statistics
@@ -46,7 +46,7 @@ def test_biased_HMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
     np.testing.assert_array_almost_equal(tgt_corrs, res_corrs, precision)
 
 
-def test_unbiased_HMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
+def test_unbiased_HeMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
     data = np.random.rand(n_rv, n_sample)
 
     # unbiased input statistics
@@ -58,8 +58,8 @@ def test_unbiased_HMM(n_rv=50, n_sample=100, n_scenario=500, precision=2):
     tgt_corrs = np.corrcoef(data)
 
     t0 = time()
-    scenarios = HMM(tgt_moments, tgt_corrs, n_scenario, bias=False)
-    print("unbiased HMM (n_rv, n_scenario):({}, {}) used {:.4f} secs".format(
+    scenarios = HeMM(tgt_moments, tgt_corrs, n_scenario, bias=False)
+    print("unbiased HeMM (n_rv, n_scenario):({}, {}) used {:.4f} secs".format(
         n_rv, n_scenario, time() - t0))
 
     # scenarios statistics
