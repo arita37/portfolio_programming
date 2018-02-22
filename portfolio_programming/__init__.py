@@ -28,9 +28,13 @@ TAIEX_SYMBOL_JSON = os.path.join(DATA_DIR,
 TAIEX_PANEL_PKL = os.path.join(TMP_DIR,
                              'TAIEX_20050103_50largest_listed_market_cap_panel.pkl')
 
+SCENARIO_SET_DIR = TMP_DIR
+
 # solver
-DEFAULT_SOLVER = 'cplex'
+PROG_SOLVER = 'cplex'
 
 # simulation
-SIM_START_DATE = dt.date(2005, 1, 3)
-SIM_END_DATE = dt.date(2014, 12, 31)
+EXP_START_DATE = dt.date(2005, 1, 3)
+EXP_END_DATE = dt.date(2014, 12, 31)
+BUY_TRANS_FEE = 0.001425
+SELL_TRANS_FEE = 0.001425

@@ -16,3 +16,5 @@ mathematical programming for risky asset portfolio
     - pytorch
 
 
+---
+nosetests .
