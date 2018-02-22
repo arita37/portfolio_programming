@@ -26,12 +26,6 @@ from Cython.Build import cythonize
 import numpy as np
 
 extensions = [
-    # Extension(
-    #           "base_model",
-    #           ["base_model.pyx",],
-    #           include_dirs = [np.get_include()],
-    # ),
-
     Extension(
               "spsp_cvar",
               ["spsp_cvar.pyx",],
