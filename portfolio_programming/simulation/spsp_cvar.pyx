@@ -288,20 +288,22 @@ def spsp_cvar(candidate_symbols,
         chosen_symbols = pd.Series([instance.chosen[mdx].value
                                     for mdx in range(n_stock)],
                                    index=candidate_symbols)
+    elif setting == "compact":
+        chosen_symbols = pd.Series([1 for mdx in range(n_stock)],
+                                   index=candidate_symbols)
 
     if verbose:
-        print("spsp_cvar {} OK, {:.3f} secs".format(
-            time() - t0, setting))
+        print("spsp_cvar {} OK, {:.3f} secs".format(setting, time() -t0))
 
     return {
         "buy_amounts": buy_amounts,
         "sell_amounts": sell_amounts,
-        "estimated_var": estimated_var,
-        "estimated_cvar": estimated_cvar,
-        "estimated_ev_var": estimated_ev_var,
-        "estimated_ev_cvar": estimated_ev_cvar,
-        "estimated_eev_cvar": estimated_eev_cvar,
-        "vss": vss,
+        "VaR": estimated_var,
+        "CVaR": estimated_cvar,
+        "EV_VaR": estimated_ev_var,
+        "EV_CVaR": estimated_ev_cvar,
+        "EEV_CVaR": estimated_eev_cvar,
+        "VSS": vss,
         "chosen_symbols": chosen_symbols,
     }
 
@@ -469,16 +471,16 @@ class SPSP_CVaR(ValidMixin):
             simulation.
             The risk-free asset symbol is self.risk_free_symbol
 
-        amount_pnl : pandas.Panel, shape: (n_exp_period. n_stock+1, 3)
-            Buying, selling and transaction fee amount of each asset in each
+        amount_pnl : pandas.Panel, shape: (n_exp_period. n_stock+1, 4)
+            Buying, selling, transaction fee and chosen of each asset in each
             period of the simulation.
-
 
         estimated_risks: pandas.DataFrame, shape: (n_exp_period, 3)
             The estimated CVaR, VaR and number of gen_scenario_fail in
             the simulation.
             The scenario-generating function may fail in generating
             scenarios in some periods.
+
         """
 
         # verify candidate_symbols
@@ -600,13 +602,13 @@ class SPSP_CVaR(ValidMixin):
         ---------------
         scenario_pnl: pandas.Panel, shape: (n_exp_period, n_stock, n_scenario)
         """
-        name = "scenario-set-idx{}_{}_{}_Mc{}_h{}_s{}.pkl".format(
-            self.scenario_set_idx,
-            pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
-            pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
-            self.n_stock,
-            self.window_length,
-            self.n_scenario
+        name = pp.SCENARIO_NAME_FORMAT.format(
+            sdx=self.scenario_set_idx,
+            scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+            scecnario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+            n_stock=self.n_stock,
+            rolling_window_size=self.rolling_window_size,
+            n_scenario=self.n_scenario
         )
 
         scenario_path = os.path.join(pp.SCENARIO_SET_DIR, name)
@@ -874,6 +876,10 @@ class SPSP_CVaR(ValidMixin):
             total_buy = (buy_amounts_sum * (1 + self.buy_trans_fee))
             total_sell = (sell_amounts_sum * (1 - self.sell_trans_fee))
 
+            # record chosen symbols
+            self.amounts_pnl.loc[curr_date, :, 'chosen'] = pg_results[
+                'chosen_symbols']
+
             # capital allocation
             self.wealth_df.loc[curr_date, self.candidate_symbols] = (
                     (1 + self.exp_risk_rois.loc[curr_date]) *
@@ -893,7 +899,14 @@ class SPSP_CVaR(ValidMixin):
             allocated_risk_free_wealth = self.risk_free_wealth.loc[
                 curr_date, self.risk_free_symbol]
 
-            logging.info("{} [{}/{}] {}"
+            # record risks
+            for col in ("VaR", "CVaR", "EV_VaR", "EV_CVaR", "EEV_CVaR", "VSS"):
+                self.estimated_risks.loc[curr_date, col] = pg_results[col]
+
+            # record chosen symbols
+
+
+            print("{} [{}/{}] {}"
                          "curr_wealth:{:.2f}, {:.3f} secs".format(
                 simulation_name,
                 tdx + 1,
@@ -934,11 +947,11 @@ class SPSP_CVaR(ValidMixin):
         # add simulation time
         reports['simulation_time'] = time() - t0
 
-        logging.info("{} OK  [{}-{}], {:.4f}.secs".format(
+        print("{} OK [{}-{}], {:.4f} secs".format(
             simulation_name, self.n_stock,
             self.exp_start_date,
             self.exp_end_date,
-            time.time() - t0)
+            time() - t0)
         )
 
         return reports

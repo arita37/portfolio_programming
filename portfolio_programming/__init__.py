@@ -22,13 +22,12 @@ else:
 
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 
+# candidate_symbol sets
 TAIEX_SYMBOL_JSON = os.path.join(DATA_DIR,
                                  'TAIEX_20050103_50largest_listed_market_cap.json')
 
 TAIEX_PANEL_PKL = os.path.join(TMP_DIR,
                              'TAIEX_20050103_50largest_listed_market_cap_panel.pkl')
-
-SCENARIO_SET_DIR = TMP_DIR
 
 # solver
 PROG_SOLVER = 'cplex'
@@ -36,7 +35,18 @@ PROG_SOLVER = 'cplex'
 # simulation
 EXP_START_DATE = dt.date(2005, 1, 3)
 EXP_END_DATE = dt.date(2014, 12, 31)
-SCENARIO_START_DATE = EXP_START_DATE
-SCENARIO_END_DATE = EXP_END_DATE
 BUY_TRANS_FEE = 0.001425
 SELL_TRANS_FEE = 0.001425
+
+# scenario
+# SCENARIO_SET_DIR = TMP_DIR
+SCENARIO_SET_DIR = os.path.join(DATA_DIR, 'scenario')
+SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
+                       "scenario-set-idx{sdx}_" \
+                       "{scenario_start_date}_" \
+                       "{scenario_end_date}_" \
+                       "Mc{n_stock}_" \
+                       "h{rolling_window_size}_s{n_scenario}.pkl"
+SCENARIO_START_DATE = dt.date(2005, 1, 3)
+SCENARIO_END_DATE = dt.date(2014, 12, 31)
+
