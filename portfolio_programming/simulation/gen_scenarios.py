@@ -237,6 +237,8 @@ def checking_existed_scenario_names(scenario_set_dir=None):
 def wait_watching_stdout(ar, dt=1, truncate=1000):
     from IPython.display import clear_output
     import sys
+    import platform
+    import os
     from time import sleep
 
     while not ar.ready():
@@ -245,12 +247,15 @@ def wait_watching_stdout(ar, dt=1, truncate=1000):
             continue
         # clear_output doesn't do much in terminal environments
         clear_output()
-        print ('-' * 30)
-        print ("{:.3f}s elapsed".format(ar.elapsed))
+        print ('-' * 50)
+        print ("node:{} pid:{} {:.3f}s elapsed".format(
+            platform.node(),
+            os.getpid(),
+            ar.elapsed))
 
         for stdout in ar.stdout:
             if stdout:
-                print (stdout[-truncate:])
+                print(stdout[-truncate:])
         sys.stdout.flush()
         sleep(dt)
 
