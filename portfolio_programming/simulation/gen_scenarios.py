@@ -287,7 +287,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
             param)) for param in params]
 
-    if __name__ == '__main__':
+if __name__ == '__main__':
     # generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
     #                          5, 50)
-        dispatch_scenario_names()
+    dispatch_scenario_names()
