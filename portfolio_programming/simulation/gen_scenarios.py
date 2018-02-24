@@ -250,7 +250,7 @@ def wait_watching_stdout(ar, dt=1, truncate=1000):
 
         for stdout in ar.stdout:
             if stdout:
-                print (stdout)
+                print (stdout[-truncate:])
         sys.stdout.flush()
         sleep(dt)
 
@@ -276,10 +276,11 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
     dview = rc.load_balanced_view()
 
-    dview.map_sync(lambda arg:
+    ar = dview.map_async(lambda arg:
               portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
                       *arg),
                   params)
+    wait_watching_stdout(ar)
 
 
 
