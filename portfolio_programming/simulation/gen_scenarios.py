@@ -271,11 +271,11 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         return sys.path
 
     print('Remote: ', view.map_sync(show_remote_sys_path, range(1)))
-    ar = view.map_async(lambda arg:
+    view.map_sync(lambda arg:
               portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
                       *arg),
                   params)
-    wait_watching_stdout(ar)
+
 
 
 if __name__ == '__main__':
