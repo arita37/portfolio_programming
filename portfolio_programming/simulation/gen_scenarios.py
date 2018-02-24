@@ -258,7 +258,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     params = unfinished_names.values()
 
     # task interface
-    rc = ipp.Client()
+    rc = ipp.Client(profile='ssh')
     view = rc[:]
     # view = rc.load_balanced_view()
     view.use_dill()
