@@ -260,7 +260,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     # task interface
     rc = ipp.Client(profile='ssh')
     view = rc[:]
-    # view = rc.load_balanced_view()
+
     view.use_dill()
 
     with view.sync_imports():
@@ -271,7 +271,10 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         return sys.path
 
     print('Remote: ', view.map_sync(show_remote_sys_path, range(1)))
-    view.map_sync(lambda arg:
+
+    dview = rc.load_balanced_view()
+
+    dview.map_sync(lambda arg:
               portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
                       *arg),
                   params)
