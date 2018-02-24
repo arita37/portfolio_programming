@@ -285,7 +285,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     dview = rc.load_balanced_view()
     ar_list = [dview.apply_async(
         portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
-            param)) for param in params]
+            *param)) for param in params]
 
 if __name__ == '__main__':
     # generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
