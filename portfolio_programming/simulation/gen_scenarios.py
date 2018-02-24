@@ -17,6 +17,7 @@ import glob
 import json
 import os
 from time import time
+
 import ipyparallel as ipp
 import numpy as np
 import pandas as pd
@@ -247,8 +248,8 @@ def wait_watching_stdout(ar, dt=1, truncate=1000):
             continue
         # clear_output doesn't do much in terminal environments
         clear_output()
-        print ('-' * 50)
-        print ("node:{} pid:{} {:.3f}s elapsed".format(
+        print('-' * 50)
+        print("node:{} pid:{} {:.3f}s elapsed".format(
             platform.node(),
             os.getpid(),
             ar.elapsed))
@@ -258,6 +259,7 @@ def wait_watching_stdout(ar, dt=1, truncate=1000):
                 print(stdout[-truncate:])
         sys.stdout.flush()
         sleep(dt)
+
 
 def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     unfinished_names = checking_existed_scenario_names(scenario_set_dir)
@@ -277,20 +279,15 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     def show_remote_sys_path(_):
         return sys.path
 
+
     print('Remote: ', view.map_sync(show_remote_sys_path, range(1)))
 
     dview = rc.load_balanced_view()
+    ar_list = [dview.apply_async(
+        portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
+            param)) for param in params]
 
-    ar = dview.map_async(lambda arg:
-              portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
-                      *arg),
-                  params)
-    wait_watching_stdout(ar)
-
-
-
-if __name__ == '__main__':
+    if __name__ == '__main__':
     # generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
     #                          5, 50)
-    dispatch_scenario_names()
-
+        dispatch_scenario_names()
