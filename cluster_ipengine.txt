@@ -1,0 +1,2 @@
+# scp chenhh@par49.cse.nsysu.edu.tw:/home/chenhh/.ipython/profile_default/security/ipcontroller-engine.json .
+ipengine --ip=140.117.168.49 --port=8957  --work-dir='/home/chenhh/workspace_pycharm/portfolio_programming' --enginessh='chenhh@par49.cse.nsysu.edu.tw'

@@ -65,8 +65,11 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
         fout_path = os.path.join(df_dir, '{}_df.pkl'.format(symbol))
         df.to_pickle(fout_path)
 
-        print("[{}/{}]{}.csv to dataframe OK, {:.4f} secs".format(
-            rdx + 1, len(symbols), symbol, time() - t0))
+        print("[{}/{}]{} csv to dataframe OK dates:{}_{}, {:.4f} secs".format(
+            rdx + 1, len(symbols), symbol,
+            df.index[0],
+            df.index[-1],
+            time() - t0))
 
     print("csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
 
@@ -151,7 +154,7 @@ def run_tej_csv_to_panel():
     df_dir = pp.TMP_DIR
 
     # manual setting
-    trim_start_date = dt.date(2005, 1, 3)
+    trim_start_date = dt.date(2000, 1, 3)
     trim_end_date = dt.date(2017, 6, 30)
 
     # run

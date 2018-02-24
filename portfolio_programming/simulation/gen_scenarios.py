@@ -2,17 +2,24 @@
 """
 Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
+
+https://stackoverflow.com/questions/37480402/how-to-correctly-import-modules-on-engines-in-jupyter-notebook-for-parallel-proc
+https://stackoverflow.com/questions/18570071/import-custom-modules-on-ipython-parallel-engines-with-sync-imports
+
+https://stackoverflow.com/questions/18086299/real-time-output-from-engines-in-ipython-parallel
+
+https://ask.helplib.com/parallel-processing/post_5405801
+
+https://stackoverflow.com/questions/23145650/how-to-setup-ssh-tunnel-for-ipython-cluster-ipcluster/31479269
 """
 
 import glob
-import os
-import platform
 import json
+import os
 from time import time
-
+import ipyparallel as ipp
 import numpy as np
 import pandas as pd
-import ipyparallel as ipp
 
 import portfolio_programming as pp
 from portfolio_programming.sampling.moment_matching import (
@@ -24,11 +31,11 @@ def generating_scenarios_pnl(scenario_set_idx,
                              scenario_end_date,
                              n_stock,
                              rolling_window_size,
-                             n_scenario=200,
+                             n_scenario,
                              retry_cnt=5):
     """
     generating scenarios panel
- 
+
     Parameters:
     ------------------
     n_stock: positive integer, number of stocks in the candidate symbols
@@ -36,6 +43,15 @@ def generating_scenarios_pnl(scenario_set_idx,
     n_scenario: integer, number of scenarios to generating
     etry_cnt: positive integer, maximum retry of scenarios
     """
+
+    # import for parallel processing
+    # import os
+    # from time import time
+    # import pandas as pd
+    # import portfolio_programming as pp
+    # from portfolio_programming.sampling.moment_matching import (
+    #     heuristic_moment_matching as HeMM)
+
     t0 = time()
 
     # scenario dir
@@ -43,16 +59,16 @@ def generating_scenarios_pnl(scenario_set_idx,
         os.makedirs(pp.SCENARIO_SET_DIR)
 
     scenario_file = pp.SCENARIO_NAME_FORMAT.format(
-            sdx = scenario_set_idx,
-            scenario_start_date=scenario_start_date.strftime("%y%m%d"),
-            scenario_end_date= scenario_end_date.strftime("%y%m%d"),
-            n_stock=  n_stock,
-            rolling_window_size= rolling_window_size,
-            n_scenario=n_scenario
+        sdx=scenario_set_idx,
+        scenario_start_date=scenario_start_date.strftime("%y%m%d"),
+        scenario_end_date=scenario_end_date.strftime("%y%m%d"),
+        n_stock=n_stock,
+        rolling_window_size=rolling_window_size,
+        n_scenario=n_scenario
     )
 
     scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
-    if os.path.exists( scenario_path):
+    if os.path.exists(scenario_path):
         print("{} exists.".format(scenario_file))
         return
 
@@ -79,7 +95,7 @@ def generating_scenarios_pnl(scenario_set_idx,
     # experiment trans_dates
     sc_start_idx = trans_dates.get_loc(scenario_start_date)
     sc_end_idx = trans_dates.get_loc(scenario_end_date)
-    sc_trans_dates = trans_dates[sc_start_idx: sc_end_idx+1]
+    sc_trans_dates = trans_dates[sc_start_idx: sc_end_idx + 1]
     n_sc_period = len(sc_trans_dates)
 
     # estimating moments and correlation matrix
@@ -88,7 +104,7 @@ def generating_scenarios_pnl(scenario_set_idx,
     # output scenario panel, shape: (n_sc_period, n_stock, n_scenario)
     scenario_pnl = pd.Panel(
         np.zeros((n_sc_period, n_stock, n_scenario)),
-        items= sc_trans_dates,
+        items=sc_trans_dates,
         major_axis=candidate_symbols
     )
 
@@ -131,9 +147,10 @@ def generating_scenarios_pnl(scenario_set_idx,
                                            max_moment_err,
                                            max_corr_err)
                     except ValueError as e:
-                        print ("relaxing max err: {}_{}_max_mom_err:{}, "
-                               "max_corr_err{}".format( sc_date, parameters,
-                                max_moment_err, max_corr_err))
+                        print("relaxing max err: {}_{}_max_mom_err:{}, "
+                              "max_corr_err{}".format(sc_date, parameters,
+                                                      max_moment_err,
+                                                      max_corr_err))
                     else:
                         # generating scenarios success
                         break
@@ -150,9 +167,9 @@ def generating_scenarios_pnl(scenario_set_idx,
         scenario_pnl.loc[sc_date, :, :] = scenario_df
 
         # clear est data
-        print ("{} [{}/{}] {} OK, {:.4f} secs".format(
+        print("{} [{}/{}] {} OK, {:.4f} secs".format(
             sc_date.strftime("%Y%m%d"),
-            tdx+1,
+            tdx + 1,
             n_sc_period,
             parameters,
             time() - t1))
@@ -160,10 +177,10 @@ def generating_scenarios_pnl(scenario_set_idx,
     # write scenario
     scenario_pnl.to_pickle(scenario_path)
 
-    print("generating scenarios {} OK, {:.3f} secs".format(
+    msg = ("generating scenarios {} OK, {:.3f} secs".format(
         parameters, time() - t0))
-
-
+    print(msg)
+    return msg
 
 
 def _all_scenario_names():
@@ -214,159 +231,55 @@ def checking_existed_scenario_names(scenario_set_dir=None):
     # unfinished params
     return all_names
 
-#
-# def checking_working_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR,
-#                                     log_file='working.pkl',
-#                                     retry_cnt=5):
-#     """
-#     if a parameter is under working and not write to pkl,
-#     it is recorded to a file
-#     """
-#     # get all params
-#     all_names = _all_scenario_names()
-#
-#     # storing a dict, key: param, value: platform_name
-#     log_path = os.path.join(scenario_set_dir, log_file)
-#
-#     # no working
-#     if not os.path.exists(log_path):
-#         return all_names
-#
-#     for retry in range(retry_cnt):
-#         try:
-#             # preventing multi-process write file at the same time
-#             wokring_names = pd.read_pickle(log_path)
-#         except IOError as e:
-#             if retry == retry_cnt:
-#                 raise Exception(e)
-#             else:
-#                 print("check working retry: {}, {}".format(retry + 1, e))
-#                 time.sleep(np.random.rand() * 5)
-#
-#     for node, name in wokring_names.items():
-#         val = all_names.pop(name, None)
-#         if val:
-#             print("{} under processing on {}.".format(val, node))
-#
-#     # unfinished params
-#     return all_names
+
+def wait_watching_stdout(ar, dt=1, truncate=1000):
+    from IPython.display import clear_output
+    import sys
+    from time import sleep
+
+    while not ar.ready():
+        stdouts = ar.stdout
+        if not any(stdouts):
+            continue
+        # clear_output doesn't do much in terminal environments
+        clear_output()
+        print ('-' * 30)
+        print ("{:.3f}s elapsed".format(ar.elapsed))
+
+        for stdout in ar.stdout:
+            if stdout:
+                print (stdout)
+        sys.stdout.flush()
+        sleep(dt)
 
 def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
-    # reading working pkl
-    log_path = os.path.join(scenario_set_dir)
-    existed_names = checking_existed_scenario_names(scenario_set_dir)
-    unfinished_names = existed_names.intersection(existed_names)
+    unfinished_names = checking_existed_scenario_names(scenario_set_dir)
     print("number of unfinished scenario: {}".format(len(unfinished_names)))
+    params = unfinished_names.values()
 
     # task interface
     rc = ipp.Client()
-    #lview = rc.load_balanced_view()
-    dview = rc[:]
+    view = rc[:]
+    # view = rc.load_balanced_view()
+    view.use_dill()
 
+    with view.sync_imports():
+        import sys
+        import portfolio_programming.simulation.gen_scenarios
 
+    def show_remote_sys_path(_):
+        return sys.path
 
-    while len(unfinished_names):
-        # each loop we have to
-        existed_names = checking_existed_scenario_names(scenario_set_dir)
-        working_names = checking_working_scenario_names(scenario_set_dir,
-                                                        log_file, retry_cnt)
-        unfinished_names = existed_names.intersection(working_names)
-
-        print("current unfinished scenarios: {}".format(len(unfinished_names)))
-
-        param = unfinished_names.pop()
-        _, _, stock, win, scenario, biased, _ = param.split('_')
-        n_stock = int(stock[stock.rfind('m') + 1:])
-        win_length = int(win[win.rfind('w') + 1:])
-        n_scenario = int(scenario[scenario.rfind('s') + 1:])
-
-        # log  parameter to file
-        if not os.path.exists(log_path):
-            working_dict = {}
-        else:
-            for retry in xrange(retry_cnt):
-                try:
-                    # preventing multi-process write file at the same time
-                    working_dict = pd.read_pickle(log_path)
-                except IOError as e:
-                    if retry == retry_cnt - 1:
-                        raise Exception(e)
-                    else:
-                        print("working retry: {}, {}".format(retry + 1, e))
-                        time.sleep(np.random.rand() * 5)
-
-        working_dict[param] = platform.node()
-        for retry in xrange(retry_cnt):
-            try:
-                # preventing multi-process write file at the same time
-                pd.to_pickle(working_dict, log_path)
-            except IOError as e:
-                if retry == retry_cnt - 1:
-                    raise Exception(e)
-                else:
-                    print("working retry: {}, {}".format(retry + 1, e))
-                    time.sleep(np.random.rand() * 5)
-
-        # generating scenarios
-        try:
-            print("gen scenario: {}".format(param))
-            generating_scenarios_pnl(n_stock, win_length, n_scenario, bias)
-        except Exception as e:
-            print
-            param, e
-        finally:
-            for retry in xrange(retry_cnt):
-                try:
-                    # preventing multi-process write file at the same time
-                    working_dict = pd.read_pickle(log_path)
-                except IOError as e:
-                    if retry == retry_cnt - 1:
-                        raise Exception(e)
-                    else:
-                        print("working retry: {}, {}".format(retry + 1, e))
-                        time.sleep(np.random.rand() * 5)
-
-            if param in working_dict.keys():
-                del working_dict[param]
-            else:
-                print("can't find {} in working dict.".format(param))
-            for retry in xrange(retry_cnt):
-                try:
-                    # preventing multi-process write file at the same time
-                    pd.to_pickle(working_dict, log_path)
-                except IOError as e:
-                    if retry == retry_cnt - 1:
-                        raise Exception(e)
-                    else:
-                        print("finally retry: {}, {}".format(retry + 1, e))
-                        time.sleep(2)
-
-
-def read_working_parameters():
-    scenario_path = os.path.join(EXP_SP_PORTFOLIO_DIR, 'scenarios')
-    log_file = 'working.pkl'
-    file_path = os.path.join(scenario_path, log_file)
-
-    if not os.path.exists(file_path):
-        print("{} not exists.".format(file_path))
-    else:
-        working_dict = pd.read_pickle(file_path)
-        for param, node in working_dict.items():
-            print
-            param, node
+    print('Remote: ', view.map_sync(show_remote_sys_path, range(1)))
+    ar = view.map_async(lambda arg:
+              portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
+                      *arg),
+                  params)
+    wait_watching_stdout(ar)
 
 
 if __name__ == '__main__':
-    generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
-                             5, 50)
-    # import argparse
-    #
-    # parser = argparse.ArgumentParser()
-    # group = parser.add_mutually_exclusive_group()
-    # group.add_argument("-b", "--bias", action='store_true')
-    # group.add_argument("-u", "--unbias", action='store_true')
-    # args = parser.parse_args()
-    # if args.bias:
-    #     dispatch_scenario_names(bias_estimator=True)
-    # elif args.unbias:
-    #     dispatch_scenario_names(bias_estimator=False)
+    # generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
+    #                          5, 50)
+    dispatch_scenario_names()
+
