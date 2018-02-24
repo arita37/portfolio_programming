@@ -32,7 +32,8 @@ def generating_scenarios_pnl(scenario_set_idx,
                              n_stock,
                              rolling_window_size,
                              n_scenario,
-                             retry_cnt=5):
+                             retry_cnt=5,
+                             print_interval=10):
     """
     generating scenarios panel
 
@@ -167,12 +168,13 @@ def generating_scenarios_pnl(scenario_set_idx,
         scenario_pnl.loc[sc_date, :, :] = scenario_df
 
         # clear est data
-        print("{} [{}/{}] {} OK, {:.4f} secs".format(
-            sc_date.strftime("%Y%m%d"),
-            tdx + 1,
-            n_sc_period,
-            parameters,
-            time() - t1))
+        if tdx % print_interval == 0:
+            print("{} [{}/{}] {} OK, {:.4f} secs".format(
+                sc_date.strftime("%Y%m%d"),
+                tdx + 1,
+                n_sc_period,
+                parameters,
+                time() - t1))
 
     # write scenario
     scenario_pnl.to_pickle(scenario_path)
