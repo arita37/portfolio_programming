@@ -17,7 +17,7 @@ def run_SPSP_CVaR():
     candidate_symbols = json.load(open(pp.TAIEX_SYMBOL_JSON))[:n_stock]
     pnl = pd.read_pickle(pp.TAIEX_PANEL_PKL)
     risky_rois = pnl.loc[pp.EXP_START_DATE:pp.EXP_END_DATE,
-                 candidate_symbols, 'simple_roi']
+                 candidate_symbols, 'simple_roi'].T
 
     n_exp_dates = len(risky_rois.index)
     risk_free_rois = pd.Series(np.zeros(n_exp_dates), risky_rois.index)
