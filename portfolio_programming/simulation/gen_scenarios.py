@@ -170,7 +170,9 @@ def generating_scenarios_pnl(scenario_set_idx,
 
         # clear est data
         if tdx % print_interval == 0:
-            print("{} [{}/{}] {} OK, {:.4f} secs".format(
+            print("{}_{}, {} [{}/{}] {} OK, {:.4f} secs".format(
+                platform.node(),
+                os.getpid(),
                 sc_date.strftime("%Y%m%d"),
                 tdx + 1,
                 n_sc_period,
