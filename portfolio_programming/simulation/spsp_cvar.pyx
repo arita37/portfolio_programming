@@ -731,7 +731,6 @@ class SPSP_CVaR(ValidMixin):
             rolling_window_size,
             n_scenario,
             alpha,
-            scenario_path,
             wealth_df,
             amount_pnl,
             estimated_risks
