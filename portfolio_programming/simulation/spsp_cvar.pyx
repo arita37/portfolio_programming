@@ -203,6 +203,8 @@ def spsp_cvar(candidate_symbols,
                               for mdx in range(n_stock)],
                              index=candidate_symbols)
 
+
+
     # value at risk (estimated)
     cdef double estimated_var = instance.Z.value
     cdef double estimated_cvar = instance.cvar_objective()
@@ -408,7 +410,8 @@ class SPSP_CVaR(ValidMixin):
                  int n_scenario=200,
                  double alpha=0.05,
                  int scenario_set_idx=1,
-                 int verbose=False):
+                 int verbose=False,
+                 int print_interval=10):
         """
         stagewise portfolio stochastic programming  model
 
@@ -573,6 +576,9 @@ class SPSP_CVaR(ValidMixin):
         self.valid_range_value("alpha", alpha, 0, 1)
         self.alpha = float(alpha)
 
+        self.valid_nonnegative_value("print_interval", print_interval)
+        self.print_interval = print_interval
+
         # load scenario panel, shape:(n_exp_period, n_stock, n_scenario)
         self.scenario_set_idx = scenario_set_idx
         self.scenario_pnl = self.load_generated_scenario()
@@ -585,10 +591,10 @@ class SPSP_CVaR(ValidMixin):
             columns=candidate_symbols + [self.risk_free_symbol, ]
         )
 
-        # buying,selling, transaction_free, chosen amount panel,
-        # shape: (n_exp_period, n_stock+1, 3)
+        # buying,selling, transaction_fee, chosen amount panel,
+        # shape: (n_exp_period, n_stock, 3)
         self.amounts_pnl = pd.Panel(
-            np.zeros((self.n_exp_period, self.n_stock + 1, 4)),
+            np.zeros((self.n_exp_period, self.n_stock, 4)),
             items=self.exp_risk_rois.index,
             major_axis=self.candidate_symbols + [self.risk_free_symbol, ],
             minor_axis=("buy", "sell", "trans_fee", "chosen"),
@@ -818,14 +824,6 @@ class SPSP_CVaR(ValidMixin):
         reports['noaction_SPA_c_pvalue'] = spa_na.pvalues[1]
         reports['noaction_SPA_u_pvalue'] = spa_na.pvalues[2]
 
-        # SPA test, benchmark is buy-and-hold
-        spa_bah = SPA(wealth_daily_rois, np.ones(wealth_arr.size), reps=1000)
-        spa_bah.seed(np.random.randint(0, 2 ** 31 - 1))
-        spa_bah.compute()
-        reports['bah_SPA_l_pvalue'] = spa_bah.pvalues[0]
-        reports['bah_SPA_c_pvalue'] = spa_bah.pvalues[1]
-        reports['bah_SPA_u_pvalue'] = spa_bah.pvalues[2]
-
         return reports
 
     def run(self):
@@ -911,16 +909,16 @@ class SPSP_CVaR(ValidMixin):
                 self.estimated_risks.loc[curr_date, col] = pg_results[col]
 
             # record chosen symbols
-
-            print("{} [{}/{}] {} "
-                  "wealth:{:.2f}, {:.3f} secs".format(
-                simulation_name,
-                tdx + 1,
-                self.n_exp_period,
-                self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
-                self.wealth_df.loc[curr_date].sum(),
-                time() - t1)
-            )
+            if tdx % self.print_interval == 0:
+                print("{} [{}/{}] {} "
+                      "wealth:{:.2f}, {:.3f} secs".format(
+                    simulation_name,
+                    tdx + 1,
+                    self.n_exp_period,
+                    self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
+                    self.wealth_df.loc[curr_date].sum(),
+                    time() - t1)
+                )
 
         # end of simulation, computing statistics
         edx = self.n_exp_period - 1
