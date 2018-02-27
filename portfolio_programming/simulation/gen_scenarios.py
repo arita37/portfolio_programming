@@ -17,7 +17,7 @@ import glob
 import json
 import os
 from time import time, sleep
-
+import platform
 import ipyparallel as ipp
 import numpy as np
 import pandas as pd
@@ -34,7 +34,7 @@ def generating_scenarios_pnl(scenario_set_idx,
                              rolling_window_size,
                              n_scenario,
                              retry_cnt=5,
-                             print_interval=5):
+                             verbose=False):
     """
     generating scenarios panel
 
@@ -169,7 +169,7 @@ def generating_scenarios_pnl(scenario_set_idx,
         scenario_pnl.loc[sc_date, :, :] = scenario_df
 
         # clear est data
-        if tdx % print_interval == 0:
+        if verbose:
             print("{}_{}, {} [{}/{}] {} OK, {:.4f} secs".format(
                 platform.node(),
                 os.getpid(),
@@ -182,7 +182,8 @@ def generating_scenarios_pnl(scenario_set_idx,
     # write scenario
     scenario_pnl.to_pickle(scenario_path)
 
-    msg = ("generating scenarios {} OK, {:.3f} secs".format(
+    msg = ("{} {} generating scenarios {} OK, {:.3f} secs".format(
+        platform.node(), os.getpid(),
         parameters, time() - t0))
     print(msg)
     return msg
@@ -303,7 +304,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         clear_output()
         for stdout in ar.stdout:
             if stdout:
-                print(stdout[-50:])
+                print(stdout[-10:])
         sys.stdout.flush()
         sleep(1)
 
