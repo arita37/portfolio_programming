@@ -170,7 +170,7 @@ def generating_scenarios_pnl(scenario_set_idx,
         scenario_pnl.loc[sc_date, :, :] = scenario_df
 
         # clear est data
-        if tdx % print_interval == 0:
+        if tdx % print_interval == 10:
             print("{} [{}/{}] {} OK, {:.4f} secs".format(
                 sc_date.strftime("%Y%m%d"),
                 tdx + 1,
@@ -204,7 +204,6 @@ def _all_scenario_names():
     window_sizes = range(50, 240 + 10, 10)
     n_scenarios = [200, ]
 
-    # dict comprehension
     return {
         pp.SCENARIO_NAME_FORMAT.format(
             sdx=sdx,
@@ -214,11 +213,35 @@ def _all_scenario_names():
             rolling_window_size=h,
             n_scenario=s
         ): (sdx, s_date, e_date, m, h, s)
-        for sdx in set_indices
-        for m in n_stocks
-        for h in window_sizes
-        for s in n_scenarios
+        for sdx, m, h, s in (
+            (1, 5, 150, 200),
+            (1, 10, 90, 200),
+            (1, 15 ,100, 200),
+            (1, 20, 110, 200),
+            (1, 25, 120, 200),
+            (1, 30, 190, 200),
+            (1, 35, 120, 200),
+            (1, 40, 100, 200),
+            (1, 45, 120, 200),
+            (1, 50, 120, 200)
+        )
     }
+
+    # dict comprehension
+    # return {
+    #     pp.SCENARIO_NAME_FORMAT.format(
+    #         sdx=sdx,
+    #         scenario_start_date=s_date,
+    #         scenario_end_date=e_date,
+    #         n_stock=m,
+    #         rolling_window_size=h,
+    #         n_scenario=s
+    #     ): (sdx, s_date, e_date, m, h, s)
+    #     for sdx in set_indices
+    #     for m in n_stocks
+    #     for h in window_sizes
+    #     for s in n_scenarios
+    # }
 
 
 def checking_existed_scenario_names(scenario_set_dir=None):
@@ -301,7 +324,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             continue
         # clear_output doesn't do much in terminal environments
         clear_output()
-        for stdout in ar.stdout:
+        for stdout in ar.stdout[-10:]:
             if stdout:
                 print(stdout)
         sys.stdout.flush()
