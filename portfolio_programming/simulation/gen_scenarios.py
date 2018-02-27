@@ -34,7 +34,7 @@ def generating_scenarios_pnl(scenario_set_idx,
                              rolling_window_size,
                              n_scenario,
                              retry_cnt=5,
-                             verbose=False):
+                             print_interval=10):
     """
     generating scenarios panel
 
@@ -170,7 +170,7 @@ def generating_scenarios_pnl(scenario_set_idx,
         scenario_pnl.loc[sc_date, :, :] = scenario_df
 
         # clear est data
-        if verbose:
+        if tdx % print_interval == 0:
             print("{} [{}/{}] {} OK, {:.4f} secs".format(
                 sc_date.strftime("%Y%m%d"),
                 tdx + 1,
@@ -290,6 +290,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         print(info)
 
     lbv = rc.load_balanced_view()
+    print("start map unfinished parameters to load balance view.")
     ar = lbv.map_async(
         lambda x:portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(*x),
             params)

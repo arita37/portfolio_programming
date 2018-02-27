@@ -553,6 +553,11 @@ class SPSP_CVaR(ValidMixin):
             self.exp_risk_rois.index[0])
 
         # # verify rolling_window_size
+        # because we have generated the scenario in advance, it does not require
+        # generate scenario in the simulation.
+        # For a reason, we don't need to verify the condition
+        # self.exp_start_date_idx < rolling_window_size.
+
         # self.valid_nonnegative_value("rolling_window_size", rolling_window_size)
         # if self.exp_start_date_idx < rolling_window_size:
         #     print(self.exp_start_date_idx, rolling_window_size)
@@ -574,7 +579,7 @@ class SPSP_CVaR(ValidMixin):
         # results data
         # wealth DataFrame, shape: (n_exp_period, n_stock+1)
         self.wealth_df = pd.DataFrame(
-            np.zeros((self.n_exp_period, self.n_stock)),
+            np.zeros((self.n_exp_period, self.n_stock+1)),
             index=self.exp_risk_rois.index,
             columns=candidate_symbols + [self.risk_free_symbol, ]
         )
@@ -583,14 +588,14 @@ class SPSP_CVaR(ValidMixin):
         # shape: (n_exp_period, n_stock+1, 3)
         self.amounts_pnl = pd.Panel(
             np.zeros((self.n_exp_period, self.n_stock + 1, 4)),
-            index=self.exp_risk_rois.index,
+            items=self.exp_risk_rois.index,
             major_axis=self.candidate_symbols + [self.risk_free_symbol, ],
             minor_axis=("buy", "sell", "trans_fee", "chosen"),
         )
 
         # estimated risks, shape(n_exp_period, 6)
         self.estimated_risks = pd.DataFrame(
-            np.zeros(self.n_exp_period, 6),
+            np.zeros((self.n_exp_period, 6)),
             index=self.exp_risk_rois.index,
             columns=('CVaR', 'VaR', 'EV_CVaR', 'EV_VaR', 'EEV_CVaR', 'VSS')
         )
@@ -700,10 +705,10 @@ class SPSP_CVaR(ValidMixin):
             self.exp_end_date.strftime("%Y%m%d"),
             self.max_portfolio_size,
             self.n_stock,
-            self.window_length,
+            self.rolling_window_size,
             self.alpha,
             self.n_scenario,
-            self.scenario_idx)
+            self.scenario_set_idx)
         )
 
         return name
@@ -722,7 +727,7 @@ class SPSP_CVaR(ValidMixin):
             sell_trans_fee,
             initial_wealth,
             final_wealth,
-            trans_fee_loss,
+            cum_trans_fee_loss,
             rolling_window_size,
             n_scenario,
             alpha,
@@ -746,7 +751,7 @@ class SPSP_CVaR(ValidMixin):
             the transaction fee in the simulation
         initial_wealth, final_wealth: float
         n_exp_period: integer
-        trans_fee_loss: float
+        cum_trans_fee_loss: float
         wealth_df: pandas.DataFrame, shape:(n_exp_period, n_stock + 1)
             the wealth series of each symbols in the simulation.
             It includes the risky and risk-free asset.
@@ -773,7 +778,7 @@ class SPSP_CVaR(ValidMixin):
         reports['sell_trans_fee'] = sell_trans_fee
         reports['initial_wealth'] = initial_wealth
         reports['final_wealth'] = final_wealth
-        reports['trans_fee_loss'] = trans_fee_loss
+        reports['cum_trans_fee_loss'] = cum_trans_fee_loss
         reports['wealth_df'] = wealth_df
         reports['amount_pnl'] = amount_pnl
         reports['estimated_risks'] = estimated_risks
@@ -839,9 +844,10 @@ class SPSP_CVaR(ValidMixin):
         # initial wealth of each stock in the portfolio
         allocated_risk_wealth = self.initial_risk_wealth
         allocated_risk_free_wealth = self.initial_risk_free_wealth
+        cum_trans_fee_loss = 0
 
         for tdx in range(self.n_exp_period):
-            t1 = time.time()
+            t1 = time()
             curr_date = self.exp_risk_rois.index[tdx]
 
             estimated_risk_rois = self.get_estimated_risk_rois(
@@ -868,7 +874,7 @@ class SPSP_CVaR(ValidMixin):
             # # record the transaction loss
             buy_amounts_sum = pg_results["buy_amounts"].sum()
             sell_amounts_sum = pg_results["sell_amounts"].sum()
-            self.trans_fee_loss += (
+            cum_trans_fee_loss += (
                     buy_amounts_sum * self.buy_trans_fee +
                     sell_amounts_sum * self.sell_trans_fee
             )
@@ -895,9 +901,9 @@ class SPSP_CVaR(ValidMixin):
             )
 
             # update wealth
-            allocated_risk_wealth = self.risk_wealth_df.loc[
+            allocated_risk_wealth = self.wealth_df.loc[
                 curr_date, self.candidate_symbols]
-            allocated_risk_free_wealth = self.risk_free_wealth.loc[
+            allocated_risk_free_wealth = self.wealth_df.loc[
                 curr_date, self.risk_free_symbol]
 
             # record risks
@@ -907,13 +913,13 @@ class SPSP_CVaR(ValidMixin):
             # record chosen symbols
 
 
-            print("{} [{}/{}] {}"
-                         "curr_wealth:{:.2f}, {:.3f} secs".format(
+            print("{} [{}/{}] {} "
+                         "wealth:{:.2f}, {:.3f} secs".format(
                 simulation_name,
                 tdx + 1,
                 self.n_exp_period,
                 self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
-                self.wealth_df.loc[tdx].sum(),
+                self.wealth_df.loc[curr_date].sum(),
                 time() - t1)
             )
 
@@ -936,11 +942,11 @@ class SPSP_CVaR(ValidMixin):
             self.sell_trans_fee,
             initial_wealth,
             final_wealth,
-            self.trans_fee_loss,
+            cum_trans_fee_loss,
             self.rolling_window_size,
             self.n_scenario,
             self.alpha,
-            self.rwealth_df,
+            self.wealth_df,
             self.amounts_pnl,
             self.estimated_risks
         )

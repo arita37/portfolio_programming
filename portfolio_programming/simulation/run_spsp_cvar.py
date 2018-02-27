@@ -21,7 +21,7 @@ def run_SPSP_CVaR():
 
     n_exp_dates = len(risky_rois.index)
     risk_free_rois = pd.Series(np.zeros(n_exp_dates), risky_rois.index)
-    initial_risk_wealth = np.zeros(n_stock)
+    initial_risk_wealth = pd.Series(np.zeros(n_stock), index=candidate_symbols)
     initial_risk_free_wealth = 1e6
 
     instance = SPSP_CVaR(candidate_symbols,
