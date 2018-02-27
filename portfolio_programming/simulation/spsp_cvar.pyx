@@ -11,6 +11,7 @@ License: GPL v3
 """
 
 import os
+import pickle
 import platform
 from time import time
 
@@ -293,7 +294,7 @@ def spsp_cvar(candidate_symbols,
                                    index=candidate_symbols)
 
     if verbose:
-        print("spsp_cvar {} OK, {:.3f} secs".format(setting, time() -t0))
+        print("spsp_cvar {} OK, {:.3f} secs".format(setting, time() - t0))
 
     return {
         "buy_amounts": buy_amounts,
@@ -579,7 +580,7 @@ class SPSP_CVaR(ValidMixin):
         # results data
         # wealth DataFrame, shape: (n_exp_period, n_stock+1)
         self.wealth_df = pd.DataFrame(
-            np.zeros((self.n_exp_period, self.n_stock+1)),
+            np.zeros((self.n_exp_period, self.n_stock + 1)),
             index=self.exp_risk_rois.index,
             columns=candidate_symbols + [self.risk_free_symbol, ]
         )
@@ -911,9 +912,8 @@ class SPSP_CVaR(ValidMixin):
 
             # record chosen symbols
 
-
             print("{} [{}/{}] {} "
-                         "wealth:{:.2f}, {:.3f} secs".format(
+                  "wealth:{:.2f}, {:.3f} secs".format(
                 simulation_name,
                 tdx + 1,
                 self.n_exp_period,
@@ -924,7 +924,8 @@ class SPSP_CVaR(ValidMixin):
 
         # end of simulation, computing statistics
         edx = self.n_exp_period - 1
-        initial_wealth =   (self.initial_risk_wealth.sum() + self.initial_risk_free_wealth)
+        initial_wealth = (
+                    self.initial_risk_wealth.sum() + self.initial_risk_free_wealth)
         final_wealth = self.wealth_df.iloc[edx].sum()
 
         # get reports
@@ -953,8 +954,18 @@ class SPSP_CVaR(ValidMixin):
         # add simulation time
         reports['simulation_time'] = time() - t0
 
+        # write report
+        if not os.path.exists(pp.REPORT_DIR):
+            os.mkdirs(pp.REPORT_DIR)
+
+        report_path = os.path.join(pp.REPORT_DIR,
+                                   "report_{}.pkl".format(simulation_name))
+
+        with open(report_path, 'wb') as fout:
+            pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
+
         print("{} OK [{}-{}], {:.4f} secs".format(
-            simulation_name, self.n_stock,
+            simulation_name,
             self.exp_start_date,
             self.exp_end_date,
             time() - t0)
