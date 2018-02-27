@@ -170,7 +170,7 @@ def generating_scenarios_pnl(scenario_set_idx,
         scenario_pnl.loc[sc_date, :, :] = scenario_df
 
         # clear est data
-        if tdx % print_interval ==:
+        if tdx % print_interval == 10:
             print("{} [{}/{}] {} OK, {:.4f} secs".format(
                 sc_date.strftime("%Y%m%d"),
                 tdx + 1,
@@ -324,7 +324,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             continue
         # clear_output doesn't do much in terminal environments
         clear_output()
-        for stdout in ar.stdout[-100:]:
+        for stdout in ar.stdout[-10:]:
             if stdout:
                 print(stdout)
         sys.stdout.flush()
