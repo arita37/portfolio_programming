@@ -304,12 +304,12 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         clear_output()
         for stdout in ar.stdout:
             if stdout:
-                print(stdout[-10:])
+                print(stdout)
         sys.stdout.flush()
-        sleep(1)
+        sleep(2)
 
 
 if __name__ == '__main__':
     # generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
-    #                          5, 50)
+    #                          5, 50, 200)
     dispatch_scenario_names()
