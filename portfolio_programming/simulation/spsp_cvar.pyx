@@ -310,7 +310,7 @@ def spsp_cvar(candidate_symbols,
 
 class ValidMixin(object):
     @staticmethod
-    def valid_range_value(name, value, upper_bound, lower_bound):
+    def valid_range_value(name, value, lower_bound, upper_bound):
         """
         Parameter:
         -------------
@@ -522,7 +522,7 @@ class SPSP_CVaR(ValidMixin):
                              len(initial_risk_wealth))
 
         self.valid_nonnegative_list(
-            ("initial_risk_wealth", initial_risk_free_wealth))
+            "initial_risk_wealth", initial_risk_free_wealth)
         self.initial_risk_wealth = initial_risk_wealth
 
         self.valid_nonnegative_value("initial_risk_free_wealth",
@@ -552,10 +552,11 @@ class SPSP_CVaR(ValidMixin):
         self.exp_start_date_idx = self.risk_rois.index.get_loc(
             self.exp_risk_rois.index[0])
 
-        # verify rolling_window_size
-        self.valid_nonnegative_value("rolling_window_size", rolling_window_size)
-        if self.exp_start_date_idx < rolling_window_size:
-            raise ValueError('There is no enough data.')
+        # # verify rolling_window_size
+        # self.valid_nonnegative_value("rolling_window_size", rolling_window_size)
+        # if self.exp_start_date_idx < rolling_window_size:
+        #     print(self.exp_start_date_idx, rolling_window_size)
+        #     raise ValueError('There is no enough data.')
         self.rolling_window_size = int(rolling_window_size)
 
         # verify n_scenario
@@ -605,7 +606,7 @@ class SPSP_CVaR(ValidMixin):
         name = pp.SCENARIO_NAME_FORMAT.format(
             sdx=self.scenario_set_idx,
             scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
-            scecnario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+            scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
             n_stock=self.n_stock,
             rolling_window_size=self.rolling_window_size,
             n_scenario=self.n_scenario
