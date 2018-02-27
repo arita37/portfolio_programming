@@ -31,8 +31,8 @@ def run_SPSP_CVaR():
                          risk_free_rois,
                          initial_risk_wealth,
                          initial_risk_free_wealth,
-                         rolling_window_size=240,
-                         alpha=0.95,
+                         rolling_window_size=150,
+                         alpha=0.8,
                          scenario_set_idx=1
                          )
     instance.run()
