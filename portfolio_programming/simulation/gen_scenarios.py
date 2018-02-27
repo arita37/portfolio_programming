@@ -16,7 +16,7 @@ https://stackoverflow.com/questions/23145650/how-to-setup-ssh-tunnel-for-ipython
 import glob
 import json
 import os
-from time import time
+from time import time, sleep
 
 import ipyparallel as ipp
 import numpy as np
@@ -34,7 +34,7 @@ def generating_scenarios_pnl(scenario_set_idx,
                              rolling_window_size,
                              n_scenario,
                              retry_cnt=5,
-                             print_interval=10):
+                             print_interval=5):
     """
     generating scenarios panel
 
@@ -195,7 +195,8 @@ def _all_scenario_names():
                        "Mc{n_stock}_" \
                        "h{rolling_window_size}_s{n_scenario}.pkl"
     """
-    set_indices = (1, 2, 3)
+    # set_indices = (1, 2, 3)
+    set_indices = (1,)
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
     n_stocks = range(5, 50 + 5, 5)
@@ -262,34 +263,48 @@ def wait_watching_stdout(ar, dt=1, truncate=1000):
 
 
 def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
+    from IPython.display import clear_output
+
+
     unfinished_names = checking_existed_scenario_names(scenario_set_dir)
     print("number of unfinished scenario: {}".format(len(unfinished_names)))
     params = unfinished_names.values()
 
     # task interface
     rc = ipp.Client(profile='ssh')
-    view = rc[:]
+    dv = rc[:]
+    dv.use_dill()
 
-    view.use_dill()
-
-    with view.sync_imports():
+    with dv.sync_imports():
         import sys
+        import platform
+        import os
         import portfolio_programming.simulation.gen_scenarios
 
-    def show_remote_sys_path(_):
-        return sys.path
+    def name_pid():
+        return "node:{}, pid:{}".format(platform.node(), os.getpid())
 
+    infos = dv.apply_sync(name_pid)
+    for info in infos:
+        print(info)
 
-    print('Remote: ', view.map_sync(show_remote_sys_path, range(1)))
+    lbv = rc.load_balanced_view()
+    ar = lbv.map_async(
+        lambda x:portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(*x),
+            params)
 
-    dview = rc.load_balanced_view()
-    ar_list = [dview.apply_async(
-        portfolio_programming.simulation.gen_scenarios.generating_scenarios_pnl(
-            *param)) for param in params]
+    while not ar.ready():
+        stdouts = ar.stdout
+        if not any(stdouts):
+            continue
+        # clear_output doesn't do much in terminal environments
+        clear_output()
+        for stdout in ar.stdout:
+            if stdout:
+                print(stdout[-50:])
+        sys.stdout.flush()
+        sleep(1)
 
-    while not(all(ar.ready() for ar in ar_list)):
-        for ar in ar_list:
-            wait_watching_stdout(ar)
 
 if __name__ == '__main__':
     # generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
