@@ -4,32 +4,39 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
-import sys
+import json
+import numpy as np
+import pandas as pd
+
+import portfolio_programming as pp
+from portfolio_programming.simulation.spsp_cvar import SPSP_CVaR
 
 
-def all_scenario_parameters():
-    """
-    the
+def run_SPSP_CVaR():
+    n_stock = 5
+    candidate_symbols = json.load(open(pp.TAIEX_SYMBOL_JSON))[:n_stock]
+    pnl = pd.read_pickle(pp.TAIEX_PANEL_PKL)
+    risky_rois = pnl.loc[pp.EXP_START_DATE:pp.EXP_END_DATE,
+                 candidate_symbols, 'simple_roi']
 
-    n_stock: {5, 10, 15, 20, 25, 30, 35, 40, 45, 50}
-    rolling_window_size: {50, 60, ..., 240}
-    alpha: (0,5, 0.55, ..., 0.95)
-    setting: ("compact", "general")
-    """
+    n_exp_dates = len(risky_rois.index)
+    risk_free_rois = pd.Series(np.zeros(n_exp_dates), risky_rois.index)
+    initial_risk_wealth = np.zeros(n_stock)
+    initial_risk_free_wealth = 1e6
 
-    n_stocks = range(5, 50+5, 5)
-    window_sizes = range(50, 240+10, 10)
-    percent_alphas = range(50, 100, 5)
+    instance = SPSP_CVaR(candidate_symbols,
+                         "compact",
+                         n_stock,
+                         risky_rois,
+                         risk_free_rois,
+                         initial_risk_wealth,
+                         initial_risk_free_wealth,
+                         rolling_window_size=240,
+                         alpha=0.95,
+                         scenario_set_idx=1
+                         )
+    instance.run()
 
-    all_params = [(m, h, a)
-                  for m in n_stocks
-                  for h in window_sizes
-                  for a in percent_alphas
-                  ]
-    # preclude Mc50_h50
-    for a in percent_alphas:
-        all_params.remove((50, 50, a))
 
-    return set(all_params)
 if __name__ == '__main__':
-    main()
+    run_SPSP_CVaR()
