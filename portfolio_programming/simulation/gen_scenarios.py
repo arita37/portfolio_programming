@@ -71,10 +71,11 @@ def generating_scenarios_pnl(scenario_set_idx,
 
     scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
     if os.path.exists(scenario_path):
-        print("{} exists.".format(scenario_file))
-        return
+        return "{} exists.".format(scenario_file)
 
-    parameters = "scenarios-set-idx{}_{}_{}_Mc{}_h{}_s{}".format(
+    parameters = "{}_{} scenarios-set-idx{}_{}_{}_Mc{}_h{}_s{}".format(
+        platform.node(),
+        os.getpid(),
         scenario_set_idx,
         scenario_start_date.strftime("%y%m%d"),
         scenario_end_date.strftime("%y%m%d"),
@@ -149,9 +150,9 @@ def generating_scenarios_pnl(scenario_set_idx,
                                            max_moment_err,
                                            max_corr_err)
                     except ValueError as e:
-                        print("relaxing max err: {}_{}_max_mom_err:{}, "
-                              "max_corr_err{}".format(sc_date, parameters,
-                                                      max_moment_err,
+                        print("{} relaxing max err: {}_max_mom_err:{}, "
+                              "max_corr_err{}".format(
+                                parameters, sc_date, max_moment_err,
                                                       max_corr_err))
                     else:
                         # generating scenarios success
@@ -165,14 +166,12 @@ def generating_scenarios_pnl(scenario_set_idx,
                 # generating scenarios success
                 break
 
-        # store scenarios
+        # store scenarios, scenario_df shape: (n_stock, n_scenario)
         scenario_pnl.loc[sc_date, :, :] = scenario_df
 
         # clear est data
         if verbose:
-            print("{}_{}, {} [{}/{}] {} OK, {:.4f} secs".format(
-                platform.node(),
-                os.getpid(),
+            print("{} [{}/{}] {} OK, {:.4f} secs".format(
                 sc_date.strftime("%Y%m%d"),
                 tdx + 1,
                 n_sc_period,
@@ -182,8 +181,7 @@ def generating_scenarios_pnl(scenario_set_idx,
     # write scenario
     scenario_pnl.to_pickle(scenario_path)
 
-    msg = ("{} {} generating scenarios {} OK, {:.3f} secs".format(
-        platform.node(), os.getpid(),
+    msg = ("generating scenarios {} OK, {:.3f} secs".format(
         parameters, time() - t0))
     print(msg)
     return msg
@@ -307,6 +305,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
                 print(stdout)
         sys.stdout.flush()
         sleep(2)
+
 
 
 if __name__ == '__main__':
