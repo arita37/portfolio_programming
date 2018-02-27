@@ -37,7 +37,7 @@ EXP_START_DATE = dt.date(2005, 1, 3)
 EXP_END_DATE = dt.date(2014, 12, 31)
 BUY_TRANS_FEE = 0.001425
 SELL_TRANS_FEE = 0.004425
-REPORT_DIR = op.path.join(DATA_DIR, 'report')
+REPORT_DIR = os.path.join(DATA_DIR, 'report')
 
 # scenario
 # SCENARIO_SET_DIR = TMP_DIR
