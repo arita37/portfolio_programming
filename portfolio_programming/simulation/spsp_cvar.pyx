@@ -596,7 +596,7 @@ class SPSP_CVaR(ValidMixin):
         self.amounts_pnl = pd.Panel(
             np.zeros((self.n_exp_period, self.n_stock, 4)),
             items=self.exp_risk_rois.index,
-            major_axis=self.candidate_symbols + [self.risk_free_symbol, ],
+            major_axis=self.candidate_symbols,
             minor_axis=("buy", "sell", "trans_fee", "chosen"),
         )
 
