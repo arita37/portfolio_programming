@@ -962,10 +962,10 @@ class SPSP_CVaR(ValidMixin):
         with open(report_path, 'wb') as fout:
             pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
 
-        print("{} OK [{}-{}], {:.4f} secs".format(
+        print("{}-{} {} OK, {:.4f} secs".format(
+            platform.node(),
+            os.getpid(),
             simulation_name,
-            self.exp_start_date,
-            self.exp_end_date,
             time() - t0)
         )
 
