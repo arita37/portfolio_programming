@@ -45,6 +45,7 @@ __pycache__
 #*.zip
 #*.pickle
 *.pkl
+*.nc
 #*.jpg
 #*.jpeg
 #*.png
