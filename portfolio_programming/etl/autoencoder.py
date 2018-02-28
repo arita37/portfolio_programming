@@ -21,7 +21,7 @@ import portfolio_programming as pp
 def AE(n_epochs=1000, batch_size=60, learning_rate=1e-3):
     # Dimensions: 3090 (items) x 50 (major_axis) x 6 (minor_axis)
     # Items axis: 2005-01-03 00:00:00 to 2017-06-30 00:00:00
-    pnl = pd.read_pickle(pp.TAIEX_PANEL_PKL)
+    pnl = pd.read_pickle(pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_XARRAY)
     n_batch = int(pnl.items.size / batch_size)
 
     class autoencoder(nn.Module):

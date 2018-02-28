@@ -8,6 +8,7 @@ mathematical programming for risky asset portfolio
     - numpy
     - scipy
     - pandas
+    - xarray
     - pyomo
     - cython
     - arch (pip install git+https://github.com/bashtage/arch.git)
