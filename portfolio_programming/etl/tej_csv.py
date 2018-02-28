@@ -109,12 +109,7 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
     minor_indices = ['open_price', 'high_price', 'low_price', 'close_price',
                      'volume', 'simple_roi']
 
-    # setting panel (date, symbol, indices)
-    # pnl = pd.Panel(
-    #     np.zeros((len(trans_dates), len(symbols), len(minor_indices))),
-    #     items=trans_dates,
-    #     major_axis=symbols,
-    #     minor_axis=minor_indices)
+    # setting xarray (date, symbol, indices)
     xarr = xr.DataArray(
         np.zeros((len(trans_dates), len(symbols), len(minor_indices))),
         dims=('trans_date,', 'symbol', 'data'),
