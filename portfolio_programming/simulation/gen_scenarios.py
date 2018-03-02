@@ -20,7 +20,9 @@ from time import time, sleep
 import platform
 import ipyparallel as ipp
 import numpy as np
+import scipy.stats as spstats
 import pandas as pd
+import xarray as xr
 
 import portfolio_programming as pp
 from portfolio_programming.sampling.moment_matching import (
@@ -43,16 +45,12 @@ def generating_scenarios_pnl(scenario_set_idx,
     n_stock: positive integer, number of stocks in the candidate symbols
     rolling_window_size: positive integer, number of historical periods
     n_scenario: integer, number of scenarios to generating
-    etry_cnt: positive integer, maximum retry of scenarios
-    """
+    retry_cnt: positive integer, maximum retry of scenarios
 
-    # import for parallel processing
-    # import os
-    # from time import time
-    # import pandas as pd
-    # import portfolio_programming as pp
-    # from portfolio_programming.sampling.moment_matching import (
-    #     heuristic_moment_matching as HeMM)
+    Returns:
+    ------------------
+    scenario_xarr : xarray.DataArray, dim:(trans_date, symbol, scenario)
+    """
 
     t0 = time()
 
@@ -85,15 +83,17 @@ def generating_scenarios_pnl(scenario_set_idx,
     )
 
     # read symbol roi data
-    # shape: (n_period, n_stock, attributes)
-    risky_asset_pnl = pd.read_pickle(pp.TAIEX_PANEL_PKL)
+    # shape: (n_period, n_stock, 6 attributes)
+    risky_asset_xarr = xr.open_dataarray(pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_XARRAY)
+    # risky_asset_pnl = pd.read_pickle(pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_XARRAY)
 
     # symbols
-    with open(pp.TAIEX_SYMBOL_JSON) as fin:
+
+    with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
         candidate_symbols = json.load(fin)[:n_stock]
 
-    # all trans_date
-    trans_dates = risky_asset_pnl.items
+    # all trans_date, pandas.core.indexes.datetimes.DatetimeIndex
+    trans_dates = risky_asset_xarr.get_index('trans_date')
 
     # experiment trans_dates
     sc_start_idx = trans_dates.get_loc(scenario_start_date)
@@ -102,13 +102,22 @@ def generating_scenarios_pnl(scenario_set_idx,
     n_sc_period = len(sc_trans_dates)
 
     # estimating moments and correlation matrix
-    est_moments = pd.DataFrame(np.zeros((n_stock, 4)), index=candidate_symbols)
+    # est_moments = pd.DataFrame(np.zeros((n_stock, 4)), index=candidate_symbols)
+    est_moments = xr.DataArray(np.zeros(n_stock, 4),
+                               dims=('symbol', 'moment'),
+                               coords=(candidate_symbols, ['mean', 'std',
+                                                           'skew', 'ex_kurt']))
 
     # output scenario panel, shape: (n_sc_period, n_stock, n_scenario)
-    scenario_pnl = pd.Panel(
+    # scenario_pnl = pd.Panel(
+    #     np.zeros((n_sc_period, n_stock, n_scenario)),
+    #     items=sc_trans_dates,
+    #     major_axis=candidate_symbols
+    # )
+    scenario_xarr = xr.DataArray(
         np.zeros((n_sc_period, n_stock, n_scenario)),
-        items=sc_trans_dates,
-        major_axis=candidate_symbols
+        dims=('trans_date', 'symbol', 'scenario'),
+        coords=(trans_dates, candidate_symbols, range(n_scenario)),
     )
 
     for tdx, sc_date in enumerate(sc_trans_dates):
@@ -122,17 +131,19 @@ def generating_scenarios_pnl(scenario_set_idx,
         assert len(hist_interval) == rolling_window_size
         assert hist_interval[-1] == sc_date
 
-        # hist_data, shape: (n_stock, win_length)
-        hist_data = risky_asset_pnl.loc[hist_interval,
+        # hist_data, shape: (win_length, n_stock)
+        hist_data = risky_asset_xarr.loc[hist_interval,
                                         candidate_symbols,
                                         'simple_roi']
 
         # unbiased moments and corrs estimators
-        est_moments.iloc[:, 0] = hist_data.mean(axis=1)
-        est_moments.iloc[:, 1] = hist_data.std(axis=1, ddof=1)
-        est_moments.iloc[:, 2] = hist_data.skew(axis=1)
-        est_moments.iloc[:, 3] = hist_data.kurt(axis=1)
-        est_corrs = (hist_data.T).corr("pearson")
+        est_moments.loc[:, 'mean'] = hist_data.mean(dim='trans_date')
+        est_moments.loc[:, 'std'] = hist_data.std(axis=1, ddof=1)
+        est_moments.loc[:, 'skew'] = spstats.skew(hist_data, axis=0, bias=False)
+        est_moments.loc[:, 'ex_kurt'] = spstats.kurtosis(hist_data, axis=0,
+                                                   bias=False)
+        # est_corrs = (hist_data.T).corr("pearson")
+        est_corrs = np.corrcoef(hist_data.T)
 
         # generating unbiased scenario
         for error_count in range(retry_cnt):
@@ -167,7 +178,7 @@ def generating_scenarios_pnl(scenario_set_idx,
                 break
 
         # store scenarios, scenario_df shape: (n_stock, n_scenario)
-        scenario_pnl.loc[sc_date, :, :] = scenario_df
+        scenario_zEE.loc[sc_date, :, :] = scenario_df
 
         # clear est data
         if tdx % print_interval == 10:
@@ -179,7 +190,7 @@ def generating_scenarios_pnl(scenario_set_idx,
                 time() - t1))
 
     # write scenario
-    scenario_pnl.to_pickle(scenario_path)
+    scenario_xarr.to_netcdf(scenario_path)
 
     msg = ("generating scenarios {} OK, {:.3f} secs".format(
         parameters, time() - t0))
