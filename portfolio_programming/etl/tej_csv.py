@@ -105,7 +105,7 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
 
     # get trans_dates and columns
     trans_dates = df[start_date:end_date].index
-    trans_dates.name = 'trans_dates'
+    trans_dates.name = 'trans_date'
     minor_indices = ['open_price', 'high_price', 'low_price', 'close_price',
                      'volume', 'simple_roi']
 
@@ -131,7 +131,6 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
         trimmed_df.rename(columns={r'volume_1000_shares': 'volume'},
                           inplace=True)
 
-        # note: pnl.loc[:, symbol, :], shape: (columns, n_exp_period)
         xarr.loc[dates, symbol, :] = trimmed_df.loc[
             dates, ('open_price', 'high_price',
                     'low_price', 'close_price',
