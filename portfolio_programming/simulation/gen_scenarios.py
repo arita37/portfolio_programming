@@ -313,6 +313,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         import sys
         import platform
         import os
+        import logging
         import portfolio_programming.simulation.gen_scenarios
 
     def name_pid():
