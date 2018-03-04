@@ -161,7 +161,7 @@ def generating_scenarios_xarr(scenario_set_idx,
                     except ValueError as _:
                         logging.warning(
                             "{} relaxing max err: {}_max_mom_err:{}, "
-                              "max_corr_err{}".format(
+                            "max_corr_err{}".format(
                                 parameters, sc_date,
                                 max_moment_err, max_corr_err))
                     else:
@@ -343,10 +343,10 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(filename)s %(levelname)s %(asctime)s\n'
+    logging.basicConfig(format='%(filename)15s %(levelname)10s %(asctime)s\n'
                                '%(message)s',
                         datefmt='%Y%m%d-%H:%M:%S',
                         level=logging.DEBUG)
-    generating_scenarios_xarr(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
+    # generating_scenarios_xarr(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
                              5, 50, 200)
-    # dispatch_scenario_names()
+    dispatch_scenario_names()
