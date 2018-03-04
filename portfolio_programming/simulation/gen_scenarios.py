@@ -88,7 +88,7 @@ def generating_scenarios_xarr(scenario_set_idx,
     # read roi data
     # shape: (n_period, n_stock, 6 attributes)
     risky_asset_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_XARRAY)
+        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
 
     # symbols
     with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
@@ -98,24 +98,22 @@ def generating_scenarios_xarr(scenario_set_idx,
     trans_dates = risky_asset_xarr.get_index('trans_date')
 
     # experiment trans_dates
-    sc_start_idx = risky_asset_xarr.get_index('trans_date').get_loc(
-        scenario_start_date)
-    sc_end_idx = risky_asset_xarr.get_index('trans_date').get_loc(
-        scenario_end_date)
+    sc_start_idx = trans_dates.get_loc(scenario_start_date)
+    sc_end_idx = trans_dates.get_loc(scenario_end_date)
     sc_trans_dates = trans_dates[sc_start_idx: sc_end_idx + 1]
     n_sc_period = len(sc_trans_dates)
 
     # estimating moments and correlation matrix
-    est_moments = xr.DataArray(np.zeros(n_stock, 4),
+    est_moments = xr.DataArray(np.zeros((n_stock, 4)),
                                dims=('symbol', 'moment'),
                                coords=(candidate_symbols,
                                        ['mean', 'std', 'skew', 'ex_kurt']))
 
-    # output scenario panel, shape: (n_sc_period, n_stock, n_scenario)
+    # output scenario xarray, shape: (n_sc_period, n_stock, n_scenario)
     scenario_xarr = xr.DataArray(
         np.zeros((n_sc_period, n_stock, n_scenario)),
         dims=('trans_date', 'symbol', 'scenario'),
-        coords=(trans_dates, candidate_symbols, range(n_scenario)),
+        coords=(sc_trans_dates, candidate_symbols, range(n_scenario)),
     )
 
     for tdx, sc_date in enumerate(sc_trans_dates):
@@ -135,8 +133,8 @@ def generating_scenarios_xarr(scenario_set_idx,
                                         'simple_roi']
 
         # unbiased moments and corrs estimators
-        est_moments.loc[:, 'mean'] = hist_data.mean(axis=1)
-        est_moments.loc[:, 'std'] = hist_data.std(axis=1, ddof=1)
+        est_moments.loc[:, 'mean'] = hist_data.mean(axis=0)
+        est_moments.loc[:, 'std'] = hist_data.std(axis=0, ddof=1)
         est_moments.loc[:, 'skew'] = spstats.skew(hist_data, axis=0, bias=False)
         est_moments.loc[:, 'ex_kurt'] = spstats.kurtosis(hist_data, axis=0,
                                                    bias=False)
@@ -152,8 +150,8 @@ def generating_scenarios_xarr(scenario_set_idx,
                         # df shape: (n_stock, n_scenario)
                         max_moment_err = 10 ** error_exponent
                         max_corr_err = 10 ** error_exponent
-                        scenario_df = HeMM(est_moments.as_matrix(),
-                                           est_corrs.as_matrix(),
+                        scenario_df = HeMM(est_moments.values,
+                                           est_corrs,
                                            n_scenario,
                                            False,
                                            max_moment_err,
@@ -342,6 +340,6 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
 
 if __name__ == '__main__':
-    # generating_scenarios_pnl(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
-    #                          5, 50, 200)
-    dispatch_scenario_names()
+    generating_scenarios_xarr(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
+                             5, 50, 200)
+    # dispatch_scenario_names()
