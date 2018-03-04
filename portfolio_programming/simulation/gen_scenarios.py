@@ -204,7 +204,7 @@ def _all_scenario_names():
                        "{scenario_start_date}_" \
                        "{scenario_end_date}_" \
                        "Mc{n_stock}_" \
-                       "h{rolling_window_size}_s{n_scenario}.pkl"
+                       "h{rolling_window_size}_s{n_scenario}.nc"
     """
     # set_indices = (1, 2, 3)
     set_indices = (1,)
@@ -262,7 +262,7 @@ def checking_existed_scenario_names(scenario_set_dir=None):
         scenario_set_dir = pp.SCENARIO_SET_DIR
     all_names = _all_scenario_names()
 
-    existed_names = glob.glob(os.path.join(scenario_set_dir, "*.pkl"))
+    existed_names = glob.glob(os.path.join(scenario_set_dir, "*.nc"))
     for name in existed_names:
         all_names.pop(name, None)
 
