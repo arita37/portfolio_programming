@@ -211,33 +211,9 @@ def _all_scenario_names():
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
     n_stocks = range(5, 50 + 5, 5)
-    window_sizes = range(50, 240 + 10, 10)
+    window_sizes = range(120, 240 + 10, 10)
     n_scenarios = [200, ]
 
-    return {
-        pp.SCENARIO_NAME_FORMAT.format(
-            sdx=sdx,
-            scenario_start_date=s_date,
-            scenario_end_date=e_date,
-            n_stock=m,
-            rolling_window_size=h,
-            n_scenario=s
-        ): (sdx, s_date, e_date, m, h, s)
-        for sdx, m, h, s in (
-            (1, 5, 150, 200),
-            (1, 10, 90, 200),
-            (1, 15 ,100, 200),
-            (1, 20, 110, 200),
-            (1, 25, 120, 200),
-            (1, 30, 190, 200),
-            (1, 35, 120, 200),
-            (1, 40, 100, 200),
-            (1, 45, 120, 200),
-            (1, 50, 120, 200)
-        )
-    }
-
-    # dict comprehension
     # return {
     #     pp.SCENARIO_NAME_FORMAT.format(
     #         sdx=sdx,
@@ -247,11 +223,35 @@ def _all_scenario_names():
     #         rolling_window_size=h,
     #         n_scenario=s
     #     ): (sdx, s_date, e_date, m, h, s)
-    #     for sdx in set_indices
-    #     for m in n_stocks
-    #     for h in window_sizes
-    #     for s in n_scenarios
+    #     for sdx, m, h, s in (
+    #         (1, 5, 150, 200),
+    #         (1, 10, 90, 200),
+    #         (1, 15 ,100, 200),
+    #         (1, 20, 110, 200),
+    #         (1, 25, 120, 200),
+    #         (1, 30, 190, 200),
+    #         (1, 35, 120, 200),
+    #         (1, 40, 100, 200),
+    #         (1, 45, 120, 200),
+    #         (1, 50, 120, 200)
+    #     )
     # }
+
+    # dict comprehension
+    return {
+        pp.SCENARIO_NAME_FORMAT.format(
+            sdx=sdx,
+            scenario_start_date=s_date,
+            scenario_end_date=e_date,
+            n_stock=m,
+            rolling_window_size=h,
+            n_scenario=s
+        ): (sdx, s_date, e_date, m, h, s)
+        for sdx in set_indices
+        for m in n_stocks
+        for h in window_sizes
+        for s in n_scenarios
+    }
 
 
 def checking_existed_scenario_names(scenario_set_dir=None):
