@@ -18,11 +18,13 @@ import json
 import os
 from time import (time, sleep)
 import platform
+import logging
 import ipyparallel as ipp
 import numpy as np
 import scipy.stats as spstats
 import pandas as pd
 import xarray as xr
+
 
 import portfolio_programming as pp
 from portfolio_programming.sampling.moment_matching import (
@@ -157,7 +159,8 @@ def generating_scenarios_xarr(scenario_set_idx,
                                            max_moment_err,
                                            max_corr_err)
                     except ValueError as _:
-                        print("{} relaxing max err: {}_max_mom_err:{}, "
+                        logging.warning(
+                            "{} relaxing max err: {}_max_mom_err:{}, "
                               "max_corr_err{}".format(
                                 parameters, sc_date,
                                 max_moment_err, max_corr_err))
@@ -178,7 +181,7 @@ def generating_scenarios_xarr(scenario_set_idx,
 
         # clear est data
         if tdx % print_interval == 0:
-            print("{} [{}/{}] {} OK, {:.4f} secs".format(
+            logging.info("{} [{}/{}] {} OK, {:.4f} secs".format(
                 sc_date.strftime("%Y%m%d"),
                 tdx + 1,
                 n_sc_period,
@@ -190,7 +193,7 @@ def generating_scenarios_xarr(scenario_set_idx,
 
     msg = ("generating scenarios {} OK, {:.3f} secs".format(
         parameters, time() - t0))
-    print(msg)
+    logging.info(msg)
     return msg
 
 
@@ -340,6 +343,10 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(filename)s %(levelname)s %(asctime)s\n'
+                               '%(message)s',
+                        datefmt='%Y%m%d-%H:%M:%S',
+                        level=logging.DEBUG)
     generating_scenarios_xarr(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
                              5, 50, 200)
     # dispatch_scenario_names()
