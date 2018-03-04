@@ -1,3 +1,0 @@
-# --port: registration port
-# --reuse: reuse the json files in $HOME/.ipython/profile_default/security/
-ipcontroller --ip="*" --port=8957 --reuse --sqlitedb --ping=10000 --work-dir='/home/chenhh/workspace_pycharm/portfolio_programming'

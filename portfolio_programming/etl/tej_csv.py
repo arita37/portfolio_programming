@@ -7,10 +7,15 @@ transforming TEJ's stock csv to pandas panel data
 """
 
 import datetime as dt
-from time import time
+import json
 import os
+from time import time
+
 import numpy as np
 import pandas as pd
+import xarray as xr
+
+import portfolio_programming as pp
 
 
 def tej_csv_to_df(symbols, csv_dir, df_dir):
@@ -74,7 +79,7 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
     print("csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
 
 
-def dataframe_to_panel(symbols, df_dir, start_date, end_date, fout_path):
+def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
     """
     aggregating and trimming dataframe of stock to a panel file
 
@@ -89,7 +94,7 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date, fout_path):
 
     Returns:
     ---------
-    pandas.panel
+    xarray.DataArray
 
     """
     t0 = time()
@@ -100,16 +105,16 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date, fout_path):
 
     # get trans_dates and columns
     trans_dates = df[start_date:end_date].index
-    trans_dates.name = 'trans_dates'
+    trans_dates.name = 'trans_date'
     minor_indices = ['open_price', 'high_price', 'low_price', 'close_price',
                      'volume', 'simple_roi']
 
-    # setting panel (date, symbol, indices)
-    pnl = pd.Panel(
+    # setting xarray (date, symbol, indices)
+    xarr = xr.DataArray(
         np.zeros((len(trans_dates), len(symbols), len(minor_indices))),
-        items=trans_dates,
-        major_axis=symbols,
-        minor_axis=minor_indices)
+        dims=('trans_date', 'symbol', 'data'),
+        coords=[trans_dates, symbols, minor_indices]
+    )
 
     for sdx, symbol in enumerate(symbols):
         t1 = time()
@@ -118,6 +123,7 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date, fout_path):
         trimmed_df = pd.read_pickle(fin_path).loc[start_date:end_date]
 
         # rename columns
+        dates = trimmed_df.index
         trimmed_df['simple_roi_%'] /= 100.
         trimmed_df.rename(columns={r'simple_roi_%': 'simple_roi'},
                           inplace=True)
@@ -125,29 +131,26 @@ def dataframe_to_panel(symbols, df_dir, start_date, end_date, fout_path):
         trimmed_df.rename(columns={r'volume_1000_shares': 'volume'},
                           inplace=True)
 
-        # note: pnl.loc[:, symbol, :], shape: (columns, n_exp_period)
-        pnl.loc[:, symbol, :] = trimmed_df.ix[:, ('open_price', 'high_price',
-                                                  'low_price', 'close_price',
-                                                  'volume',
-                                                  'simple_roi')].T
+        xarr.loc[dates, symbol, :] = trimmed_df.loc[
+            dates, ('open_price', 'high_price',
+                    'low_price', 'close_price',
+                    'volume',
+                    'simple_roi')]
 
-        print("[{}/{}] {} load to panel OK, {:.3f} secs".format(
+        print("[{}/{}] {} load to xarray OK, {:.3f} secs".format(
             sdx + 1, len(symbols), symbol, time() - t1))
 
     # # fill na with 0
     # pnl = pnl.fillna(0)
 
     # output data file path
-    pnl.to_pickle(fout_path)
+    xarr.to_netcdf(fout_path)
 
-    print("all exp_symbols load to panel OK, {:.3f} secs".format(time() - t0))
+    print("all exp_symbols load to xarray OK, {:.3f} secs".format(time() - t0))
 
 
-def run_tej_csv_to_panel():
-    import portfolio_programming as pp
-    import json
-
-    with open(pp.TAIEX_SYMBOL_JSON) as fin:
+def run_tej_csv_to_xarray():
+    with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
         symbols = json.load(fin)
 
     csv_dir = os.path.join(pp.DATA_DIR, 'tej_csv')
@@ -155,13 +158,13 @@ def run_tej_csv_to_panel():
 
     # manual setting
     trim_start_date = dt.date(2000, 1, 3)
-    trim_end_date = dt.date(2017, 6, 30)
+    trim_end_date = dt.date(2017, 12, 31)
 
     # run
     tej_csv_to_df(symbols, csv_dir, df_dir)
-    dataframe_to_panel(symbols, df_dir, trim_start_date, trim_end_date,
-                       pp.TAIEX_PANEL_PKL)
+    dataframe_to_xarray(symbols, df_dir, trim_start_date, trim_end_date,
+                        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
 
 
 if __name__ == '__main__':
-    run_tej_csv_to_panel()
+    run_tej_csv_to_xarray()

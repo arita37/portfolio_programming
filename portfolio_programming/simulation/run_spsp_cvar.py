@@ -13,9 +13,10 @@ from portfolio_programming.simulation.spsp_cvar import SPSP_CVaR
 
 
 def run_SPSP_CVaR():
-    n_stock = 50 
-    candidate_symbols = json.load(open(pp.TAIEX_SYMBOL_JSON))[:n_stock]
     pnl = pd.read_pickle(pp.TAIEX_PANEL_PKL)
+    n_stock = 5
+    candidate_symbols = json.load(open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))[:n_stock]
+    pnl = pd.read_pickle(pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_XARRAY)
     risky_rois = pnl.loc[pp.EXP_START_DATE:pp.EXP_END_DATE,
                  candidate_symbols, 'simple_roi'].T
 

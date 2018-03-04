@@ -23,11 +23,12 @@ else:
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 
 # candidate_symbol sets
-TAIEX_SYMBOL_JSON = os.path.join(DATA_DIR,
+TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON = os.path.join(DATA_DIR,
                                  'TAIEX_20050103_50largest_listed_market_cap.json')
 
-TAIEX_PANEL_PKL = os.path.join(DATA_DIR,
-                             'TAIEX_20050103_50largest_listed_market_cap_panel.pkl')
+# netCDF file
+TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC = os.path.join(DATA_DIR,
+                             'TAIEX_20050103_50largest_listed_market_cap_xarray.nc')
 
 # solver
 PROG_SOLVER = 'cplex'
