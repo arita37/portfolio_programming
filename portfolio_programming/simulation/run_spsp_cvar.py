@@ -85,5 +85,34 @@ if __name__ == '__main__':
                                '%(message)s',
                         datefmt='%Y%m%d-%H:%M:%S',
                         level=logging.INFO)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--setting", type=str,
+                        choices=("compact", "general"),
+                        required=True,
+                        help="SPSP setting")
+
+    parser.add_argument("-M", "--max_portfolio_size", type=int,
+                        choices=range(5, 55, 5),
+                        required=True,
+                        help="max_portfolio_size")
+
+    parser.add_argument("-h", "--rolling_window_size", type=int,
+                        choices=range(50, 250, 10),
+                        required=True,
+                        help="rolling window size for estimating statistics.")
+
+    parser.add_argument("-a", "--alpha", type=str,
+                        choices=["{:.2f}".format(v/100.)
+                                 for v in range(50,100, 5)],
+                        required=True,
+                        help="confidence level of CVaR")
+
+    parser.add_argument("scenario-set-idx", type=int,
+                        choices=range(1, 4),
+                        default=1,
+                        help="pre-generated scenario set index.")
+    args = parser.parse_args()
+
     run_compact_SPSP_CVaR(10, 90, 0.5)
     run_general_SPSP_CVaR(5, 200, 0.5)
