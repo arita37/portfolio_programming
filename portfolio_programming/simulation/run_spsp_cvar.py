@@ -55,7 +55,7 @@ def run_general_SPSP_CVaR(max_portfolio_size, rolling_window_size, alpha):
 
     risky_rois = risky_roi_xarr.loc[pp.EXP_START_DATE:pp.EXP_END_DATE,
                  candidate_symbols, 'simple_roi']
-
+    n_symbol = len(candidate_symbols)
     exp_trans_dates = risky_rois.get_index('trans_date')
     n_exp_dates = len(exp_trans_dates)
     risk_free_rois = xr.DataArray(np.zeros(n_exp_dates),
