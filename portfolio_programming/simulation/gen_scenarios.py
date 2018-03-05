@@ -34,7 +34,7 @@ from portfolio_programming.sampling.moment_matching import (
 def generating_scenarios_xarr(scenario_set_idx,
                               scenario_start_date,
                               scenario_end_date,
-                              n_stock,
+                              n_symbol,
                               rolling_window_size,
                               n_scenario,
                               retry_cnt=5,
@@ -67,7 +67,7 @@ def generating_scenarios_xarr(scenario_set_idx,
         sdx=scenario_set_idx,
         scenario_start_date=scenario_start_date.strftime("%Y%m%d"),
         scenario_end_date=scenario_end_date.strftime("%Y%m%d"),
-        n_stock=n_stock,
+        n_symbol=n_symbol,
         rolling_window_size=rolling_window_size,
         n_scenario=n_scenario
     )
@@ -82,7 +82,7 @@ def generating_scenarios_xarr(scenario_set_idx,
         scenario_set_idx,
         scenario_start_date.strftime("%Y%m%d"),
         scenario_end_date.strftime("%Y%m%d"),
-        n_stock,
+        n_symbol,
         rolling_window_size,
         n_scenario,
     )
@@ -94,7 +94,7 @@ def generating_scenarios_xarr(scenario_set_idx,
 
     # symbols
     with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
-        candidate_symbols = json.load(fin)[:n_stock]
+        candidate_symbols = json.load(fin)[:n_symbol]
 
     # all trans_date, pandas.core.indexes.datetimes.DatetimeIndex
     trans_dates = risky_asset_xarr.get_index('trans_date')
@@ -106,14 +106,14 @@ def generating_scenarios_xarr(scenario_set_idx,
     n_sc_period = len(sc_trans_dates)
 
     # estimating moments and correlation matrix
-    est_moments = xr.DataArray(np.zeros((n_stock, 4)),
+    est_moments = xr.DataArray(np.zeros((n_symbol, 4)),
                                dims=('symbol', 'moment'),
                                coords=(candidate_symbols,
                                        ['mean', 'std', 'skew', 'ex_kurt']))
 
     # output scenario xarray, shape: (n_sc_period, n_stock, n_scenario)
     scenario_xarr = xr.DataArray(
-        np.zeros((n_sc_period, n_stock, n_scenario)),
+        np.zeros((n_sc_period, n_symbol, n_scenario)),
         dims=('trans_date', 'symbol', 'scenario'),
         coords=(sc_trans_dates, candidate_symbols, range(n_scenario)),
     )
@@ -210,7 +210,7 @@ def _all_scenario_names():
     set_indices = (1,)
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
-    n_stocks = range(5, 50 + 5, 5)
+    n_symbols = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
 
@@ -243,12 +243,12 @@ def _all_scenario_names():
             sdx=sdx,
             scenario_start_date=s_date,
             scenario_end_date=e_date,
-            n_stock=m,
+            n_symbol=m,
             rolling_window_size=h,
             n_scenario=s
         ): (sdx, s_date, e_date, m, h, s)
         for sdx in set_indices
-        for m in n_stocks
+        for m in n_symbols
         for h in window_sizes
         for s in n_scenarios
     }
