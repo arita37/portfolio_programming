@@ -80,6 +80,7 @@ def spsp_cvar(candidate_symbols,
 
     # Model
     instance = ConcreteModel()
+    instance.max_portfolio_size = max_portfolio_size
     instance.risk_rois = risk_rois
     instance.risk_free_roi = risk_free_roi
     instance.allocated_risk_wealth = allocated_risk_wealth
@@ -779,12 +780,12 @@ class SPSP_CVaR(ValidMixin):
         reports['daily_skew_roi'] = wealth_daily_rois.skew()
 
         # excess Kurtosis
-        reports['daily_exkurt_roi'] = wealth_daily_rois.kurt()
-        reports['sharpe'] = Sharpe(wealth_daily_rois)
-        reports['sortino_full'], reports['sortino_full_semi_std'] = \
+        reports['daily_ex-kurt_roi'] = wealth_daily_rois.kurt()
+        reports['Sharpe'] = Sharpe(wealth_daily_rois)
+        reports['Sortino_full'], reports['Sortino_full_semi_std'] = \
             Sortino_full(wealth_daily_rois)
 
-        reports['sortino_partial'], reports['sortino_partial_semi_std'] = \
+        reports['Sortino_partial'], reports['Sortino_partial_semi_std'] = \
             Sortino_partial(wealth_daily_rois)
 
         return reports

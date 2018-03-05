@@ -109,7 +109,7 @@ def generating_scenarios_xarr(scenario_set_idx,
     est_moments = xr.DataArray(np.zeros((n_symbol, 4)),
                                dims=('symbol', 'moment'),
                                coords=(candidate_symbols,
-                                       ['mean', 'std', 'skew', 'ex_kurt']))
+                                       ['mean', 'std', 'skew', 'ex-kurt']))
 
     # output scenario xarray, shape: (n_sc_period, n_stock, n_scenario)
     scenario_xarr = xr.DataArray(
@@ -138,7 +138,7 @@ def generating_scenarios_xarr(scenario_set_idx,
         est_moments.loc[:, 'mean'] = hist_data.mean(axis=0)
         est_moments.loc[:, 'std'] = hist_data.std(axis=0, ddof=1)
         est_moments.loc[:, 'skew'] = spstats.skew(hist_data, axis=0, bias=False)
-        est_moments.loc[:, 'ex_kurt'] = spstats.kurtosis(hist_data, axis=0,
+        est_moments.loc[:, 'ex-kurt'] = spstats.kurtosis(hist_data, axis=0,
                                                    bias=False)
         # est_corrs = (hist_data.T).corr("pearson")
         est_corrs = np.corrcoef(hist_data.T)
