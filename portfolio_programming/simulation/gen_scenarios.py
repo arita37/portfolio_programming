@@ -211,7 +211,7 @@ def _all_scenario_names():
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
     n_stocks = range(5, 50 + 5, 5)
-    window_sizes = range(120, 240 + 10, 10)
+    window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
 
     # return {

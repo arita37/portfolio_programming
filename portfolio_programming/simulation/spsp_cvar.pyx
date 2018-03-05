@@ -14,11 +14,11 @@ import os
 import pickle
 import platform
 from time import time
+import logging
 
 cimport numpy as cnp
 import numpy as np
-import pandas as pd
-from arch.bootstrap.multiple_comparrison import (SPA, )
+import xarray as xr
 from pyomo.environ import *
 
 import portfolio_programming as pp
@@ -38,8 +38,7 @@ def spsp_cvar(candidate_symbols,
               cnp.ndarray[cnp.float64_t, ndim=2] predict_risk_rois,
               double predict_risk_free_roi,
               int n_scenario,
-              str solver=pp.PROG_SOLVER,
-              int verbose=False):
+              str solver=pp.PROG_SOLVER):
     """
     2nd-stage minimize CVaR stochastic programming.
     The maximize_portfolio_size is equal to the n_stock.
@@ -66,20 +65,18 @@ def spsp_cvar(candidate_symbols,
     Returns
     -------------------
     results: dict
-        "buy_amounts": pandas.Series, shape: (n_stock,)
-        "sell_amounts": pandas.Series,  shape: (n_stock,)
+        "amounts": xarray.DataArray, shape:(n_symbol, 3),
+            coords: (symbol, ('buy', 'sell','chosen'))
         "estimated_var": float
         "estimated_cvar": float
         "estimated_ev_var": float
         "estimated_ev_cvar": float
         "estimated_eev_cvar": float
         "vss": vss, float
-        "chosen_symbols": pandas.Series, shape: (n_stock,)
-
     """
     t0 = time()
 
-    cdef Py_ssize_t n_stock = len(candidate_symbols)
+    cdef Py_ssize_t n_symbol = len(candidate_symbols)
 
     # Model
     instance = ConcreteModel()
@@ -96,7 +93,7 @@ def spsp_cvar(candidate_symbols,
     instance.predict_risk_free_roi = predict_risk_free_roi
 
     # Set
-    instance.symbols = np.arange(n_stock)
+    instance.symbols = np.arange(n_symbol)
     instance.scenarios = np.arange(n_scenario)
 
     # decision variables
@@ -192,18 +189,18 @@ def spsp_cvar(candidate_symbols,
     results = opt.solve(instance)
     instance.solutions.load_from(results)
 
-    if verbose:
-        display(instance)
+    # logging.DEBUG(display(instance))
 
     # buy and sell amounts
-    buy_amounts = pd.Series([instance.buy_amounts[mdx].value
-                             for mdx in range(n_stock)],
-                            index=candidate_symbols)
-    sell_amounts = pd.Series([instance.sell_amounts[mdx].value
-                              for mdx in range(n_stock)],
-                             index=candidate_symbols)
-
-
+    actions = ['buy', 'sell', 'chosen']
+    amounts = xr.DataArray(
+        [(instance.buy_amounts[mdx].value,
+          instance.buy_amounts[mdx].value,
+          -1)
+         for mdx in range(n_symbol)],
+        dims=('symbol', "action"),
+        coords=(candidate_symbols, actions),
+    )
 
     # value at risk (estimated)
     cdef double estimated_var = instance.Z.value
@@ -272,7 +269,7 @@ def spsp_cvar(candidate_symbols,
         scen_roi = predict_risk_rois[:, sdx]
         portfolio_wealth = (
                 sum((1 + scen_roi[mdx]) * instance.risk_wealth[mdx].value
-                    for mdx in np.arange(n_stock)) +
+                    for mdx in np.arange(n_symbol)) +
                 instance.risk_free_wealth.value)
 
         if estimated_var <= portfolio_wealth:
@@ -287,27 +284,23 @@ def spsp_cvar(candidate_symbols,
 
     chosen_symbols = None
     if setting == "general":
-        # chosen stock
-        chosen_symbols = pd.Series([instance.chosen[mdx].value
-                                    for mdx in range(n_stock)],
-                                   index=candidate_symbols)
+        chosens = [instance.chosen[mdx].value for mdx in range(n_symbol)]
     elif setting == "compact":
-        chosen_symbols = pd.Series([1 for mdx in range(n_stock)],
-                                   index=candidate_symbols)
+        chosens = [1 for mdx in range(n_symbol)]
 
-    if verbose:
-        print("spsp_cvar {} OK, {:.3f} secs".format(setting, time() - t0))
+    amounts.loc[candidate_symbols, 'chosen'] = chosens
+
+    logging.info("spsp_cvar {} OK, {:.3f} secs".format(
+        setting, time() - t0))
 
     return {
-        "buy_amounts": buy_amounts,
-        "sell_amounts": sell_amounts,
+        "amounts": amounts,
         "VaR": estimated_var,
         "CVaR": estimated_cvar,
         "EV_VaR": estimated_ev_var,
         "EV_CVaR": estimated_ev_cvar,
         "EEV_CVaR": estimated_eev_cvar,
         "VSS": vss,
-        "chosen_symbols": chosen_symbols,
     }
 
 
@@ -410,7 +403,6 @@ class SPSP_CVaR(ValidMixin):
                  int n_scenario=200,
                  double alpha=0.05,
                  int scenario_set_idx=1,
-                 int verbose=False,
                  int print_interval=10):
         """
         stagewise portfolio stochastic programming  model
@@ -429,14 +421,18 @@ class SPSP_CVaR(ValidMixin):
             if the max_portfolio_size == n_stock, it degenerates to the
             linear programming.
 
-        risk_rois : pandas.DataFrame, shape: (n_period, n_stock)
+        risk_rois : xarray.DataArray,
+            dim:(trans_date, symbol),
+            shape: (n_period, n_stock)
             The return of all stocks in the given intervals.
             The n_exp_period should be subset of the n_period.
 
-        risk_free_rois : pandas.series or numpy.array, shape: (n_exp_period, )
+        risk_free_rois : xarray.DataArray,
+            dim: (trans_date),
+            shape: (n_exp_period, )
             The return of risk-free asset, usually all zeros.
 
-        initial_risk_wealth : pandas.series, shape: (n_stock,)
+        initial_risk_wealth : xarray.DataArray, shape: (n_stock,)
             The invested wealth of the stocks in the candidate set.
 
         initial_risk_free_wealth : float
@@ -466,63 +462,54 @@ class SPSP_CVaR(ValidMixin):
         report_path : string
             The performance report file path of the simulation.
 
-        verbose : boolean
 
         Data
         --------------
-        wealth_df : pandas.DataFrame, shape: (n_exp_period, n_stock+1)
-            The risky and risk-free assets wealth in each period of the
-            simulation.
-            The risk-free asset symbol is self.risk_free_symbol
-
-        amount_pnl : pandas.Panel, shape: (n_exp_period. n_stock+1, 4)
-            Buying, selling, transaction fee and chosen of each asset in each
-            period of the simulation.
-
-        estimated_risks: pandas.DataFrame, shape: (n_exp_period, 3)
-            The estimated CVaR, VaR and number of gen_scenario_fail in
-            the simulation.
-            The scenario-generating function may fail in generating
-            scenarios in some periods.
+       decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
+       estimated risk_xarr, xarray.DataArray, shape(n_exp_period, 6)
 
         """
 
         # verify candidate_symbols
-        self.valid_dimension("n_stock", len(candidate_symbols),
+        self.valid_dimension("n_symbol", len(candidate_symbols),
                              risk_rois.shape[1])
 
-        self.n_stock = len(candidate_symbols)
+        self.n_symbol = len(candidate_symbols)
         self.candidate_symbols = candidate_symbols
-        self.periods = risk_rois.index
         self.risk_free_symbol = 'risk_free'
+        self.pf_symbols = candidate_symbols + [self.risk_free_symbol, ]
+
+        # pandas.core.indexes.datetimes.DatetimeIndex
+        self.all_trans_dates = risk_rois.get_index('trans_date')
+        self.n_all_period = len(self.all_trans_dates)
 
         # verify setting
         if setting not in ("compact", "general"):
             raise (ValueError("Incorrect setting: {}".format(setting)))
 
-        if setting == "compact" and max_portfolio_size != self.n_stock:
+        if setting == "compact" and max_portfolio_size != self.n_symbol:
             raise (ValueError(
                 "The max portfolio size {} must be the same "
                 "as the number of symbols {}".format(
-                    max_portfolio_size, self.n_stock)))
+                    max_portfolio_size, self.n_symbol)))
         self.setting = setting
 
         # verify max_portfolio_size
         self.valid_nonnegative_value("max_portfolio_size", max_portfolio_size)
         self.max_portfolio_size = max_portfolio_size
 
-        if max_portfolio_size > self.n_stock:
+        if max_portfolio_size > self.n_symbol:
             raise (ValueError(
                 "The portfolio size {} cannot large than the "
                 "size of candidate set. {}.".format(
-                    max_portfolio_size, self.n_stock)))
+                    max_portfolio_size, self.n_symbol)))
 
         # verify risky rois and risk_free_rois
         self.risk_rois = risk_rois
         self.risk_free_rois = risk_free_rois
 
         # verify initial_wealth
-        self.valid_dimension("n_stock", len(candidate_symbols),
+        self.valid_dimension("n_symbol", len(candidate_symbols),
                              len(initial_risk_wealth))
 
         self.valid_nonnegative_list(
@@ -540,7 +527,6 @@ class SPSP_CVaR(ValidMixin):
         self.valid_range_value("sell_trans_fee", sell_trans_fee, 0, 1)
         self.sell_trans_fee = sell_trans_fee
 
-        self.verbose = verbose
 
         # note .loc() will contain the end_date element
         self.valid_trans_date(start_date, end_date)
@@ -550,22 +536,19 @@ class SPSP_CVaR(ValidMixin):
         self.exp_risk_free_rois = risk_free_rois.loc[
                                   start_date:end_date]
 
-        self.n_exp_period = self.exp_risk_rois.shape[0]
-        self.exp_start_date = self.exp_risk_rois.index[0]
-        self.exp_end_date = self.exp_risk_rois.index[self.n_exp_period - 1]
-        self.exp_start_date_idx = self.risk_rois.index.get_loc(
-            self.exp_risk_rois.index[0])
+        self.exp_trans_dates = self.exp_risk_rois.get_index('trans_date')
+        self.n_exp_period = len(self.exp_trans_dates)
+        self.exp_start_date = self.exp_trans_dates[0]
+        self.exp_end_date = self.exp_trans_dates[self.n_exp_period - 1]
+
+        self.exp_start_date_idx = self.all_trans_dates.get_loc(
+            self.exp_start_date)
+        self.exp_end_date_idx = self.all_trans_dates.get_loc(
+            self.exp_end_date)
 
         # # verify rolling_window_size
-        # because we have generated the scenario in advance, it does not require
-        # generate scenario in the simulation.
-        # For a reason, we don't need to verify the condition
-        # self.exp_start_date_idx < rolling_window_size.
-
-        # self.valid_nonnegative_value("rolling_window_size", rolling_window_size)
-        # if self.exp_start_date_idx < rolling_window_size:
-        #     print(self.exp_start_date_idx, rolling_window_size)
-        #     raise ValueError('There is no enough data.')
+        self.valid_nonnegative_value("rolling_window_size",
+                                     rolling_window_size)
         self.rolling_window_size = int(rolling_window_size)
 
         # verify n_scenario
@@ -581,62 +564,65 @@ class SPSP_CVaR(ValidMixin):
 
         # load scenario panel, shape:(n_exp_period, n_stock, n_scenario)
         self.scenario_set_idx = scenario_set_idx
-        self.scenario_pnl = self.load_generated_scenario()
+        self.scenario_xarr = self.load_generated_scenario()
 
         # results data
-        # wealth DataFrame, shape: (n_exp_period, n_stock+1)
-        self.wealth_df = pd.DataFrame(
-            np.zeros((self.n_exp_period, self.n_stock + 1)),
-            index=self.exp_risk_rois.index,
-            columns=candidate_symbols + [self.risk_free_symbol, ]
-        )
-
-        # buying,selling, transaction_fee, chosen amount panel,
-        # shape: (n_exp_period, n_stock, 3)
-        self.amounts_pnl = pd.Panel(
-            np.zeros((self.n_exp_period, self.n_stock, 4)),
-            items=self.exp_risk_rois.index,
-            major_axis=self.candidate_symbols,
-            minor_axis=("buy", "sell", "trans_fee", "chosen"),
+        # decision xarray, shape: (n_exp_period, n_symbol+1, 4)
+        decisions = ["wealth", "buy", "sell", "chosen"]
+        self.decision_xarr = xr.DataArray(
+            np.zeros((self.n_exp_period, self.n_symbol + 1, len(decisions))),
+            dims=('trans_date', 'pf_symbol', 'decision'),
+            coords=(
+                self.exp_trans_dates,
+                self.pf_symbols,
+                decisions
+            )
         )
 
         # estimated risks, shape(n_exp_period, 6)
-        self.estimated_risks = pd.DataFrame(
-            np.zeros((self.n_exp_period, 6)),
-            index=self.exp_risk_rois.index,
-            columns=('CVaR', 'VaR', 'EV_CVaR', 'EV_VaR', 'EEV_CVaR', 'VSS')
+        risks = ['CVaR', 'VaR', 'EV_CVaR', 'EV_VaR', 'EEV_CVaR', 'VSS']
+        self.estimated_risk_xarr = xr.DataArray(
+            np.zeros((self.n_exp_period, len(risks))),
+            dims=('trans_date', 'risk'),
+            coords=(
+                self.exp_trans_dates,
+                risks
+            )
         )
 
     def load_generated_scenario(self):
         """
-        load generated scenario panel
+        load generated scenario xarray
 
         Returns
         ---------------
-        scenario_pnl: pandas.Panel, shape: (n_exp_period, n_stock, n_scenario)
+        scenario_xarr: xarray.DataArray ,
+            dims=(trans_date, symbol, sceenario),
+            shape: (n_exp_period, n_stock,  n_scenario)
         """
-        name = pp.SCENARIO_NAME_FORMAT.format(
+        scenario_file = pp.SCENARIO_NAME_FORMAT.format(
             sdx=self.scenario_set_idx,
             scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
             scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
-            n_stock=self.n_stock,
+            n_symbol=self.n_symbol,
             rolling_window_size=self.rolling_window_size,
             n_scenario=self.n_scenario
         )
 
-        scenario_path = os.path.join(pp.SCENARIO_SET_DIR, name)
+        scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
 
         if not os.path.exists(scenario_path):
             raise ValueError("{} not exists.".format(scenario_path))
         else:
-            scenario_pnl = pd.read_pickle(scenario_path)
+            scenario_xarr = xr.open_dataarray(scenario_path)
             # the experiment interval maybe subset of scenarios.
             if (self.exp_start_date != pp.SCENARIO_START_DATE or
                     self.exp_end_date != pp.SCENARIO_END_DATE):
-                scenario_pnl = scenario_pnl.loc[
-                               self.exp_start_date:self.exp_end_date]
+                # truncate xarr
+                scenario_xarr = scenario_xarr.loc[
+                                self.exp_start_date:self.exp_end_date]
 
-        return scenario_pnl
+        return scenario_xarr
 
     def get_estimated_risk_rois(self, *args, **kwargs):
         """
@@ -644,10 +630,10 @@ class SPSP_CVaR(ValidMixin):
 
         Returns:
         ----------------------------
-        pandas.DataFrame, shape: (n_stock, n_scenario)
+        xarray.DataArray, shape: (n_stock, n_scenario)
         """
-        df = self.scenario_pnl.loc[kwargs['trans_date']]
-        return df
+        xarr = self.scenario_xarr.loc[kwargs['trans_date']]
+        return xarr
 
     def get_estimated_risk_free_roi(self, *arg, **kwargs):
         """
@@ -667,15 +653,14 @@ class SPSP_CVaR(ValidMixin):
         Returns:
         --------------
         results: dict
-            "buy_amounts": pandas.Series, shape: (n_stock,)
-            "sell_amounts": pandas.Series,  shape: (n_stock,)
+            "amounts": xarray.DataArray, shape:(n_symbol, 3),
+                coords: (symbol, ('buy', 'sell','chosen'))
             "estimated_var": float
             "estimated_cvar": float
             "estimated_ev_var": float
             "estimated_ev_cvar": float
             "estimated_eev_cvar": float
             "vss": vss, float
-            "chosen_symbols": pandas.Series, shape: (n_stock,)
         """
         # current exp_period index
         trans_date = kwargs['trans_date']
@@ -683,18 +668,17 @@ class SPSP_CVaR(ValidMixin):
             self.candidate_symbols,
             self.setting,
             self.max_portfolio_size,
-            self.exp_risk_rois.loc[trans_date, :].as_matrix(),
+            self.exp_risk_rois.loc[trans_date, :].values,
             self.risk_free_rois.loc[trans_date],
-            kwargs['allocated_risk_wealth'].as_matrix(),
+            kwargs['allocated_risk_wealth'].values,
             kwargs['allocated_risk_free_wealth'],
             self.buy_trans_fee,
             self.sell_trans_fee,
             self.alpha,
-            kwargs['estimated_risk_rois'].as_matrix(),
+            kwargs['estimated_risk_rois'].values,
             kwargs['estimated_risk_free_roi'],
             self.n_scenario,
             pp.PROG_SOLVER,
-            self.verbose
         )
         return results
 
@@ -711,7 +695,7 @@ class SPSP_CVaR(ValidMixin):
             self.exp_start_date.strftime("%Y%m%d"),
             self.exp_end_date.strftime("%Y%m%d"),
             self.max_portfolio_size,
-            self.n_stock,
+            self.n_symbol,
             self.rolling_window_size,
             self.alpha,
             self.n_scenario,
@@ -738,9 +722,8 @@ class SPSP_CVaR(ValidMixin):
             rolling_window_size,
             n_scenario,
             alpha,
-            wealth_df,
-            amount_pnl,
-            estimated_risks
+            decision_xarr,
+            estimated_risk_xarr
     ):
         """
        simulation reports
@@ -758,17 +741,8 @@ class SPSP_CVaR(ValidMixin):
         initial_wealth, final_wealth: float
         n_exp_period: integer
         cum_trans_fee_loss: float
-        wealth_df: pandas.DataFrame, shape:(n_exp_period, n_stock + 1)
-            the wealth series of each symbols in the simulation.
-            It includes the risky and risk-free asset.
-        amount_pnl : pandas.Panel, shape: (n_exp_period, n_stock+1, 3)
-            Buying, selling and transaction fee amount of each asset in each
-            period of the simulation.
-        estimated_risks: pandas.DataFrame, shape: (n_exp_period, 3)
-            The estimated CVaR, VaR and gen_scenario fail count in the
-            simulation.
-            The scenario-generating function may fail in generating
-            scenarios in some periods.
+        decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
+        estimated risk_xarr, xarray.DataArray, shape(n_exp_period, 6)
         """
         reports = dict()
 
@@ -785,18 +759,17 @@ class SPSP_CVaR(ValidMixin):
         reports['initial_wealth'] = initial_wealth
         reports['final_wealth'] = final_wealth
         reports['cum_trans_fee_loss'] = cum_trans_fee_loss
-        reports['wealth_df'] = wealth_df
-        reports['amount_pnl'] = amount_pnl
-        reports['estimated_risks'] = estimated_risks
+        reports['decision_xarr'] = decision_xarr
+        reports[' estimated_risk_xarr'] = estimated_risk_xarr
 
         # analysis
-        reports['n_stock'] = len(candidate_symbols)
+        reports['n_symbol'] = len(candidate_symbols)
         reports['cum_roi'] = final_wealth / initial_wealth - 1.
         reports['daily_roi'] = np.power(final_wealth / initial_wealth,
                                         1. / n_exp_period) - 1
 
-        # wealth_arr, shape: (n_stock+1,)
-        wealth_arr = wealth_df.sum(axis=1)
+        # wealth_arr, Pandas.Series, shape: (n_stock+1,)
+        wealth_arr = decision_xarr.loc[:, :, 'wealth'].sum(axis=1).to_series()
         wealth_daily_rois = wealth_arr.pct_change()
         wealth_daily_rois[0] = 0
 
@@ -814,15 +787,6 @@ class SPSP_CVaR(ValidMixin):
             Sortino_partial(wealth_daily_rois)
 
         reports['max_abs_drawdown'] = maximum_drawdown(wealth_arr)
-
-        # statistics test
-        # SPA test, benchmark is no action
-        spa_na = SPA(wealth_daily_rois, np.zeros(wealth_arr.size), reps=1000)
-        spa_na.seed(np.random.randint(0, 2 ** 31 - 1))
-        spa_na.compute()
-        reports['noaction_SPA_l_pvalue'] = spa_na.pvalues[0]
-        reports['noaction_SPA_c_pvalue'] = spa_na.pvalues[1]
-        reports['noaction_SPA_u_pvalue'] = spa_na.pvalues[2]
 
         return reports
 
@@ -846,7 +810,7 @@ class SPSP_CVaR(ValidMixin):
 
         for tdx in range(self.n_exp_period):
             t1 = time()
-            curr_date = self.exp_risk_rois.index[tdx]
+            curr_date = self.exp_trans_dates[tdx]
 
             estimated_risk_rois = self.get_estimated_risk_rois(
                 trans_date=curr_date)
@@ -863,55 +827,56 @@ class SPSP_CVaR(ValidMixin):
                 allocated_risk_free_wealth=allocated_risk_free_wealth
             )
 
-            # buy and sell amounts and trans_fee
-            self.amounts_pnl.loc[curr_date, :, 'buy'] = pg_results[
-                "buy_amounts"]
-            self.amounts_pnl.loc[curr_date, :, 'sell'] = pg_results[
-                "sell_amounts"]
+            # amount_xarr, dims=('symbol', "amount"),
+            amount_xarr = pg_results["amounts"]
+            for act in ('buy', 'sell', 'chosen'):
+                # the symbol does not contain risk_free symbol
+                self.decision_xarr.loc[curr_date, self.candidate_symbols, act] \
+                    = amount_xarr.loc[self.candidate_symbols, act]
 
             # # record the transaction loss
-            buy_amounts_sum = pg_results["buy_amounts"].sum()
-            sell_amounts_sum = pg_results["sell_amounts"].sum()
+            buy_sum = amount_xarr.loc[:, 'buy'].sum()
+            sell_sum = amount_xarr.loc[:, 'sell'].sum()
             cum_trans_fee_loss += (
-                    buy_amounts_sum * self.buy_trans_fee +
-                    sell_amounts_sum * self.sell_trans_fee
+                    buy_sum * self.buy_trans_fee +
+                    sell_sum * self.sell_trans_fee
             )
 
             # buy and sell amounts consider the transaction cost
-            total_buy = (buy_amounts_sum * (1 + self.buy_trans_fee))
-            total_sell = (sell_amounts_sum * (1 - self.sell_trans_fee))
-
-            # record chosen symbols
-            self.amounts_pnl.loc[curr_date, :, 'chosen'] = pg_results[
-                'chosen_symbols']
+            total_buy = (buy_sum * (1 + self.buy_trans_fee))
+            total_sell = (sell_sum * (1 - self.sell_trans_fee))
 
             # capital allocation
-            self.wealth_df.loc[curr_date, self.candidate_symbols] = (
-                    (1 + self.exp_risk_rois.loc[curr_date]) *
+
+            self.decision_xarr.loc[curr_date, self.candidate_symbols, 'wealth'] \
+                = (
+                    (1 + self.exp_risk_rois.loc[curr_date, self.candidate_symbols]) *
                     allocated_risk_wealth +
-                    self.amounts_pnl.loc[curr_date, :, "buy"] -
-                    self.amounts_pnl.loc[curr_date, :, "sell"]
+                    self.decision_xarr.loc[curr_date,
+                                           self.candidate_symbols, 'buy'] -
+                    self.decision_xarr.loc[curr_date,
+                                           self.candidate_symbols, 'sell']
             )
-            self.wealth_df.loc[curr_date, self.risk_free_symbol] = (
+            self.wealth_df.loc[curr_date, self.risk_free_symbol, 'wealth'] = (
                     (1 + self.exp_risk_free_rois.loc[curr_date]) *
                     allocated_risk_free_wealth -
                     total_buy + total_sell
             )
 
             # update wealth
-            allocated_risk_wealth = self.wealth_df.loc[
-                curr_date, self.candidate_symbols]
-            allocated_risk_free_wealth = self.wealth_df.loc[
-                curr_date, self.risk_free_symbol]
+            allocated_risk_wealth = self.decision_xarr.loc[
+                curr_date, self.candidate_symbols, 'wealth']
+            allocated_risk_free_wealth = self.decision_xarr.loc[
+                curr_date, self.candidate_symbols, 'wealth']
 
             # record risks
             for col in ("VaR", "CVaR", "EV_VaR", "EV_CVaR", "EEV_CVaR", "VSS"):
-                self.estimated_risks.loc[curr_date, col] = pg_results[col]
+                self.estimated_risk_xarr.loc[curr_date, col] = pg_results[col]
 
             # record chosen symbols
             if tdx % self.print_interval == 0:
-                print("{} [{}/{}] {} "
-                      "wealth:{:.2f}, {:.3f} secs".format(
+                logging.info("{} [{}/{}] {} "
+                             "wealth:{:.2f}, {:.3f} secs".format(
                     simulation_name,
                     tdx + 1,
                     self.n_exp_period,
@@ -923,8 +888,9 @@ class SPSP_CVaR(ValidMixin):
         # end of simulation, computing statistics
         edx = self.n_exp_period - 1
         initial_wealth = (
-                    self.initial_risk_wealth.sum() + self.initial_risk_free_wealth)
-        final_wealth = self.wealth_df.iloc[edx].sum()
+                self.initial_risk_wealth.sum() + self.initial_risk_free_wealth)
+        final_wealth = self.decision_xarr.loc[self.exp_end_date, :,
+                       'wealth'].sum()
 
         # get reports
         reports = self.get_performance_report(
@@ -945,8 +911,8 @@ class SPSP_CVaR(ValidMixin):
             self.n_scenario,
             self.alpha,
             self.wealth_df,
-            self.amounts_pnl,
-            self.estimated_risks
+            self.decision_xarr,
+            self.estimated_risk_xarr
         )
 
         # add simulation time
