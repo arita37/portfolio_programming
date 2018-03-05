@@ -759,8 +759,9 @@ class SPSP_CVaR(ValidMixin):
         reports['initial_wealth'] = initial_wealth
         reports['final_wealth'] = final_wealth
         reports['cum_trans_fee_loss'] = cum_trans_fee_loss
+        reports['rolling_window_size'] = rolling_window_size
         reports['decision_xarr'] = decision_xarr
-        reports[' estimated_risk_xarr'] = estimated_risk_xarr
+        reports['estimated_risk_xarr'] = estimated_risk_xarr
 
         # analysis
         reports['n_symbol'] = len(candidate_symbols)
@@ -785,8 +786,6 @@ class SPSP_CVaR(ValidMixin):
 
         reports['sortino_partial'], reports['sortino_partial_semi_std'] = \
             Sortino_partial(wealth_daily_rois)
-
-        reports['max_abs_drawdown'] = maximum_drawdown(wealth_arr)
 
         return reports
 
@@ -903,9 +902,9 @@ class SPSP_CVaR(ValidMixin):
             self.n_exp_period,
             self.buy_trans_fee,
             self.sell_trans_fee,
-            initial_wealth,
-            final_wealth,
-            cum_trans_fee_loss,
+            float(initial_wealth),
+            float(final_wealth),
+            float(cum_trans_fee_loss),
             self.rolling_window_size,
             self.n_scenario,
             self.alpha,
