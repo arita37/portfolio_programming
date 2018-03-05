@@ -14,7 +14,7 @@ import portfolio_programming as pp
 from portfolio_programming.simulation.spsp_cvar import SPSP_CVaR
 
 
-def run_compact_SPSP_CVaR(n_symbol, rolling_window_size, alpha,
+def run_SPSP_CVaR_compact(n_symbol, rolling_window_size, alpha,
                           sceenario_set_idx):
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
@@ -48,14 +48,14 @@ def run_compact_SPSP_CVaR(n_symbol, rolling_window_size, alpha,
     instance.run()
 
 
-def run_general_SPSP_CVaR(max_portfolio_size, rolling_window_size, alpha,
+def run_SPSP_CVaR_general(max_portfolio_size, rolling_window_size, alpha,
                           sceenario_set_idx):
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
     candidate_symbols = json.load(
         open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
     n_symbol = len(candidate_symbols)
-    
+
     risky_rois = risky_roi_xarr.loc[pp.EXP_START_DATE:pp.EXP_END_DATE,
                  candidate_symbols, 'simple_roi']
 
@@ -118,12 +118,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.setting == 'compact':
-        run_compact_SPSP_CVaR(args.max_portfolio_size,
+        run_SPSP_CVaR_compact(args.max_portfolio_size,
                               args.rolling_window_size,
                               float(args.alpha),
                               args.sceenario_set_idx)
     elif args.setting == 'general':
-        run_general_SPSP_CVaR(args.max_portfolio_size,
+        run_SPSP_CVaR_general(args.max_portfolio_size,
                               args.rolling_window_size,
                               float(args.alpha),
                               args.sceenario_set_idx)

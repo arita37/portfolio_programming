@@ -690,17 +690,18 @@ class SPSP_CVaR(ValidMixin):
         string
            simulation name of this experiment
         """
-        name = ("SPSP_CVaR_{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{}_scenario-set-idx{"
-                "}".format(
-            self.setting,
-            self.exp_start_date.strftime("%Y%m%d"),
-            self.exp_end_date.strftime("%Y%m%d"),
-            self.max_portfolio_size,
-            self.n_symbol,
-            self.rolling_window_size,
-            self.alpha,
-            self.n_scenario,
-            self.scenario_set_idx)
+        name = (
+            "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{}".format(
+                self.setting,
+                self.scenario_set_idx,
+                self.exp_start_date.strftime("%Y%m%d"),
+                self.exp_end_date.strftime("%Y%m%d"),
+                self.max_portfolio_size,
+                self.n_symbol,
+                self.rolling_window_size,
+                self.alpha,
+                self.n_scenario
+            )
         )
 
         return name
