@@ -290,7 +290,7 @@ def spsp_cvar(candidate_symbols,
 
     amounts.loc[candidate_symbols, 'chosen'] = chosens
 
-    logging.info("spsp_cvar {} OK, {:.3f} secs".format(
+    logging.debug("spsp_cvar {} OK, {:.3f} secs".format(
         setting, time() - t0))
 
     return {
@@ -909,7 +909,6 @@ class SPSP_CVaR(ValidMixin):
             self.rolling_window_size,
             self.n_scenario,
             self.alpha,
-            self.wealth_df,
             self.decision_xarr,
             self.estimated_risk_xarr
         )
