@@ -50,4 +50,4 @@ if __name__ == '__main__':
                                '%(message)s',
                         datefmt='%Y%m%d-%H:%M:%S',
                         level=logging.DEBUG)
-    run_SPSP_CVaR(5, 150, 0.8)
+    run_SPSP_CVaR(10, 90, 0.5)
