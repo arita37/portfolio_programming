@@ -195,7 +195,7 @@ def spsp_cvar(candidate_symbols,
     actions = ['buy', 'sell', 'chosen']
     amounts = xr.DataArray(
         [(instance.buy_amounts[mdx].value,
-          instance.buy_amounts[mdx].value,
+          instance.sell_amounts[mdx].value,
           -1)
          for mdx in range(n_symbol)],
         dims=('symbol', "action"),
@@ -571,7 +571,7 @@ class SPSP_CVaR(ValidMixin):
         decisions = ["wealth", "buy", "sell", "chosen"]
         self.decision_xarr = xr.DataArray(
             np.zeros((self.n_exp_period, self.n_symbol + 1, len(decisions))),
-            dims=('trans_date', 'pf_symbol', 'decision'),
+            dims=('trans_date', 'symbol', 'decision'),
             coords=(
                 self.exp_trans_dates,
                 self.pf_symbols,
@@ -847,7 +847,6 @@ class SPSP_CVaR(ValidMixin):
             total_sell = (sell_sum * (1 - self.sell_trans_fee))
 
             # capital allocation
-
             self.decision_xarr.loc[curr_date, self.candidate_symbols, 'wealth'] \
                 = (
                     (1 + self.exp_risk_rois.loc[curr_date, self.candidate_symbols]) *
@@ -857,7 +856,7 @@ class SPSP_CVaR(ValidMixin):
                     self.decision_xarr.loc[curr_date,
                                            self.candidate_symbols, 'sell']
             )
-            self.wealth_df.loc[curr_date, self.risk_free_symbol, 'wealth'] = (
+            self.decision_xarr.loc[curr_date, self.risk_free_symbol, 'wealth'] = (
                     (1 + self.exp_risk_free_rois.loc[curr_date]) *
                     allocated_risk_free_wealth -
                     total_buy + total_sell
@@ -867,7 +866,7 @@ class SPSP_CVaR(ValidMixin):
             allocated_risk_wealth = self.decision_xarr.loc[
                 curr_date, self.candidate_symbols, 'wealth']
             allocated_risk_free_wealth = self.decision_xarr.loc[
-                curr_date, self.candidate_symbols, 'wealth']
+                curr_date, self.risk_free_symbol, 'wealth']
 
             # record risks
             for col in ("VaR", "CVaR", "EV_VaR", "EV_CVaR", "EEV_CVaR", "VSS"):
@@ -880,8 +879,8 @@ class SPSP_CVaR(ValidMixin):
                     simulation_name,
                     tdx + 1,
                     self.n_exp_period,
-                    self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
-                    self.wealth_df.loc[curr_date].sum(),
+                    curr_date.strftime("%Y%m%d"),
+                    float(self.decision_xarr.loc[curr_date, :, 'wealth'].sum()),
                     time() - t1)
                 )
 
