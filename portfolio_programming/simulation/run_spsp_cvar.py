@@ -14,7 +14,8 @@ import portfolio_programming as pp
 from portfolio_programming.simulation.spsp_cvar import SPSP_CVaR
 
 
-def run_compact_SPSP_CVaR(n_symbol, rolling_window_size, alpha):
+def run_compact_SPSP_CVaR(n_symbol, rolling_window_size, alpha,
+                          sceenario_set_idx):
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
     candidate_symbols = json.load(
@@ -41,18 +42,20 @@ def run_compact_SPSP_CVaR(n_symbol, rolling_window_size, alpha):
                          initial_risk_free_wealth,
                          rolling_window_size=rolling_window_size,
                          alpha=alpha,
-                         scenario_set_idx=1,
+                         scenario_set_idx=sceenario_set_idx,
                          print_interval=10
                          )
     instance.run()
 
 
-def run_general_SPSP_CVaR(max_portfolio_size, rolling_window_size, alpha):
+def run_general_SPSP_CVaR(max_portfolio_size, rolling_window_size, alpha,
+                          sceenario_set_idx):
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
     candidate_symbols = json.load(
         open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
-
+    n_symbol = len(candidate_symbols)
+    
     risky_rois = risky_roi_xarr.loc[pp.EXP_START_DATE:pp.EXP_END_DATE,
                  candidate_symbols, 'simple_roi']
 
@@ -74,7 +77,7 @@ def run_general_SPSP_CVaR(max_portfolio_size, rolling_window_size, alpha):
                          initial_risk_free_wealth,
                          rolling_window_size=rolling_window_size,
                          alpha=alpha,
-                         scenario_set_idx=1,
+                         scenario_set_idx=sceenario_set_idx,
                          print_interval=10
                          )
     instance.run()
@@ -108,11 +111,19 @@ if __name__ == '__main__':
                         required=True,
                         help="confidence level of CVaR")
 
-    parser.add_argument("scenario-set-idx", type=int,
+    parser.add_argument("--scenario-set-idx", type=int,
                         choices=range(1, 4),
                         default=1,
                         help="pre-generated scenario set index.")
     args = parser.parse_args()
 
-    run_compact_SPSP_CVaR(10, 90, 0.5)
-    run_general_SPSP_CVaR(5, 200, 0.5)
+    if args.setting == 'compact':
+        run_compact_SPSP_CVaR(args.max_portfolio_size,
+                              args.rolling_window_size,
+                              float(args.alpha),
+                              args.sceenario_set_idx)
+    elif args.setting == 'general':
+        run_general_SPSP_CVaR(args.max_portfolio_size,
+                              args.rolling_window_size,
+                              float(args.alpha),
+                              args.sceenario_set_idx)
