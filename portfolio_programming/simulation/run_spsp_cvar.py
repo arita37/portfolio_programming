@@ -49,5 +49,5 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(filename)15s %(levelname)10s %(asctime)s\n'
                                '%(message)s',
                         datefmt='%Y%m%d-%H:%M:%S',
-                        level=logging.DEBUG)
+                        level=logging.INFO)
     run_SPSP_CVaR(10, 90, 0.5)
