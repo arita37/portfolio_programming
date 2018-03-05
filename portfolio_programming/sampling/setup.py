@@ -39,7 +39,6 @@ extensions = [
               "moment_matching",
               ["moment_matching.pyx"],
               include_dirs = [np.get_include()],
-              extra_compile_args = ['--with-fpectl',],
     ),
 ]
 
