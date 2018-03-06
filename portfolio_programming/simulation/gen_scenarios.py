@@ -304,10 +304,15 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     while not ar.ready():
         stdouts = ar.stdout
         if not any(stdouts):
+            sleep(2)
             continue
+            
         # clear_output doesn't do much in terminal environments
         clear_output()
-        print("finished percentage:{:.2%}".format(1. * ar.progress / len(ar)))
+        print("finished {}/{} {:.2%}".format(
+            ar.progress,
+            len(ar),
+            1. * ar.progress / len(ar)))
         print(type(ar.stdout))
         print(ar.stdout)
         # for stdout in ar.stdout[-10:]:
