@@ -308,7 +308,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             params)
 
         while not ar.ready():
-            print("n_engine:{} task: {}/{} {:.4} secs".format(
+            print("n_engine:{} task: {}/{} {:10.1f} secs".format(
                 n_engine, ar.progress, len(ar), ar.elapsed))
             sys.stdout.flush()
             sleep(5)
