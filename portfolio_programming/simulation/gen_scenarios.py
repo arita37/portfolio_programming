@@ -281,6 +281,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     dv.use_dill()
     dv.scatter('engine_id', rc.ids, flatten=True)
     print("Engine IDs: ", dv['engine_id'])
+    n_engine = len(rc.ids)
 
     with dv.sync_imports():
         import sys
@@ -307,19 +308,20 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             params)
 
         while not ar.ready():
-            print("task: {}/{} {:.4} secs".format(
-                ar.progress, len(ar), ar.elapsed))
+            print("n_engine:{} task: {}/{} {:.4} secs".format(
+                n_engine, ar.progress, len(ar), ar.elapsed))
             sys.stdout.flush()
             sleep(5)
 
+            # type(ar.stdout) == list, and the length is equal to the number of
+            # task.
             stdouts = ar.stdout
             if not any(stdouts):
                 continue
 
-            for eid, outs in enumerate(stdouts):
-                print("{}: {}".format(eid, stdouts.split('\n')[-1]))
+            for task_idx, outs in enumerate(stdouts):
+                print("{}: {}".format(task_idx, outs.split('\n')[-1]))
             sys.stdout.flush()
-            sleep(5)
 
     except Exception as e:
         print(e)
