@@ -309,8 +309,6 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         while not ar.ready():
             print("task: {}/{} {:.4} secs".format(
                 ar.progress, len(ar), ar.elapsed))
-            print(type(ar.stdout))
-            print(ar.stdout)
             sys.stdout.flush()
             sleep(5)
 
@@ -318,8 +316,6 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             if not any(stdouts):
                 continue
 
-            print(type(ar.stdout))
-            print(ar.stdout)
             for eid, outs in enumerate(stdouts):
                 print("{}: {}".format(eid, stdouts.split('\n')[-1]))
             sys.stdout.flush()
