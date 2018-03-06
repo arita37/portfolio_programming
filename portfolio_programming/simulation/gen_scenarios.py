@@ -309,6 +309,8 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         while not ar.ready():
             print("task: {}/{} {:.4} secs".format(
                 ar.progress, len(ar), ar.elapsed))
+            print(type(ar.stdout))
+            print(ar.stdout)
             sys.stdout.flush()
             sleep(5)
 
