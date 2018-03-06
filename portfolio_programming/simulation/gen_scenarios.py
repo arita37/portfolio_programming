@@ -326,18 +326,16 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", '--parallel', type=bool,
-                        default=False,
+    parser.add_argument("-p", '--parallel',
+                        action='store_true',
                         help="parallel mode or not")
 
     parser.add_argument("-n", "--n_candidate_symbol", type=int,
                         choices=range(1, 51),
-                        required=True,
                         help="number of candidate symbol")
 
     parser.add_argument("-w", "--rolling_window_size", type=int,
                         choices=range(50, 250),
-                        required=True,
                         help="rolling window size for estimating statistics.")
 
     parser.add_argument("-s", '--n_scenario', type=int,
