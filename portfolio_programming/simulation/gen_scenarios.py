@@ -13,6 +13,7 @@ import logging
 import os
 import platform
 import sys
+import datetime as dt
 from time import (time, sleep)
 
 import ipyparallel as ipp
@@ -310,8 +311,9 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             params)
 
         while not ar.ready():
-            print("n_engine:{} task: {}/{} {:10.1f} secs".format(
-                n_engine, ar.progress, len(ar), ar.elapsed))
+            print("{} n_engine:{} task: {}/{} {:10.1f} secs".format(
+                str(dt.datetime.now()), n_engine, ar.progress, len(ar),
+                ar.elapsed))
             sys.stdout.flush()
             sleep(5)
 
