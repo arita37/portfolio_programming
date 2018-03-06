@@ -214,11 +214,12 @@ def _all_scenario_names():
     n_scenarios = [200, ]
 
     # dict comprehension
+    # key: file_name, value: parameters
     return {
         pp.SCENARIO_NAME_FORMAT.format(
             sdx=sdx,
-            scenario_start_date=s_date,
-            scenario_end_date=e_date,
+            scenario_start_date=s_date.strftime("%Y%m%d"),
+            scenario_end_date=e_date.strftime("%Y%m%d"),
             n_symbol=m,
             rolling_window_size=h,
             n_scenario=s
@@ -238,7 +239,8 @@ def checking_existed_scenario_names(scenario_set_dir=None):
         scenario_set_dir = pp.SCENARIO_SET_DIR
     all_names = _all_scenario_names()
 
-    existed_names = glob.glob(os.path.join(scenario_set_dir, "*.nc"))
+    os.chdir(scenario_set_dir)
+    existed_names = glob.glob( "*.nc")
     for name in existed_names:
         all_names.pop(name, None)
 
