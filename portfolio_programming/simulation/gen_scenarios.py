@@ -329,6 +329,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", '--parallel',
+                        default=False,
                         action='store_true',
                         help="parallel mode or not")
 
