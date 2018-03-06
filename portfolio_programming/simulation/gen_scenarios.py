@@ -279,15 +279,19 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     rc = ipp.Client(profile='ssh')
     dv = rc[:]
     dv.use_dill()
+    dv.scatter('engine_id', rc.ids, flatten=True)
+    print("Engine IDs: ", dv['engine_id'])
 
     with dv.sync_imports():
         import sys
         import platform
         import os
+        import logging
         import portfolio_programming.simulation.gen_scenarios
 
     def name_pid():
-        return "node:{}, pid:{}".format(platform.node(), os.getpid())
+        return "node:{}, pid:{}".format(
+            platform.node(), os.getpid())
 
     infos = dv.apply_sync(name_pid)
     for info in infos:
@@ -295,36 +299,39 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
     lbv = rc.load_balanced_view()
     print("start map unfinished parameters to load balance view.")
-    ar = lbv.map_async(
-        lambda
-            x: portfolio_programming.simulation.gen_scenarios.generating_scenarios_xarr(
-            *x),
-        params)
+    try:
+        ar = lbv.map_async(
+            lambda
+                x: portfolio_programming.simulation.gen_scenarios.generating_scenarios_xarr(
+                *x),
+            params)
 
-    while not ar.ready():
-        stdouts = ar.stdout
-        if not any(stdouts):
-            sleep(2)
-            continue
-            
-        # clear_output doesn't do much in terminal environments
-        clear_output()
-        print("finished {}/{} {:.2%}".format(
-            ar.progress,
-            len(ar),
-            1. * ar.progress / len(ar)))
-        print(type(ar.stdout))
-        print(ar.stdout)
-        # for stdout in ar.stdout[-10:]:
-        #     if stdout:
-        #         print(stdout)
-        sys.stdout.flush()
-        sleep(5)
+        while not ar.ready():
+            stdouts = ar.stdout
+            if not any(stdouts):
+                sleep(2)
+                continue
+
+            # clear_output doesn't do much in terminal environments
+            clear_output()
+            print("finished {}/{} {:.2%}".format(
+                ar.progress,
+                len(ar),
+                1. * ar.progress / len(ar)))
+            print(type(ar.stdout))
+            print(ar.stdout)
+            sys.stdout.flush()
+            sleep(5)
+
+    except Exception as e:
+        print(e)
+        dv.abort()
+        sys.exit(1)
 
     print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     # using stdout instead of stderr
     logging.basicConfig(
         stream=sys.stdout,
