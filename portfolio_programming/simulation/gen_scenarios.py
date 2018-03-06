@@ -15,16 +15,15 @@ https://stackoverflow.com/questions/23145650/how-to-setup-ssh-tunnel-for-ipython
 
 import glob
 import json
-import os
-from time import (time, sleep)
-import platform
 import logging
+import os
+import platform
+from time import (time, sleep)
+
 import ipyparallel as ipp
 import numpy as np
 import scipy.stats as spstats
-import pandas as pd
 import xarray as xr
-
 
 import portfolio_programming as pp
 from portfolio_programming.sampling.moment_matching import (
@@ -131,15 +130,15 @@ def generating_scenarios_xarr(scenario_set_idx,
 
         # hist_data, shape: (win_length, n_stock)
         hist_data = risky_asset_xarr.loc[hist_interval,
-                                        candidate_symbols,
-                                        'simple_roi']
+                                         candidate_symbols,
+                                         'simple_roi']
 
         # unbiased moments and corrs estimators
         est_moments.loc[:, 'mean'] = hist_data.mean(axis=0)
         est_moments.loc[:, 'std'] = hist_data.std(axis=0, ddof=1)
         est_moments.loc[:, 'skew'] = spstats.skew(hist_data, axis=0, bias=False)
         est_moments.loc[:, 'ex-kurt'] = spstats.kurtosis(hist_data, axis=0,
-                                                   bias=False)
+                                                         bias=False)
         # est_corrs = (hist_data.T).corr("pearson")
         est_corrs = np.corrcoef(hist_data.T)
 
@@ -214,29 +213,6 @@ def _all_scenario_names():
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
 
-    # return {
-    #     pp.SCENARIO_NAME_FORMAT.format(
-    #         sdx=sdx,
-    #         scenario_start_date=s_date,
-    #         scenario_end_date=e_date,
-    #         n_stock=m,
-    #         rolling_window_size=h,
-    #         n_scenario=s
-    #     ): (sdx, s_date, e_date, m, h, s)
-    #     for sdx, m, h, s in (
-    #         (1, 5, 150, 200),
-    #         (1, 10, 90, 200),
-    #         (1, 15 ,100, 200),
-    #         (1, 20, 110, 200),
-    #         (1, 25, 120, 200),
-    #         (1, 30, 190, 200),
-    #         (1, 35, 120, 200),
-    #         (1, 40, 100, 200),
-    #         (1, 45, 120, 200),
-    #         (1, 50, 120, 200)
-    #     )
-    # }
-
     # dict comprehension
     return {
         pp.SCENARIO_NAME_FORMAT.format(
@@ -299,7 +275,6 @@ def wait_watching_stdout(ar, dt=1, truncate=1000):
 def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     from IPython.display import clear_output
 
-
     unfinished_names = checking_existed_scenario_names(scenario_set_dir)
     print("number of unfinished scenario: {}".format(len(unfinished_names)))
     params = unfinished_names.values()
@@ -313,7 +288,6 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         import sys
         import platform
         import os
-        import logging
         import portfolio_programming.simulation.gen_scenarios
 
     def name_pid():
@@ -326,8 +300,10 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     lbv = rc.load_balanced_view()
     print("start map unfinished parameters to load balance view.")
     ar = lbv.map_async(
-        lambda x:portfolio_programming.simulation.gen_scenarios.generating_scenarios_xarr(*x),
-            params)
+        lambda
+            x: portfolio_programming.simulation.gen_scenarios.generating_scenarios_xarr(
+            *x),
+        params)
 
     while not ar.ready():
         stdouts = ar.stdout
@@ -342,12 +318,48 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         sleep(2)
 
 
-
 if __name__ == '__main__':
     logging.basicConfig(format='%(filename)15s %(levelname)10s %(asctime)s\n'
                                '%(message)s',
                         datefmt='%Y%m%d-%H:%M:%S',
                         level=logging.DEBUG)
-    #generating_scenarios_xarr(2, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
-    #                          5, 50, 200)
-    dispatch_scenario_names()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", '--parallel', type=bool,
+                        default=False,
+                        help="parallel mode or not")
+
+    parser.add_argument("-n", "--n_candidate_symbol", type=int,
+                        choices=range(1, 51),
+                        required=True,
+                        help="number of candidate symbol")
+
+    parser.add_argument("-w", "--rolling_window_size", type=int,
+                        choices=range(50, 250),
+                        required=True,
+                        help="rolling window size for estimating statistics.")
+
+    parser.add_argument("-s", '--n_scenario', type=int,
+                        choices=range(200, 1000, 10),
+                        default=200,
+                        help="number of generated scenario.")
+
+    parser.add_argument("--scenario-set-idx", type=int,
+                        choices=range(1, 4),
+                        default=1,
+                        help="pre-generated scenario set index.")
+
+    args = parser.parse_args()
+    if args.parallel:
+        print("generating scenario in parallel mode")
+        dispatch_scenario_names()
+    else:
+        print("generating scenario in single mode")
+        generating_scenarios_xarr(args.scenario_set_idx,
+                                  pp.SCENARIO_START_DATE,
+                                  pp.SCENARIO_END_DATE,
+                                  args.n_candidate_symbol,
+                                  args.rolling_window_size,
+                                  args.n_scenario
+                                  )
