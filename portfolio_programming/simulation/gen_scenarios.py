@@ -307,19 +307,19 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             params)
 
         while not ar.ready():
+            print("task: {}/{} {:.4} secs".format(
+                ar.progress, len(ar), ar.elapsed))
+            sys.stdout.flush()
+            sleep(5)
+
             stdouts = ar.stdout
             if not any(stdouts):
-                sleep(2)
                 continue
 
-            # clear_output doesn't do much in terminal environments
-            clear_output()
-            print("finished {}/{} {:.2%}".format(
-                ar.progress,
-                len(ar),
-                1. * ar.progress / len(ar)))
             print(type(ar.stdout))
             print(ar.stdout)
+            for eid, outs in enumerate(stdouts):
+                print("{}: {}".format(eid, stdouts.split('\n')[-1]))
             sys.stdout.flush()
             sleep(5)
 
@@ -329,7 +329,6 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         sys.exit(1)
 
     print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
-
 
 if __name__ == '__main__':
     # using stdout instead of stderr
