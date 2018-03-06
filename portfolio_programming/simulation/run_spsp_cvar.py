@@ -114,29 +114,25 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", '--parallel', type=bool,
-                        default=False,
+    parser.add_argument('--parallel', 
+                        action='store_true',
                         help="parallel mode or not")
 
     parser.add_argument("--setting", type=str,
                         choices=("compact", "general"),
-                        required=True,
                         help="SPSP setting")
 
     parser.add_argument("-M", "--max_portfolio_size", type=int,
                         choices=range(5, 55, 5),
-                        required=True,
                         help="max_portfolio_size")
 
     parser.add_argument("-w", "--rolling_window_size", type=int,
                         choices=range(50, 250, 10),
-                        required=True,
                         help="rolling window size for estimating statistics.")
 
     parser.add_argument("-a", "--alpha", type=str,
                         choices=["{:.2f}".format(v / 100.)
                                  for v in range(50, 100, 5)],
-                        required=True,
                         help="confidence level of CVaR")
 
     parser.add_argument("--scenario-set-idx", type=int,
