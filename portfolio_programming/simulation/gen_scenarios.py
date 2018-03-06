@@ -348,6 +348,6 @@ if __name__ == '__main__':
                                '%(message)s',
                         datefmt='%Y%m%d-%H:%M:%S',
                         level=logging.DEBUG)
-    # generating_scenarios_xarr(1, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
+    #generating_scenarios_xarr(2, pp.SCENARIO_START_DATE, pp.SCENARIO_END_DATE,
     #                          5, 50, 200)
     dispatch_scenario_names()
