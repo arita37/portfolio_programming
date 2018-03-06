@@ -4,6 +4,7 @@ Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 
 https://github.com/ipython/ipyparallel/blob/master/examples/customresults.py
+https://github.com/ipython/ipyparallel/blob/master/ipyparallel/client/asyncresult.py
 """
 
 import glob
@@ -301,6 +302,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     lbv = rc.load_balanced_view()
     print("start map unfinished parameters to load balance view.")
     try:
+        #  ipyparallel.client.asyncresult.AsyncMapResult
         ar = lbv.map_async(
             lambda
                 x: portfolio_programming.simulation.gen_scenarios.generating_scenarios_xarr(
@@ -313,15 +315,17 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             sys.stdout.flush()
             sleep(5)
 
+
+            ar.display_outputs(groupby='engine')
             # type(ar.stdout) == list, and the length is equal to the number of
             # task.
-            stdouts = ar.stdout
-            if not any(stdouts):
-                continue
-
-            for task_idx, outs in enumerate(stdouts):
-                print("{}: {}".format(task_idx, outs.split('\n')[-1]))
-            sys.stdout.flush()
+            # stdouts = ar.stdout
+            # if not any(stdouts):
+            #     continue
+            #
+            # for task_idx, outs in enumerate(stdouts):
+            #     print("{}: {}".format(task_idx, outs.split('\n')[-1]))
+            # sys.stdout.flush()
 
     except Exception as e:
         print(e)
