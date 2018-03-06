@@ -3,14 +3,7 @@
 Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 
-https://stackoverflow.com/questions/37480402/how-to-correctly-import-modules-on-engines-in-jupyter-notebook-for-parallel-proc
-https://stackoverflow.com/questions/18570071/import-custom-modules-on-ipython-parallel-engines-with-sync-imports
-
-https://stackoverflow.com/questions/18086299/real-time-output-from-engines-in-ipython-parallel
-
-https://ask.helplib.com/parallel-processing/post_5405801
-
-https://stackoverflow.com/questions/23145650/how-to-setup-ssh-tunnel-for-ipython-cluster-ipcluster/31479269
+https://github.com/ipython/ipyparallel/blob/master/examples/customresults.py
 """
 
 import glob
@@ -18,6 +11,7 @@ import json
 import logging
 import os
 import platform
+import sys
 from time import (time, sleep)
 
 import ipyparallel as ipp
@@ -308,6 +302,8 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         params)
 
     while not ar.ready():
+        print("finished percentage:{:.2%}".format(1. * ar.progress / len(ar)))
+
         stdouts = ar.stdout
         if not any(stdouts):
             continue
@@ -317,16 +313,22 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             if stdout:
                 print(stdout)
         sys.stdout.flush()
-        sleep(2)
 
+        sleep(5)
+
+    print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(filename)15s %(levelname)10s %(asctime)s\n'
-                               '%(message)s',
-                        datefmt='%Y%m%d-%H:%M:%S',
-                        level=logging.DEBUG)
-    import argparse
 
+    # using stdout instead of stderr
+    logging.basicConfig(
+        stream=sys.stdout,
+        format='%(filename)15s %(levelname)10s %(asctime)s\n'
+                               '%(message)s',
+        datefmt='%Y%m%d-%H:%M:%S',
+        level=logging.INFO)
+
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", '--parallel',
                         default=False,
