@@ -128,7 +128,7 @@ if __name__ == '__main__':
                         required=True,
                         help="max_portfolio_size")
 
-    parser.add_argument("-h", "--rolling_window_size", type=int,
+    parser.add_argument("-w", "--rolling_window_size", type=int,
                         choices=range(50, 250, 10),
                         required=True,
                         help="rolling window size for estimating statistics.")
@@ -153,4 +153,4 @@ if __name__ == '__main__':
         run_SPSP_CVaR(args.setting, args.max_portfolio_size,
                       args.rolling_window_size,
                       float(args.alpha),
-                      args.sceenario_set_idx)
+                      args.scenario_set_idx)
