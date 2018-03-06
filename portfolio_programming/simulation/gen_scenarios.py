@@ -302,18 +302,18 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         params)
 
     while not ar.ready():
-        print("finished percentage:{:.2%}".format(1. * ar.progress / len(ar)))
-
         stdouts = ar.stdout
         if not any(stdouts):
             continue
         # clear_output doesn't do much in terminal environments
         clear_output()
-        for stdout in ar.stdout[-10:]:
-            if stdout:
-                print(stdout)
+        print("finished percentage:{:.2%}".format(1. * ar.progress / len(ar)))
+        print(type(ar.stdout))
+        print(ar.stdout)
+        # for stdout in ar.stdout[-10:]:
+        #     if stdout:
+        #         print(stdout)
         sys.stdout.flush()
-
         sleep(5)
 
     print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
