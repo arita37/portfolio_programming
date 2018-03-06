@@ -207,7 +207,7 @@ def _all_scenario_names():
                        "h{rolling_window_size}_s{n_scenario}.nc"
     """
     # set_indices = (1, 2, 3)
-    set_indices = (1,)
+    set_indices = (2,)
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
     n_symbols = range(5, 50 + 5, 5)

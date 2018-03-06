@@ -14,7 +14,8 @@ import portfolio_programming as pp
 from portfolio_programming.simulation.spsp_cvar import SPSP_CVaR
 
 
-def run_compact_SPSP_CVaR(n_symbol, rolling_window_size, alpha):
+def run_SPSP_CVaR_compact(n_symbol, rolling_window_size, alpha,
+                          sceenario_set_idx):
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
     candidate_symbols = json.load(
@@ -41,21 +42,23 @@ def run_compact_SPSP_CVaR(n_symbol, rolling_window_size, alpha):
                          initial_risk_free_wealth,
                          rolling_window_size=rolling_window_size,
                          alpha=alpha,
-                         scenario_set_idx=1,
+                         scenario_set_idx=sceenario_set_idx,
                          print_interval=10
                          )
     instance.run()
 
 
-def run_general_SPSP_CVaR(max_portfolio_size, rolling_window_size, alpha):
+def run_SPSP_CVaR_general(max_portfolio_size, rolling_window_size, alpha,
+                          sceenario_set_idx):
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
     candidate_symbols = json.load(
         open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
+    n_symbol = len(candidate_symbols)
 
     risky_rois = risky_roi_xarr.loc[pp.EXP_START_DATE:pp.EXP_END_DATE,
                  candidate_symbols, 'simple_roi']
-    n_symbol = len(candidate_symbols)
+
     exp_trans_dates = risky_rois.get_index('trans_date')
     n_exp_dates = len(exp_trans_dates)
     risk_free_rois = xr.DataArray(np.zeros(n_exp_dates),
@@ -74,7 +77,7 @@ def run_general_SPSP_CVaR(max_portfolio_size, rolling_window_size, alpha):
                          initial_risk_free_wealth,
                          rolling_window_size=rolling_window_size,
                          alpha=alpha,
-                         scenario_set_idx=1,
+                         scenario_set_idx=sceenario_set_idx,
                          print_interval=10
                          )
     instance.run()
@@ -85,5 +88,42 @@ if __name__ == '__main__':
                                '%(message)s',
                         datefmt='%Y%m%d-%H:%M:%S',
                         level=logging.INFO)
-    # run_compact_SPSP_CVaR(10, 90, 0.5)
-    run_general_SPSP_CVaR(50, 120, 0.55)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--setting", type=str,
+                        choices=("compact", "general"),
+                        required=True,
+                        help="SPSP setting")
+
+    parser.add_argument("-M", "--max_portfolio_size", type=int,
+                        choices=range(5, 55, 5),
+                        required=True,
+                        help="max_portfolio_size")
+
+    parser.add_argument("-h", "--rolling_window_size", type=int,
+                        choices=range(50, 250, 10),
+                        required=True,
+                        help="rolling window size for estimating statistics.")
+
+    parser.add_argument("-a", "--alpha", type=str,
+                        choices=["{:.2f}".format(v/100.)
+                                 for v in range(50,100, 5)],
+                        required=True,
+                        help="confidence level of CVaR")
+
+    parser.add_argument("--scenario-set-idx", type=int,
+                        choices=range(1, 4),
+                        default=1,
+                        help="pre-generated scenario set index.")
+    args = parser.parse_args()
+
+    if args.setting == 'compact':
+        run_SPSP_CVaR_compact(args.max_portfolio_size,
+                              args.rolling_window_size,
+                              float(args.alpha),
+                              args.sceenario_set_idx)
+    elif args.setting == 'general':
+        run_SPSP_CVaR_general(args.max_portfolio_size,
+                              args.rolling_window_size,
+                              float(args.alpha),
+                              args.sceenario_set_idx)
