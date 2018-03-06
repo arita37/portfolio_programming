@@ -320,8 +320,8 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
             print(type(ar.stdout))
             print(ar.stdout)
-            for eid, outs in enumerate(stdouts):
-                print("{}: {}".format(eid, stdouts.split('\n')[-1]))
+            for task_idx, outs in enumerate(stdouts):
+                print("{}: {}".format(task_idx, stdouts.split('\n')[-1]))
             sys.stdout.flush()
             sleep(5)
 
