@@ -4,6 +4,7 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
+import sys
 import json
 import logging
 import glob
@@ -13,7 +14,7 @@ import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
-import portfolio_programming.simulation.spsp_cvar.SPSP_CVaR
+import portfolio_programming.simulation.spsp_cvar
 
 
 def _all_SPSP_CVaR_params(setting):
@@ -85,7 +86,7 @@ def _all_SPSP_CVaR_params(setting):
             for sdx in set_indices
             for m in max_portfolio_sizes
             for h in window_sizes
-            for a in alphas,
+            for a in alphas
             for s in n_scenarios
         }
 
@@ -129,8 +130,10 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
                                        dims=('symbol',),
                                        coords=(candidate_symbols,))
     initial_risk_free_wealth = 1e6
-
-    instance = SPSP_CVaR(candidate_symbols,
+    print(setting, exp_start_date, exp_end_date, max_portfolio_size,
+            rolling_window_size, alpha, n_scenario)
+    instance = portfolio_programming.simulation.spsp_cvar.SPSP_CVaR(
+                    candidate_symbols,
                          setting,
                          max_portfolio_size,
                          risky_rois,
@@ -170,6 +173,7 @@ def parallel_run_SPSP_CVaR():
         import sys
         import platform
         import os
+        import portfolio_programming.simulation.spsp_cvar
         import portfolio_programming.simulation.run_spsp_cvar
 
     def name_pid():
@@ -203,10 +207,12 @@ def parallel_run_SPSP_CVaR():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(filename)15s %(levelname)10s %(asctime)s\n'
-                               '%(message)s',
-                        datefmt='%Y%m%d-%H:%M:%S',
-                        level=logging.INFO)
+    logging.basicConfig(
+            stream=sys.stdout,
+            format='%(filename)15s %(levelname)10s %(asctime)s\n'
+                   '%(message)s',
+            datefmt='%Y%m%d-%H:%M:%S',
+            level=logging.INFO)
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -231,18 +237,21 @@ if __name__ == '__main__':
                                  for v in range(50, 100, 5)],
                         help="confidence level of CVaR")
 
-    parser.add_argument("--scenario-set-idx", type=int,
+    parser.add_argument("--scenario_set_idx", type=int,
                         choices=range(1, 4),
                         default=1,
                         help="pre-generated scenario set index.")
     args = parser.parse_args()
-
+    print(args)
     if args.parallel:
         print("run_SPSP_CVaR in parallel mode")
         parallel_run_SPSP_CVaR()
     else:
         print("run_SPSP_CVaR in single mode")
-        run_SPSP_CVaR(args.setting, args.max_portfolio_size,
+        run_SPSP_CVaR(args.setting, 
+                      args.scenario_set_idx,
+                      '20050103', '20141231',
+                      args.max_portfolio_size,
                       args.rolling_window_size,
                       float(args.alpha),
-                      args.scenario_set_idx)
+                      200)
