@@ -13,7 +13,7 @@ import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
-from portfolio_programming.simulation.spsp_cvar import SPSP_CVaR
+import portfolio_programming.simulation.spsp_cvar.SPSP_CVaR
 
 
 def _all_SPSP_CVaR_params(setting):
