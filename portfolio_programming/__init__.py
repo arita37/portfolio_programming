@@ -40,6 +40,7 @@ BUY_TRANS_FEE = 0.001425
 SELL_TRANS_FEE = 0.004425
 REPORT_DIR = os.path.join(DATA_DIR, 'report')
 
+
 # scenario
 # SCENARIO_SET_DIR = TMP_DIR
 SCENARIO_SET_DIR = os.path.join(DATA_DIR, 'scenario')

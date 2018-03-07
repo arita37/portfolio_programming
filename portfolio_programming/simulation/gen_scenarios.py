@@ -7,13 +7,13 @@ https://github.com/ipython/ipyparallel/blob/master/examples/customresults.py
 https://github.com/ipython/ipyparallel/blob/master/ipyparallel/client/asyncresult.py
 """
 
+import datetime as dt
 import glob
 import json
 import logging
 import os
 import platform
 import sys
-import datetime as dt
 from time import (time, sleep)
 
 import ipyparallel as ipp
@@ -202,9 +202,9 @@ def _all_scenario_names():
                        "h{rolling_window_size}_s{n_scenario}.nc"
     """
     set_indices = (1, 2, 3)
-    #set_indices = (2,)
-    s_date = pp.SCENARIO_START_DATE
-    e_date = pp.SCENARIO_END_DATE
+    # set_indices = (2,)
+    s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
+    e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
     n_symbols = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
@@ -214,8 +214,8 @@ def _all_scenario_names():
     return {
         pp.SCENARIO_NAME_FORMAT.format(
             sdx=sdx,
-            scenario_start_date=s_date.strftime("%Y%m%d"),
-            scenario_end_date=e_date.strftime("%Y%m%d"),
+            scenario_start_date=s_date,
+            scenario_end_date=e_date,
             n_symbol=m,
             rolling_window_size=h,
             n_scenario=s
@@ -236,7 +236,7 @@ def checking_existed_scenario_names(scenario_set_dir=None):
     all_names = _all_scenario_names()
 
     os.chdir(scenario_set_dir)
-    existed_names = glob.glob( "*.nc")
+    existed_names = glob.glob("*.nc")
     for name in existed_names:
         all_names.pop(name, None)
 
@@ -271,8 +271,6 @@ def wait_watching_stdout(ar, dt=1, truncate=1000):
 
 
 def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
-    from IPython.display import clear_output
-
     unfinished_names = checking_existed_scenario_names(scenario_set_dir)
     print("number of unfinished scenario: {}".format(len(unfinished_names)))
     params = unfinished_names.values()
@@ -289,7 +287,6 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         import sys
         import platform
         import os
-        import logging
         import portfolio_programming.simulation.gen_scenarios
 
     def name_pid():
@@ -311,7 +308,8 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             params)
 
         while not ar.ready():
-            print("{} n_engine:{} task: {}/{} {:10.1f} secs".format(
+            print("{} n_engine:{} gen_scenarios task: {}/{} {:10.1f} "
+                  "secs".format(
                 str(dt.datetime.now()), n_engine, ar.progress, len(ar),
                 ar.elapsed))
             sys.stdout.flush()
@@ -334,16 +332,18 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
     print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
 
+
 if __name__ == '__main__':
     # using stdout instead of stderr
     logging.basicConfig(
         stream=sys.stdout,
         format='%(filename)15s %(levelname)10s %(asctime)s\n'
-                               '%(message)s',
+               '%(message)s',
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
 
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", '--parallel',
                         default=False,
