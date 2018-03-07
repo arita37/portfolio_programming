@@ -315,7 +315,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
                 str(dt.datetime.now()), n_engine, ar.progress, len(ar),
                 ar.elapsed))
             sys.stdout.flush()
-            sleep(5)
+            sleep(10)
 
             # type(ar.stdout) == list, and the length is equal to the number of
             # task.
@@ -329,7 +329,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
     except Exception as e:
         print(e)
-        dv.abort()
+        ar.abort()
         sys.exit(1)
 
     print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
