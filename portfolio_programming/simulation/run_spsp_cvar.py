@@ -34,7 +34,7 @@ def _all_SPSP_CVaR_params(setting):
     REPORT_FORMAT = "repot_SPSP_CVaR_{setting}_scenario-set-idx{sdx}_{" \
                     "exp_start_date}_{exp_end_date}_M{max_portfolio}_Mc{" \
                     "n_candidate_symbol}_h{rolling_window_size" \
-                    "}_a{alpha:.2f}_s{n_scenario}.pkl"
+                    "}_a{alpha}_s{n_scenario}.pkl"
     if setting not in ('compact', 'general'):
         raise ValueError('Wrong setting: {}'.format(setting))
 
@@ -62,10 +62,10 @@ def _all_SPSP_CVaR_params(setting):
                 alpha=a,
                 n_scenario=s
             ): (setting, sdx, s_date, e_date, m, h, float(a), s)
-            for sdx in set_indices,
-            for m in max_portfolio_sizes,
+            for sdx in set_indices
+            for m in max_portfolio_sizes
             for h in window_sizes
-            for a in alphas,
+            for a in alphas
             for s in n_scenarios
         }
 
@@ -82,8 +82,8 @@ def _all_SPSP_CVaR_params(setting):
                 alpha=a,
                 n_scenario=s
             ): (setting, sdx, s_date, e_date, m, h, float(a), s)
-            for sdx in set_indices,
-            for m in max_portfolio_sizes,
+            for sdx in set_indices
+            for m in max_portfolio_sizes
             for h in window_sizes
             for a in alphas,
             for s in n_scenarios
@@ -208,7 +208,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--parallel',
+    parser.add_argument("-p", '--parallel',
                         action='store_true',
                         help="parallel mode or not")
 
