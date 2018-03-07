@@ -203,8 +203,8 @@ def _all_scenario_names():
     """
     set_indices = (1, 2, 3)
     # set_indices = (2,)
-    s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
-    e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
+    s_date = pp.SCENARIO_START_DATE
+    e_date = pp.SCENARIO_END_DATE
     n_symbols = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
@@ -214,8 +214,8 @@ def _all_scenario_names():
     return {
         pp.SCENARIO_NAME_FORMAT.format(
             sdx=sdx,
-            scenario_start_date=s_date,
-            scenario_end_date=e_date,
+            scenario_start_date=s_date.strftime("%Y%m%d"),
+            scenario_end_date=e_date.strftime("%Y%m%d"),
             n_symbol=m,
             rolling_window_size=h,
             n_scenario=s
@@ -330,7 +330,9 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
         ar.abort()
         sys.exit(1)
 
+    print(ar.get())
     print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
+
 
 
 if __name__ == '__main__':
