@@ -2,14 +2,17 @@
 """
 Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
+
+The SPSP CVaR experiments are not able to run in parallel setting(ipyparallel)
+because ofthe complex setting of pyomo.
 """
 
-import sys
+import glob
 import json
 import logging
-import glob
 import os
-import datetime as dt
+import sys
+
 import numpy as np
 import xarray as xr
 
@@ -90,6 +93,7 @@ def _all_SPSP_CVaR_params(setting):
             for s in n_scenarios
         }
 
+
 def checking_existed_SPSP_CVaR_report(setting, report_dir=None):
     """
     return unfinished experiment parameters.
@@ -131,94 +135,34 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
                                        coords=(candidate_symbols,))
     initial_risk_free_wealth = 1e6
     print(setting, exp_start_date, exp_end_date, max_portfolio_size,
-            rolling_window_size, alpha, n_scenario)
+          rolling_window_size, alpha, n_scenario)
     instance = portfolio_programming.simulation.spsp_cvar.SPSP_CVaR(
-                    candidate_symbols,
-                         setting,
-                         max_portfolio_size,
-                         risky_rois,
-                         risk_free_rois,
-                         initial_risk_wealth,
-                         initial_risk_free_wealth,
-                         rolling_window_size=rolling_window_size,
-                         alpha=alpha,
-                         n_scenario=n_scenario,
-                         scenario_set_idx=scenario_set_idx,
-                         print_interval=10
-                         )
+        candidate_symbols,
+        setting,
+        max_portfolio_size,
+        risky_rois,
+        risk_free_rois,
+        initial_risk_wealth,
+        initial_risk_free_wealth,
+        rolling_window_size=rolling_window_size,
+        alpha=alpha,
+        n_scenario=n_scenario,
+        scenario_set_idx=scenario_set_idx,
+        print_interval=10
+    )
     instance.run()
-
-
-def parallel_run_SPSP_CVaR():
-    import ipyparallel as ipp
-    from time import sleep
-
-    unfinished_reports = {}
-    settings = ("compact",)
-    for setting in settings:
-        unfinished_reports.update(checking_existed_SPSP_CVaR_report(setting))
-
-    params = unfinished_reports.values()
-    print("unfinished reports:", len(params))
-
-    # task interface
-    rc = ipp.Client(profile='ssh')
-    dv = rc[:]
-    dv.use_dill()
-    dv.scatter('engine_id', rc.ids, flatten=True)
-    print("Engine IDs: ", dv['engine_id'])
-    n_engine = len(rc.ids)
-
-    with dv.sync_imports():
-        import sys
-        import platform
-        import os
-        import portfolio_programming.simulation.spsp_cvar
-        import portfolio_programming.simulation.run_spsp_cvar
-
-    def name_pid():
-        return "node:{}, pid:{}".format(platform.node(), os.getpid())
-
-    infos = dv.apply_sync(name_pid)
-    for info in infos:
-        print(info)
-
-    lbv = rc.load_balanced_view()
-    print("start map unfinished parameters to load balance view.")
-    # ipyparallel.client.asyncresult.AsyncMapResult
-    amr = lbv.map_async(lambda x: portfolio_programming.simulation.run_spsp_cvar.run_SPSP_CVaR(*x), params)
-
-    while not amr.ready():
-        print("{} n_engine:{} run_spsp_cvar task: {}/{} {:10.1f} secs".format(
-            str(dt.datetime.now()), n_engine, amr.progress, len(amr),
-            amr.elapsed))
-        sys.stdout.flush()
-        sleep(10)
-
-        # type(ar.stdout) == list, and the length is equal to the number of
-        # task.
-        stdouts = amr.stdout
-        if not any(stdouts):
-            continue
-
-        for task_idx, outs in enumerate(stdouts):
-            print("{}: {}".format(task_idx, outs.split('\n')[-1]))
-        sys.stdout.flush()
 
 
 if __name__ == '__main__':
     logging.basicConfig(
-            stream=sys.stdout,
-            format='%(filename)15s %(levelname)10s %(asctime)s\n'
-                   '%(message)s',
-            datefmt='%Y%m%d-%H:%M:%S',
-            level=logging.INFO)
+        stream=sys.stdout,
+        format='%(filename)15s %(levelname)10s %(asctime)s\n'
+               '%(message)s',
+        datefmt='%Y%m%d-%H:%M:%S',
+        level=logging.INFO)
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", '--parallel',
-                        action='store_true',
-                        help="parallel mode or not")
 
     parser.add_argument("--setting", type=str,
                         choices=("compact", "general"),
@@ -242,16 +186,12 @@ if __name__ == '__main__':
                         default=1,
                         help="pre-generated scenario set index.")
     args = parser.parse_args()
-    print(args)
-    if args.parallel:
-        print("run_SPSP_CVaR in parallel mode")
-        parallel_run_SPSP_CVaR()
-    else:
-        print("run_SPSP_CVaR in single mode")
-        run_SPSP_CVaR(args.setting, 
-                      args.scenario_set_idx,
-                      '20050103', '20141231',
-                      args.max_portfolio_size,
-                      args.rolling_window_size,
-                      float(args.alpha),
-                      200)
+
+    print("run_SPSP_CVaR in single mode")
+    run_SPSP_CVaR(args.setting,
+                  args.scenario_set_idx,
+                  '20050103', '20141231',
+                  args.max_portfolio_size,
+                  args.rolling_window_size,
+                  float(args.alpha),
+                  200)
