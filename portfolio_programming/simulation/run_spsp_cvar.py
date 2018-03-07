@@ -85,7 +85,7 @@ def _all_SPSP_CVaR_params(setting):
             for sdx in set_indices
             for m in max_portfolio_sizes
             for h in window_sizes
-            for a in alphas,
+            for a in alphas
             for s in n_scenarios
         }
 
