@@ -27,16 +27,10 @@ import numpy as np
 
 extensions = [
     Extension(
-              "spsp_cvar",
+              "spsp_cvar.pyx",
               ["spsp_cvar.pyx",],
               include_dirs = [np.get_include()],
     ),
-    Extension(
-        "hello",
-        ["hello.pyx", ],
-
-    ),
-
 ]
 
 setup(
