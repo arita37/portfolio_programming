@@ -4,12 +4,8 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
-import sys
+import time
 
-
-def main():
-    recs = iter(sys.stdin.readlines())
-
-
-if __name__ == '__main__':
-    main()
+def hello(int value):
+    time.sleep(2)
+    return "hello value:{}".format(value)

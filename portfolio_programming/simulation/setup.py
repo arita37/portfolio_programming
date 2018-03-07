@@ -31,6 +31,11 @@ extensions = [
               ["spsp_cvar.pyx",],
               include_dirs = [np.get_include()],
     ),
+    Extension(
+        "hello",
+        ["hello.pyx", ],
+
+    ),
 
 ]
 
