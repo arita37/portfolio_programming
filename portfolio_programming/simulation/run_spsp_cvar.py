@@ -156,6 +156,8 @@ def parallel_run_SPSP_CVaR():
         unfinished_reports.update(checking_existed_SPSP_CVaR_report(setting))
 
     params = unfinished_reports.values()
+    print("unfinished reports:", len(params))
+
     # task interface
     rc = ipp.Client(profile='ssh')
     dv = rc[:]
