@@ -14,9 +14,9 @@ import json
 import sys
 
 import zmq
-from jupyter_client import find_connection_file
+#from jupyter_client import find_connection_file
 from jupyter_client.session import Session
-
+from ipykernel.connect import find_connection_file
 
 def main(connection_file):
     """watch iopub channel, and print messages"""
@@ -26,9 +26,11 @@ def main(connection_file):
     with open(connection_file) as f:
         cfg = json.loads(f.read())
 
-    reg_url = cfg['interface']
+#    reg_url = cfg['interface']
+    reg_url='tcp://140.117.168.49'
     iopub_port = cfg['iopub']
     iopub_url = "{}:{}".format(reg_url, iopub_port)
+    print("iopub_url:", iopub_url)
 
     session = Session(key=cfg['key'].encode('ascii'))
     sub = ctx.socket(zmq.SUB)
