@@ -34,7 +34,7 @@ def _all_SPSP_CVaR_params(setting):
     REPORT_FORMAT = "repot_SPSP_CVaR_{setting}_scenario-set-idx{sdx}_{" \
                     "exp_start_date}_{exp_end_date}_M{max_portfolio}_Mc{" \
                     "n_candidate_symbol}_h{rolling_window_size" \
-                    "}_a{alpha:.2f}_s{n_scenario}.pkl"
+                    "}_a{alpha}_s{n_scenario}.pkl"
     if setting not in ('compact', 'general'):
         raise ValueError('Wrong setting: {}'.format(setting))
 
