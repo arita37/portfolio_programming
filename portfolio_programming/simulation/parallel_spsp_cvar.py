@@ -223,10 +223,10 @@ def aggregating_reports(setting="compact"):
                 attributes)
     )
 
-    report_paths = os.path.join(pp.REPORT_DIR, _all_spsp_cvar_params(
-        setting).keys())
+    report_names = _all_spsp_cvar_params(setting).keys()
 
-    for path in report_paths:
+    for name in report_names:
+        path = os.path.join(pp.REPORT_DIR, name)
         with open(path, 'rb') as fin:
             report = pickle.load(fin)
         print(report['simulation_name'], report['cum_roi'])
