@@ -207,12 +207,12 @@ def aggregating_reports(setting="compact"):
     n_scenarios = [200, ]
     alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
-    attributes = (
+    attributes = [
         'initial_wealth', 'final_wealth',
         'cum_roi', 'daily_roi', 'daily_mean_roi',
         'daily_std_roi', 'daily_skew_roi', 'daily_ex-kurt_roi',
         'Sharpe', 'Sortino_full', 'Sortino_partial'
-    )
+    ]
     report_xarr = xr.DataArray(
         np.zeros((
             len(max_portfolio_sizes), len(window_sizes), len(alphas),
