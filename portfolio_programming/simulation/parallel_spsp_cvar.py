@@ -207,12 +207,12 @@ def aggregating_reports(setting="compact"):
     n_scenarios = [200, ]
     alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
-    attributes = (
+    attributes = [
         'initial_wealth', 'final_wealth',
         'cum_roi', 'daily_roi', 'daily_mean_roi',
         'daily_std_roi', 'daily_skew_roi', 'daily_ex-kurt_roi',
         'Sharpe', 'Sortino_full', 'Sortino_partial'
-    )
+    ]
     report_xarr = xr.DataArray(
         np.zeros((
             len(max_portfolio_sizes), len(window_sizes), len(alphas),
@@ -223,10 +223,10 @@ def aggregating_reports(setting="compact"):
                 attributes)
     )
 
-    report_paths = os.path.join(pp.REPORT_DIR, _all_spsp_cvar_params(
-        setting).keys())
+    report_names = _all_spsp_cvar_params(setting).keys()
 
-    for path in report_paths:
+    for name in report_names:
+        path = os.path.join(pp.REPORT_DIR, name)
         with open(path, 'rb') as fin:
             report = pickle.load(fin)
         print(report['simulation_name'], report['cum_roi'])
