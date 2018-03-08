@@ -41,7 +41,7 @@ def _all_spsp_cvar_params(setting):
                 self.n_scenario
             )
     """
-    REPORT_FORMAT = "repot_SPSP_CVaR_{setting}_scenario-set-idx{sdx}_{" \
+    REPORT_FORMAT = "report_SPSP_CVaR_{setting}_scenario-set-idx{sdx}_{" \
                     "exp_start_date}_{exp_end_date}_M{max_portfolio}_Mc{" \
                     "n_candidate_symbol}_h{rolling_window_size" \
                     "}_a{alpha}_s{n_scenario}.pkl"
@@ -224,19 +224,19 @@ def aggregating_reports(setting="compact"):
     )
 
     report_names = _all_spsp_cvar_params(setting).keys()
-
+    no_report_count = 0
     for name in report_names:
         path = os.path.join(pp.REPORT_DIR, name)
         try:
             with open(path, 'rb') as fin:
                 report = pickle.load(fin)
-                print(report['simulation_name'], report['cum_roi'])
+                print("{} {:.2%}".format(report['simulation_name'], report['cum_roi']))
         except FileNotFoundError as e:
-            print("{} does not exists.".format(name))
+            # print("{} does not exists.".format(name))
+            no_report_count += 1
             continue
 
-
-
+    print("there are {} paramters do not have report.".format(no_report_count))
 
 
 if __name__ == '__main__':
