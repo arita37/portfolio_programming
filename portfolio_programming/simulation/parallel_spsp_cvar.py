@@ -4,18 +4,18 @@ Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
-import os
-import platform
-import glob
-import time
-import logging
-import sys
 import datetime as dt
+import glob
+import logging
+import os
 import pickle
+import platform
+import sys
 
-import zmq
 import numpy as np
 import xarray as xr
+import zmq
+
 import portfolio_programming as pp
 from portfolio_programming.simulation.run_spsp_cvar import run_SPSP_CVaR
 
@@ -202,6 +202,7 @@ def parameter_client(server_ip="140.117.168.49"):
 def aggregating_reports(setting="compact"):
     s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
     e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
+    set_indices = [1, 2, 3]
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
@@ -215,28 +216,41 @@ def aggregating_reports(setting="compact"):
     ]
     report_xarr = xr.DataArray(
         np.zeros((
-            len(max_portfolio_sizes), len(window_sizes), len(alphas),
-            len(attributes))),
-        dims=("max_portfolio_size", "rolling_window_size",
+            len(set_indices), len(max_portfolio_sizes), len(window_sizes),
+            len(alphas), len(attributes))),
+        dims=("scenario_set_idx", "max_portfolio_size", "rolling_window_size",
               "alpha", "attribute"),
-        coords=(max_portfolio_sizes, window_sizes, alphas,
+        coords=(set_indices, max_portfolio_sizes, window_sizes, alphas,
                 attributes)
     )
 
-    report_names = _all_spsp_cvar_params(setting).keys()
+    # key: report_name, value: parameters
+    report_dict = _all_spsp_cvar_params(setting)
+    report_count = 0
     no_report_count = 0
-    for name in report_names:
+    for name, param in report_dict.items():
         path = os.path.join(pp.REPORT_DIR, name)
+        setting, sdx, s_date, e_date, m, h, a, s = param
+        alpha = "{:.2f}".format(a)
         try:
             with open(path, 'rb') as fin:
                 report = pickle.load(fin)
-                print("{} {:.2%}".format(report['simulation_name'], report['cum_roi']))
+                report_count += 1
+                print("{} {:.2%}".format(report['simulation_name'],
+                                         report['cum_roi']))
+                for attr in attributes:
+                    report_xarr.loc[sdx, m, h, alpha, attr] = report[attr]
         except FileNotFoundError as e:
-            # print("{} does not exists.".format(name))
             no_report_count += 1
             continue
 
-    print("there are {} paramters do not have report.".format(no_report_count))
+    print("report count:{}, no report count:{}".format(
+        report_count, no_report_count))
+
+    report_xarr_path = os.path.join(pp.DATA_DIR,
+                                    "report_SPSP_CVaR_{}_{}_{}.nc".format(
+                                        setting, s_date, e_date))
+    report_xarr.to_netcdf(report_xarr_path)
 
 
 if __name__ == '__main__':
@@ -249,7 +263,7 @@ if __name__ == '__main__':
     import argparse
 
     get_zmq_version()
-
+  
     import argparse
 
     parser = argparse.ArgumentParser()
