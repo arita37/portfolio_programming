@@ -227,9 +227,15 @@ def aggregating_reports(setting="compact"):
 
     for name in report_names:
         path = os.path.join(pp.REPORT_DIR, name)
-        with open(path, 'rb') as fin:
-            report = pickle.load(fin)
-        print(report['simulation_name'], report['cum_roi'])
+        try:
+            with open(path, 'rb') as fin:
+                report = pickle.load(fin)
+                print(report['simulation_name'], report['cum_roi'])
+        except FileNotFoundError as e:
+            print("{} does not exists.".format(name))
+            continue
+
+
 
 
 
