@@ -10,6 +10,7 @@ import glob
 import time
 import logging
 import sys
+import datetime as dt
 
 import zmq
 import portfolio_programming as pp
@@ -45,13 +46,13 @@ def _all_spsp_cvar_params(setting):
         raise ValueError('Wrong setting: {}'.format(setting))
 
     # set_indices = (1, 2, 3)
-    set_indices = (1,)
+    set_indices = (1, 2, 3)
     s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
     e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
-    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 10)]
+    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
     # dict comprehension
     # key: file_name, value: parameters
@@ -129,7 +130,9 @@ def parameters_server(setting="compact"):
     while len(params):
         # Wait for request from client
         client_node_pid = socket.recv_string()
-        print("Received request: {}".format(client_node_pid))
+        print("{:<15} Received request: {}".format(
+            str(dt.datetime.now()),
+            client_node_pid))
         node, pid = client_node_pid.split('_')
         workers.setdefault(node, 0)
         workers[node] += 1
@@ -170,7 +173,9 @@ def parameter_client(server_ip="140.117.168.49"):
             # still connected
             # receive parameters from server
             work = socket.recv_pyobj()
-            print("receiving:",work)
+            print("{:<15} receiving: {}".format(
+                str(dt.datetime.now()),
+                work))
             run_SPSP_CVaR(*work)
 
         else:
