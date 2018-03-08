@@ -215,8 +215,8 @@ def aggregating_reports(setting="compact"):
     )
     report_xarr = xr.DataArray(
         np.zeros((
-            len(max_portfolio_sizes), len(window_sizes), len(alphas)),
-            len(attributes)),
+            len(max_portfolio_sizes), len(window_sizes), len(alphas),
+            len(attributes))),
         dims=("max_portfolio_size", "rolling_window_size",
               "alpha", "attribute"),
         coords=(max_portfolio_sizes, window_sizes, alphas,
