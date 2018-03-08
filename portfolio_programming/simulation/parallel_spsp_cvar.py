@@ -11,6 +11,8 @@ import time
 
 import zmq
 import portfolio_programming as pp
+from portfolio_programming.simulation.run_spsp_cvar import run_SPSP_CVaR
+
 
 def get_zmq_version():
     node = platform.node()
@@ -135,21 +137,21 @@ def parameters_server(setting="compact"):
         print("send {} to {}".format(work, client_node_pid))
         socket.send_pyobj(params.pop())
 
-        print("current workers:")
+        print("unfinished parameters:{}".format(len(params)))
         for node, cnt in workers.items():
-            print("node:{:<8}: {:>3}".format(node, cnt))
+            print("node:{:<8} finish {:>3}".format(node, cnt))
 
     socket.close()
     context.term()
 
 
-def parameter_client():
+def parameter_client(server_ip="140.117.168.49"):
     node = platform.node()
     pid = os.getpid()
 
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    url = "tcp://localhost:25555"
+    url = "tcp://{}:25555".format(server_ip)
     socket.connect(url)
 
     # for IO monitoring
@@ -159,16 +161,16 @@ def parameter_client():
     node_pid = "{}_{}".format(node, pid)
     while True:
         # send request to server
-        socket.send_string( node_pid)
+        socket.send_string(node_pid)
         socks = dict(poll.poll(10000))
 
         if socks.get(socket) == zmq.POLLIN:
             # still connected
             # receive parameters from server
             work = socket.recv_pyobj()
-            print(work)
-            time.sleep(3)
-            # break
+            print("receiving:",work)
+            run_SPSP_CVaR(*work)
+
         else:
             # no response from server, reconnected
             socket.setsockopt(zmq.LINGER, 0)
