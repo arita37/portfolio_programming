@@ -252,7 +252,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help="parameter server mode")
 
-    parser.add_argument("-c", "--client", default=True,
+    parser.add_argument("-c", "--client", default=False,
                         action='store_true',
                         help="run SPSP_CVaR client mode")
 
