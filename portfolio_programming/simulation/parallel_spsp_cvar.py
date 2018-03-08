@@ -224,19 +224,19 @@ def aggregating_reports(setting="compact"):
     )
 
     report_names = _all_spsp_cvar_params(setting).keys()
-
+    no_report_count = 0
     for name in report_names:
         path = os.path.join(pp.REPORT_DIR, name)
         try:
             with open(path, 'rb') as fin:
                 report = pickle.load(fin)
-                print(report['simulation_name'], report['cum_roi'])
+                print("{} {:.2%}".format(report['simulation_name'], report['cum_roi']))
         except FileNotFoundError as e:
-            print("{} does not exists.".format(name))
+            # print("{} does not exists.".format(name))
+            no_report_count += 1
             continue
 
-
-
+    print("there are {} paramters do not have report.".format(no_report_count))
 
 
 if __name__ == '__main__':
