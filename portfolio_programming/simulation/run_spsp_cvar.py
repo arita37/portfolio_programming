@@ -20,97 +20,6 @@ import portfolio_programming as pp
 import portfolio_programming.simulation.spsp_cvar
 
 
-def _all_SPSP_CVaR_params(setting):
-    """
-    "report_SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{
-    }.pkl".format(
-                self.setting,
-                self.scenario_set_idx,
-                self.exp_start_date.strftime("%Y%m%d"),
-                self.exp_end_date.strftime("%Y%m%d"),
-                self.max_portfolio_size,
-                self.n_symbol,
-                self.rolling_window_size,
-                self.alpha,
-                self.n_scenario
-            )
-    """
-    REPORT_FORMAT = "repot_SPSP_CVaR_{setting}_scenario-set-idx{sdx}_{" \
-                    "exp_start_date}_{exp_end_date}_M{max_portfolio}_Mc{" \
-                    "n_candidate_symbol}_h{rolling_window_size" \
-                    "}_a{alpha}_s{n_scenario}.pkl"
-    if setting not in ('compact', 'general'):
-        raise ValueError('Wrong setting: {}'.format(setting))
-
-    # set_indices = (1, 2, 3)
-    set_indices = (1,)
-    s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
-    e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
-    max_portfolio_sizes = range(5, 50 + 5, 5)
-    window_sizes = range(60, 240 + 10, 10)
-    n_scenarios = [200, ]
-    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 10)]
-
-    # dict comprehension
-    # key: file_name, value: parameters
-    if setting == "compact":
-        return {
-            REPORT_FORMAT.format(
-                setting=setting,
-                sdx=sdx,
-                exp_start_date=s_date,
-                exp_end_date=e_date,
-                max_portfolio=m,
-                n_candidate_symbol=m,
-                rolling_window_size=h,
-                alpha=a,
-                n_scenario=s
-            ): (setting, sdx, s_date, e_date, m, h, float(a), s)
-            for sdx in set_indices
-            for m in max_portfolio_sizes
-            for h in window_sizes
-            for a in alphas
-            for s in n_scenarios
-        }
-
-    elif setting == "general":
-        return {
-            REPORT_FORMAT.format(
-                setting=setting,
-                sdx=sdx,
-                exp_start_date=s_date,
-                exp_end_date=e_date,
-                max_portfolio=m,
-                n_candidate_symbol=50,
-                rolling_window_size=h,
-                alpha=a,
-                n_scenario=s
-            ): (setting, sdx, s_date, e_date, m, h, float(a), s)
-            for sdx in set_indices
-            for m in max_portfolio_sizes
-            for h in window_sizes
-            for a in alphas
-            for s in n_scenarios
-        }
-
-
-def checking_existed_SPSP_CVaR_report(setting, report_dir=None):
-    """
-    return unfinished experiment parameters.
-    """
-    if report_dir is None:
-        report_dir = pp.REPORT_DIR
-    all_reports = _all_SPSP_CVaR_params(setting)
-
-    os.chdir(report_dir)
-    existed_reports = glob.glob("*.pkl")
-    for report in existed_reports:
-        all_reports.pop(report, None)
-
-    # unfinished params
-    return all_reports
-
-
 def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
                   max_portfolio_size, rolling_window_size, alpha, n_scenario):
     risky_roi_xarr = xr.open_dataarray(
@@ -151,6 +60,7 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
         print_interval=10
     )
     instance.run()
+
 
 
 if __name__ == '__main__':

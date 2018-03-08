@@ -11,8 +11,11 @@ import time
 import logging
 import sys
 import datetime as dt
+import pickle
 
 import zmq
+import numpy as np
+import xarray as xr
 import portfolio_programming as pp
 from portfolio_programming.simulation.run_spsp_cvar import run_SPSP_CVaR
 
@@ -196,6 +199,40 @@ def parameter_client(server_ip="140.117.168.49"):
     context.term()
 
 
+def aggregating_reports(setting="compact"):
+    s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
+    e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
+    max_portfolio_sizes = range(5, 50 + 5, 5)
+    window_sizes = range(60, 240 + 10, 10)
+    n_scenarios = [200, ]
+    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+
+    attributes = (
+        'initial_wealth', 'final_wealth',
+        'cum_roi', 'daily_roi', 'daily_mean_roi',
+        'daily_std_roi', 'daily_skew_roi', 'daily_ex-kurt_roi',
+        'Sharpe', 'Sortino_full', 'Sortino_partial'
+    )
+    report_xarr = xr.DataArray(
+        np.zeros((
+            len(max_portfolio_sizes), len(window_sizes), len(alphas)),
+            len(attributes)),
+        dims=("max_portfolio_size", "rolling_window_size",
+              "alpha", "attribute"),
+        coords=(max_portfolio_sizes, window_sizes, alphas,
+                attributes)
+    )
+
+    report_paths = os.path.join(pp.REPORT_DIR, _all_spsp_cvar_params(
+        setting).keys())
+
+    for path in report_paths:
+        with open(path, 'rb') as fin:
+            report = pickle.load(fin)
+        print(report['simulation_name'], report['cum_roi'])
+
+
+
 if __name__ == '__main__':
     logging.basicConfig(
         stream=sys.stdout,
@@ -219,6 +256,10 @@ if __name__ == '__main__':
                         action='store_true',
                         help="run SPSP_CVaR client mode")
 
+    parser.add_argument("--compact_report", default=False,
+                        action="store_true",
+                        help="SPSP_CVaR compact setting report")
+
     args = parser.parse_args()
     if args.server:
         print("run SPSP_CVaR parameter server mode")
@@ -226,5 +267,8 @@ if __name__ == '__main__':
     elif args.client:
         print("run SPSP_CVaR client mode")
         parameter_client()
+    elif args.compact_report:
+        print("SPSP CVaR compact setting report")
+        aggregating_reports("compact")
     else:
         raise ValueError("no mode is set.")
