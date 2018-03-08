@@ -8,6 +8,8 @@ import os
 import platform
 import glob
 import time
+import logging
+import sys
 
 import zmq
 import portfolio_programming as pp
@@ -190,6 +192,14 @@ def parameter_client(server_ip="140.117.168.49"):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        stream=sys.stdout,
+        format='%(filename)15s %(levelname)10s %(asctime)s\n'
+               '%(message)s',
+        datefmt='%Y%m%d-%H:%M:%S',
+        level=logging.INFO)
+    import argparse
+
     get_zmq_version()
 
     import argparse
