@@ -120,7 +120,7 @@ def parameters_server(setting="compact"):
     # Protocols supported include tcp, udp, pgm, epgm, inproc and ipc.
     socket.bind("tcp://*:25555")
 
-    params = checking_existed_spsp_cvar_report(setting).values()
+    params = set(checking_existed_spsp_cvar_report(setting).values())
     workers = {}
     while len(params):
         # Wait for request from client
@@ -134,6 +134,10 @@ def parameters_server(setting="compact"):
         work = params.pop()
         print("send {} to {}".format(work, client_node_pid))
         socket.send_pyobj(params.pop())
+
+        print("current workers:")
+        for node, cnt in workers.items():
+            print("node:{:<8}: {:>3}".format(node, cnt))
 
     socket.close()
     context.term()
