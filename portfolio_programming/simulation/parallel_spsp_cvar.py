@@ -199,7 +199,10 @@ def parameter_client(server_ip="140.117.168.49"):
     context.term()
 
 
-def aggregating_reports(setting="compact"):
+def aggregating_reports(setting):
+    if setting not in ("compact", "general"):
+        raise ValueError("Unknown SPSP_CVaR setting: {}".format(setting))
+
     s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
     e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
     set_indices = [1, 2, 3]
