@@ -136,6 +136,8 @@ def parameter_server(setting="compact"):
     progress_node_pid = set()
     progress_node_count = {}
     finished = {}
+
+
     while not params.empty():
         # Wait for request from client
         client_node_pid = socket.recv_string()

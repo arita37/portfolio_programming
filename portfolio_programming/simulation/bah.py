@@ -4,8 +4,18 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
+import logging
+import os
+import pickle
+import platform
 from time import time
 
+import numpy as np
+import xarray as xr
+
+import portfolio_programming as pp
+from portfolio_programming.statistics.risk_adjusted import (
+    Sharpe, Sortino_full, Sortino_partial)
 from spsp_cvar import ValidMixin
 
 
@@ -21,6 +31,7 @@ class BAHPortfolio(ValidMixin):
                  sell_trans_fee=0.004425,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
+                 print_interval=10
                  ):
         """
         uniform buy-and-hold portfolio
@@ -43,7 +54,7 @@ class BAHPortfolio(ValidMixin):
             shape: (n_exp_period, )
             The return of risk-free asset, usually all zeros.
 
-        initial_risk_wealth : xarray.DataArray, shape: (n_stock,)
+        initial_risk_wealth : xarray.DataArray, shape: (n_symbol,)
             The invested wealth of the stocks in the candidate set.
 
         initial_risk_free_wealth : float
@@ -97,8 +108,19 @@ class BAHPortfolio(ValidMixin):
             self.exp_risk_rois.index[0])
 
         # results data
-
-
+        # decision xarray, shape: (n_exp_period, n_symbol+1, 3)
+        decisions = ["wealth", "buy", "sell"]
+        self.decision_xarr = xr.DataArray(
+            np.zeros((self.n_exp_period,
+                      self.n_symbol + 1,
+                      len(decisions))),
+            dims=('trans_date', 'symbol', 'decision'),
+            coords=(
+                self.exp_trans_dates,
+                self.pf_symbols,
+                decisions
+            )
+        )
 
     def get_simulation_name(self, *args, **kwargs):
         """
@@ -107,6 +129,82 @@ class BAHPortfolio(ValidMixin):
         func_name: str, Function name of the class
         """
         return "BAH_M{}".format(self.n_symbol)
+
+    @staticmethod
+    def get_performance_report(
+            simulation_name,
+            symbols,
+            risk_free_symbol,
+            exp_start_date,
+            exp_end_date,
+            n_exp_period,
+            buy_trans_fee,
+            sell_trans_fee,
+            initial_wealth,
+            final_wealth,
+            cum_trans_fee_loss,
+            decision_xarr,
+    ):
+        """
+       simulation reports
+
+        Parameters:
+        ------------------
+        simulation_name : string
+        symbols: list of string
+            the candidate symbols in the simulation
+        risk_free_symbol: string
+        start_date, end_date: datetime.date
+            the starting and ending days of the simulation
+        buy_trans_fee, sell_trans_fee: float
+            the transaction fee in the simulation
+        initial_wealth, final_wealth: float
+        n_exp_period: integer
+        cum_trans_fee_loss: float
+        decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
+        """
+        reports = dict()
+
+        # basic information
+        reports['os_uname'] = "|".join(platform.uname())
+        reports['simulation_name'] = simulation_name
+        reports['symbols'] = symbols
+        reports['risk_free_symbol'] = risk_free_symbol
+        reports['exp_start_date'] = exp_start_date
+        reports['exp_end_date'] = exp_end_date
+        reports['n_exp_period'] = n_exp_period
+        reports['buy_trans_fee'] = buy_trans_fee
+        reports['sell_trans_fee'] = sell_trans_fee
+        reports['initial_wealth'] = initial_wealth
+        reports['final_wealth'] = final_wealth
+        reports['cum_trans_fee_loss'] = cum_trans_fee_loss
+        reports['decision_xarr'] = decision_xarr
+
+        # analysis
+        reports['n_symbol'] = len(symbols)
+        reports['cum_roi'] = final_wealth / initial_wealth - 1.
+        reports['daily_roi'] = np.power(final_wealth / initial_wealth,
+                                        1. / n_exp_period) - 1
+
+        # wealth_arr, Pandas.Series, shape: (n_stock+1,)
+        wealth_arr = decision_xarr.loc[:, :, 'wealth'].sum(axis=1).to_series()
+        wealth_daily_rois = wealth_arr.pct_change()
+        wealth_daily_rois[0] = 0
+
+        reports['daily_mean_roi'] = wealth_daily_rois.mean()
+        reports['daily_std_roi'] = wealth_daily_rois.std()
+        reports['daily_skew_roi'] = wealth_daily_rois.skew()
+
+        # excess Kurtosis
+        reports['daily_ex-kurt_roi'] = wealth_daily_rois.kurt()
+        reports['Sharpe'] = Sharpe(wealth_daily_rois)
+        reports['Sortino_full'], reports['Sortino_full_semi_std'] = \
+            Sortino_full(wealth_daily_rois)
+
+        reports['Sortino_partial'], reports['Sortino_partial_semi_std'] = \
+            Sortino_partial(wealth_daily_rois)
+
+        return reports
 
     def run(self):
         """
@@ -118,113 +216,111 @@ class BAHPortfolio(ValidMixin):
         t0 = time()
 
         # get function name
-        func_name = self.get_trading_func_name()
+        simulation_name = self.get_simulation_name()
 
         # current wealth of each stock in the portfolio
-        # at the first period, allocated fund uniformly to each stock
-        allocated_risk_wealth = self.initial_risk_wealth
-        allocated_risk_free_wealth = self.initial_risk_free_wealth
+        cum_trans_fee_loss = 0
 
-        for tdx in xrange(self.n_exp_period):
+        for tdx in range(self.n_exp_period):
             t1 = time()
-            if tdx == 0:
-                # the first period, uniformly allocation fund
-                # the transaction fee  should be considered while buying
-                buy_amounts = pd.Series(
-                    np.ones(self.n_symbol) *
-                    self.initial_risk_free_wealth / self.n_symbol /
-                    (1 + self.buy_trans_fee),
-                    index=self.symbols)
-                self.buy_amounts_df.iloc[tdx] = buy_amounts
-                sell_amounts = 0
+            yesterday = self.exp_trans_dates[tdx - 1]
+            today = self.exp_trans_dates[tdx]
 
-                buy_amounts_sum = buy_amounts.sum()
-                sell_amounts_sum = 0
+            if tdx == 0:
+                # the first period, uniformly allocation money to each stock
+                # the transaction fee  should be considered while buying
+                self.decision_xarr.loc[today, self.symbols, 'wealth'] = \
+                    np.ones(self.n_symbol) * \
+                    self.initial_risk_free_wealth / self.n_symbol / \
+                    (1 + self.buy_trans_fee)
+
+                self.decision_xarr.loc[today, self.symbols, 'buy'] = \
+                    self.decision_xarr.loc[today, self.symbols, 'wealth']
+
+                cum_trans_fee_loss += (np.ones(self.n_symbol) *
+                                       self.initial_risk_free_wealth *
+                                       self.buy_trans_fee /
+                                       self.n_symbol).sum()
 
             elif tdx == self.n_exp_period - 1:
                 # the last period, sell all stocks at the last period
-                buy_amounts = 0
-                sell_amounts = self.risk_wealth_df.iloc[tdx - 1]
-
-                buy_amounts_sum = 0
-                sell_amounts_sum = sell_amounts.sum()
-
+                self.decision_xarr.loc[today, self.risk_free_symbol,
+                                       'wealth'] = \
+                    (self.decision_xarr.loc[today, self.symbols, 'wealth']
+                     * (1 - self.sell_trans_fee)).sum()
+                self.decision_xarr.loc[today, self.symbols, 'wealth'] = 0
+                cum_trans_fee_loss += (self.decision_xarr.loc[today,
+                                                              self.symbols, 'wealth'] *
+                                       self.sell_trans_fee).sum()
             else:
-                buy_amounts, sell_amounts = 0, 0
-                buy_amounts_sum, sell_amounts_sum = 0, 0
+                # tdx in [2, n_exp_period-2]
 
-            # record buy and sell amounts
-            self.buy_amounts_df.iloc[tdx] = buy_amounts
-            self.sell_amounts_df.iloc[tdx] = sell_amounts
+                # noaction,only update wealth
+                self.decision_xarr[today, self.symbols, 'wealth'] = (
+                        (1 + self.exp_risk_rois.loc[
+                            today, self.symbols, 'wealth']) *
+                        self.decision_xarr[yesterday, self.symbols, 'wealth']
+                )
+                self.decision_xarr[today, self.risk_free_symbol, 'wealth'] = (
+                        (1 + self.exp_risk_free_rois.loc[today]) *
+                        self.decision_xarr[yesterday, self.risk_free_symbol,
+                                           'wealth']
+                )
 
-            self.trans_fee_loss += (
-                    buy_amounts_sum * self.buy_trans_fee +
-                    sell_amounts_sum * self.sell_trans_fee
-            )
+            if tdx % self.print_interval == 0:
+                logging.info("{} [{}/{}] {} "
+                             "wealth:{:.2f}, {:.3f} secs".format(
+                    simulation_name,
+                    tdx + 1,
+                    self.n_exp_period,
+                    today.strftime("%Y%m%d"),
+                    float(self.decision_xarr.loc[today, :, 'wealth'].sum()),
+                    time() - t1)
+                )
 
-            total_buy = (buy_amounts_sum * (1 + self.buy_trans_fee))
-            total_sell = (sell_amounts_sum * (1 - self.sell_trans_fee))
-
-            # capital allocation
-            self.risk_wealth_df.iloc[tdx] = (
-                    (1 + self.exp_risk_rois.iloc[tdx]) *
-                    allocated_risk_wealth +
-                    self.buy_amounts_df.iloc[tdx] - self.sell_amounts_df.iloc[
-                        tdx]
-            )
-            self.risk_free_wealth.iloc[tdx] = (
-                    (1 + self.exp_risk_free_rois.iloc[tdx]) *
-                    allocated_risk_free_wealth -
-                    total_buy + total_sell
-            )
-
-            # update wealth
-            allocated_risk_wealth = self.risk_wealth_df.iloc[tdx]
-            allocated_risk_free_wealth = self.risk_free_wealth.iloc[tdx]
-
-            print("[{}/{}] {} {} OK, "
-                  "current_wealth:{:.2f}, {:.3f} secs".format(
-                tdx + 1, self.n_exp_period,
-                self.exp_risk_rois.index[tdx].strftime("%Y%m%d"),
-                func_name,
-                (self.risk_wealth_df.iloc[tdx].sum() +
-                 self.risk_free_wealth.iloc[tdx]),
-                time() - t1))
+        # end of transaction
 
         # end of iterations, computing statistics
-        final_wealth = (self.risk_wealth_df.iloc[-1].sum() +
-                        self.risk_free_wealth[-1])
-
+        initial_wealth = (
+                self.initial_risk_wealth.sum() + self.initial_risk_free_wealth)
+        final_wealth = self.decision_xarr.loc[self.exp_end_date, :,
+                       'wealth'].sum()
+        # get reports
         # get reports
         reports = self.get_performance_report(
-            func_name,
+            simulation_name,
             self.symbols,
-            self.exp_risk_rois.index[0],
-            self.exp_risk_rois.index[-1],
+            self.risk_free_symbol,
+            self.exp_start_date,
+            self.exp_end_date,
+            self.n_exp_period,
             self.buy_trans_fee,
             self.sell_trans_fee,
-            (self.initial_risk_wealth.sum() + self.initial_risk_free_wealth),
-            final_wealth,
-            self.n_exp_period,
-            self.trans_fee_loss,
-            self.risk_wealth_df,
-            self.risk_free_wealth)
-
-        # model additional elements to reports
-        reports['buy_amounts_df'] = self.buy_amounts_df
-        reports['sell_amounts_df'] = self.sell_amounts_df
+            float(initial_wealth),
+            float(final_wealth),
+            float(cum_trans_fee_loss),
+            self.decision_xarr,
+        )
 
         # add simulation time
         reports['simulation_time'] = time() - t0
 
-        print("{} OK n_stock:{}, [{}-{}], {:.4f}.secs".format(
-            func_name, self.n_symbol,
-            self.exp_risk_rois.index[0],
-            self.exp_risk_rois.index[-1],
-            time() - t0))
+        # write report
+        bah_report_dir = os.path.join(pp.REPORT_DIR, 'bah')
+        if not os.path.exists(bah_report_dir):
+            os.mkdirs(bah_report_dir)
+
+        report_path = os.path.join(bah_report_dir,
+                                   "report_{}.pkl".format(simulation_name))
+
+        with open(report_path, 'wb') as fout:
+            pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
+
+        print("{}-{} {} OK, {:.4f} secs".format(
+            platform.node(),
+            os.getpid(),
+            simulation_name,
+            time() - t0)
+        )
 
         return reports
-
-
-if __name__ == '__main__':
-    main()
