@@ -170,6 +170,7 @@ def parameter_server(setting="compact"):
             print("node:{:<8} progress:{:>3} finish {:>3}".format(
                 w_node, progress_node_count[w_node], cnt))
 
+    print("end of serving, remaining {} parameters.".format(params.qsize()))
     socket.close()
     context.term()
     params.close()
