@@ -117,9 +117,10 @@ def checking_existed_spsp_cvar_report(setting, report_dir=None):
     return all_reports
 
 
-def parameters_server(setting="compact"):
+def parameter_server(setting="compact"):
     node = platform.node()
     pid = os.getpid()
+    server_node_pid = "{}[pid:{}]".format(node, pid)
     context = zmq.Context()
 
     # zmq.sugar.socket.Socket
@@ -129,25 +130,40 @@ def parameters_server(setting="compact"):
     socket.bind("tcp://*:25555")
 
     params = set(checking_existed_spsp_cvar_report(setting).values())
-    workers = {}
+    progress_node_pid = set()
+    progress_node_count = {}
+    finished = {}
     while len(params):
         # Wait for request from client
         client_node_pid = socket.recv_string()
-        print("{:<15} Received request: {}".format(
+        print("{:<15}, {} Received request: {}".format(
             str(dt.datetime.now()),
+            server_node_pid,
             client_node_pid))
-        node, pid = client_node_pid.split('_')
-        workers.setdefault(node, 0)
-        workers[node] += 1
 
         #  Send reply back to client
         work = params.pop()
         print("send {} to {}".format(work, client_node_pid))
-        socket.send_pyobj(params.pop())
+        socket.send_pyobj(work)
 
-        print("unfinished parameters:{}".format(len(params)))
-        for node, cnt in workers.items():
-            print("node:{:<8} finish {:>3}".format(node, cnt))
+        c_node, c_pid = client_node_pid.split('_')
+        finished.setdefault(c_node, 0)
+        if client_node_pid in progress_node_pid:
+            # the node have done a work
+            finished[c_node] += 1
+        else:
+            progress_node_count.setdefault(c_node, 0)
+            progress_node_count[c_node] += 1
+
+        # the progress set is not robust, because we don't track
+        # if a process crash or not.
+        progress_node_pid.add(client_node_pid)
+
+        print("remaining parameters:{}".format(len(params)))
+        print("progressing: {}".format(len(progress_node_pid)))
+        for w_node, cnt in finished.items():
+            print("node:{:<8} progress:{:>3} finish {:>3}".format(
+                w_node, progress_node_count[w_node], cnt))
 
     socket.close()
     context.term()
@@ -290,7 +306,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.server:
         print("run SPSP_CVaR parameter server mode")
-        parameters_server()
+        parameter_server()
     elif args.client:
         print("run SPSP_CVaR client mode")
         parameter_client()
