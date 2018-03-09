@@ -4,6 +4,7 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
+import sys
 import logging
 import os
 import pickle
@@ -75,6 +76,7 @@ class BAHPortfolio(ValidMixin):
         self.symbols = symbols
         self.n_symbol = len(symbols)
         self.risk_free_symbol = 'risk_free'
+        self.pf_symbols = symbols + [self.risk_free_symbol, ]
 
         # pandas.core.indexes.datetimes.DatetimeIndex
         self.all_trans_dates = risk_rois.get_index('trans_date')
@@ -100,12 +102,20 @@ class BAHPortfolio(ValidMixin):
         self.valid_trans_date(start_date, end_date)
         self.exp_risk_rois = risk_rois.loc[start_date:end_date]
         self.exp_risk_free_rois = risk_free_rois.loc[start_date:end_date]
-        self.n_exp_period = self.exp_risk_rois.shape[0]
-        self.n_symbol = self.exp_risk_rois.shape[1]
 
         # date index in total data
-        self.start_date_idx = self.risk_rois.index.get_loc(
-            self.exp_risk_rois.index[0])
+        self.exp_trans_dates = self.exp_risk_rois.get_index('trans_date')
+        self.n_exp_period = len(self.exp_trans_dates)
+        self.exp_start_date = self.exp_trans_dates[0]
+        self.exp_end_date = self.exp_trans_dates[self.n_exp_period - 1]
+
+        self.exp_start_date_idx = self.all_trans_dates.get_loc(
+            self.exp_start_date)
+        self.exp_end_date_idx = self.all_trans_dates.get_loc(
+            self.exp_end_date)
+
+        self.valid_nonnegative_value("print_interval", print_interval)
+        self.print_interval = print_interval
 
         # results data
         # decision xarray, shape: (n_exp_period, n_symbol+1, 3)
@@ -128,7 +138,10 @@ class BAHPortfolio(ValidMixin):
         ------------
         func_name: str, Function name of the class
         """
-        return "BAH_M{}".format(self.n_symbol)
+        return "BAH_{}_{}_M{}".format(
+            self.exp_start_date.strftime("%Y%m%d"),
+            self.exp_end_date.strftime("%Y%m%d"),
+            self.n_symbol)
 
     @staticmethod
     def get_performance_report(
@@ -221,52 +234,39 @@ class BAHPortfolio(ValidMixin):
         # current wealth of each stock in the portfolio
         cum_trans_fee_loss = 0
 
-        for tdx in range(self.n_exp_period):
+        # the first period, uniformly allocation money to each stock
+        # the transaction fee  should be considered while buying
+
+        self.decision_xarr.loc[self.exp_start_date, self.symbols, 'wealth'] = \
+            np.ones(self.n_symbol) * \
+            self.initial_risk_free_wealth / self.n_symbol / \
+            (1 + self.buy_trans_fee)
+
+        self.decision_xarr.loc[self.exp_start_date, self.symbols, 'buy'] = \
+            self.decision_xarr.loc[self.exp_start_date, self.symbols, 'wealth']
+
+        cum_trans_fee_loss += (np.ones(self.n_symbol) *
+                               self.initial_risk_free_wealth *
+                               self.buy_trans_fee /
+                               self.n_symbol).sum()
+
+        for tdx in range(1, self.n_exp_period):
             t1 = time()
             yesterday = self.exp_trans_dates[tdx - 1]
             today = self.exp_trans_dates[tdx]
 
-            if tdx == 0:
-                # the first period, uniformly allocation money to each stock
-                # the transaction fee  should be considered while buying
-                self.decision_xarr.loc[today, self.symbols, 'wealth'] = \
-                    np.ones(self.n_symbol) * \
-                    self.initial_risk_free_wealth / self.n_symbol / \
-                    (1 + self.buy_trans_fee)
-
-                self.decision_xarr.loc[today, self.symbols, 'buy'] = \
-                    self.decision_xarr.loc[today, self.symbols, 'wealth']
-
-                cum_trans_fee_loss += (np.ones(self.n_symbol) *
-                                       self.initial_risk_free_wealth *
-                                       self.buy_trans_fee /
-                                       self.n_symbol).sum()
-
-            elif tdx == self.n_exp_period - 1:
-                # the last period, sell all stocks at the last period
-                self.decision_xarr.loc[today, self.risk_free_symbol,
-                                       'wealth'] = \
-                    (self.decision_xarr.loc[today, self.symbols, 'wealth']
-                     * (1 - self.sell_trans_fee)).sum()
-                self.decision_xarr.loc[today, self.symbols, 'wealth'] = 0
-                cum_trans_fee_loss += (self.decision_xarr.loc[today,
-                                                              self.symbols, 'wealth'] *
-                                       self.sell_trans_fee).sum()
-            else:
-                # tdx in [2, n_exp_period-2]
-
-                # noaction,only update wealth
-                self.decision_xarr[today, self.symbols, 'wealth'] = (
-                        (1 + self.exp_risk_rois.loc[
-                            today, self.symbols, 'wealth']) *
-                        self.decision_xarr[yesterday, self.symbols, 'wealth']
-                )
-                self.decision_xarr[today, self.risk_free_symbol, 'wealth'] = (
-                        (1 + self.exp_risk_free_rois.loc[today]) *
-                        self.decision_xarr[yesterday, self.risk_free_symbol,
+            # no-action,only update wealth
+            self.decision_xarr.loc[today, self.symbols, 'wealth'] = (
+                    (1 + self.exp_risk_rois.loc[today, self.symbols]) *
+                    self.decision_xarr.loc[yesterday, self.symbols,
                                            'wealth']
-                )
-
+            )
+            self.decision_xarr.loc[today, self.risk_free_symbol, 'wealth'] \
+                = (
+                    (1 + self.exp_risk_free_rois.loc[today]) *
+                    self.decision_xarr.loc[yesterday, self.risk_free_symbol,
+                                           'wealth']
+            )
             if tdx % self.print_interval == 0:
                 logging.info("{} [{}/{}] {} "
                              "wealth:{:.2f}, {:.3f} secs".format(
@@ -278,14 +278,25 @@ class BAHPortfolio(ValidMixin):
                     time() - t1)
                 )
 
+        # sell at last day
+        self.decision_xarr.loc[self.exp_end_date, self.symbols, 'sell'] = \
+            self.decision_xarr.loc[self.exp_end_date, self.symbols, 'wealth']
+
+        self.decision_xarr.loc[self.exp_end_date, self.risk_free_symbol,
+                               'wealth'] = \
+            (self.decision_xarr.loc[self.exp_end_date, self.symbols, 'wealth']
+             * (1 - self.sell_trans_fee)).sum()
+
+        cum_trans_fee_loss += (self.decision_xarr.loc[self.exp_end_date,
+                                                      self.symbols, 'wealth'] *
+                               self.sell_trans_fee).sum()
         # end of transaction
 
         # end of iterations, computing statistics
-        initial_wealth = (
+        initial_wealth = float(
                 self.initial_risk_wealth.sum() + self.initial_risk_free_wealth)
-        final_wealth = self.decision_xarr.loc[self.exp_end_date, :,
-                       'wealth'].sum()
-        # get reports
+        final_wealth = float(self.decision_xarr.loc[self.exp_end_date, :,
+                       'wealth'].sum())
         # get reports
         reports = self.get_performance_report(
             simulation_name,
@@ -308,7 +319,7 @@ class BAHPortfolio(ValidMixin):
         # write report
         bah_report_dir = os.path.join(pp.REPORT_DIR, 'bah')
         if not os.path.exists(bah_report_dir):
-            os.mkdirs(bah_report_dir)
+            os.makedirs(bah_report_dir)
 
         report_path = os.path.join(bah_report_dir,
                                    "report_{}.pkl".format(simulation_name))
@@ -316,11 +327,54 @@ class BAHPortfolio(ValidMixin):
         with open(report_path, 'wb') as fout:
             pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
 
-        print("{}-{} {} OK, {:.4f} secs".format(
+        print("{}-{} {} OK, ROI:{:.2%} {:.4f} secs".format(
             platform.node(),
             os.getpid(),
             simulation_name,
+            final_wealth/initial_wealth,
             time() - t0)
         )
 
         return reports
+
+
+def run_bah(n_symbol):
+    risky_roi_xarr = xr.open_dataarray(
+        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
+    symbols = list(risky_roi_xarr.get_index('symbol')[:n_symbol])
+    exp_start_date = pp.EXP_START_DATE
+    exp_end_date = pp.EXP_END_DATE
+
+    risky_rois = risky_roi_xarr.loc[exp_start_date:exp_end_date,
+                 symbols, 'simple_roi']
+    exp_trans_dates = risky_rois.get_index('trans_date')
+    n_exp_dates = len(exp_trans_dates)
+    risk_free_rois = xr.DataArray(np.zeros(n_exp_dates),
+                                  coords=(exp_trans_dates,))
+    initial_risk_wealth = xr.DataArray(np.zeros(n_symbol),
+                                       dims=('symbol',),
+                                       coords=(symbols,))
+    initial_risk_free_wealth = 1e6
+    print(exp_start_date, exp_end_date, n_symbol)
+    instance = BAHPortfolio(
+        symbols,
+        risky_rois,
+        risk_free_rois,
+        initial_risk_wealth,
+        initial_risk_free_wealth,
+        start_date=exp_start_date,
+        end_date=exp_end_date,
+    )
+    instance.run()
+
+
+if __name__ == '__main__':
+    logging.basicConfig(
+        stream=sys.stdout,
+        format='%(filename)15s %(levelname)10s %(asctime)s\n'
+               '%(message)s',
+        datefmt='%Y%m%d-%H:%M:%S',
+        level=logging.INFO)
+
+    for m in range(1,51):
+        run_bah(m)
