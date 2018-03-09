@@ -62,7 +62,6 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
     instance.run()
 
 
-
 if __name__ == '__main__':
     logging.basicConfig(
         stream=sys.stdout,

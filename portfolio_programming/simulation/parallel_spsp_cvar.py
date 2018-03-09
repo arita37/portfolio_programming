@@ -263,7 +263,7 @@ if __name__ == '__main__':
     import argparse
 
     get_zmq_version()
-  
+
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -280,6 +280,10 @@ if __name__ == '__main__':
                         action="store_true",
                         help="SPSP_CVaR compact setting report")
 
+    parser.add_argument("--general_report", default=False,
+                        action="store_true",
+                        help="SPSP_CVaR general setting report")
+
     args = parser.parse_args()
     if args.server:
         print("run SPSP_CVaR parameter server mode")
@@ -290,5 +294,8 @@ if __name__ == '__main__':
     elif args.compact_report:
         print("SPSP CVaR compact setting report")
         aggregating_reports("compact")
+    elif args.general_report:
+        print("SPSP CVaR general setting report")
+        aggregating_reports("general")
     else:
         raise ValueError("no mode is set.")
