@@ -11,6 +11,7 @@ import os
 import pickle
 import platform
 import sys
+import multiprocessing as mp
 
 import numpy as np
 import xarray as xr
@@ -129,11 +130,13 @@ def parameter_server(setting="compact"):
     # Protocols supported include tcp, udp, pgm, epgm, inproc and ipc.
     socket.bind("tcp://*:25555")
 
-    params = set(checking_existed_spsp_cvar_report(setting).values())
+    params = mp.Queue()
+    [params.put(v) for v in
+     checking_existed_spsp_cvar_report(setting).values()]
     progress_node_pid = set()
     progress_node_count = {}
     finished = {}
-    while len(params):
+    while not params.empty():
         # Wait for request from client
         client_node_pid = socket.recv_string()
         print("{:<15}, {} Received request: {}".format(
@@ -142,7 +145,7 @@ def parameter_server(setting="compact"):
             client_node_pid))
 
         #  Send reply back to client
-        work = params.pop()
+        work = params.get()
         print("send {} to {}".format(work, client_node_pid))
         socket.send_pyobj(work)
 
@@ -167,6 +170,7 @@ def parameter_server(setting="compact"):
 
     socket.close()
     context.term()
+    params.close()
 
 
 def parameter_client(server_ip="140.117.168.49"):

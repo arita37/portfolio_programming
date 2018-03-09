@@ -97,33 +97,8 @@ class BAHPortfolio(ValidMixin):
             self.exp_risk_rois.index[0])
 
         # results data
-        # risk wealth DataFrame, shape: (n_exp_period, n_stock)
-        self.risk_wealth_df = pd.DataFrame(
-            np.zeros((self.n_exp_period, self.n_symbol)),
-            index=self.exp_risk_rois.index,
-            columns=self.exp_risk_rois.columns
-        )
 
-        # risk_free Series, shape: (n_exp_period, )
-        self.risk_free_wealth = pd.Series(np.zeros(self.n_exp_period),
-                                          index=self.exp_risk_free_rois.index)
 
-        # buying amount DataFrame, shape: (n_exp_period, n_stock)
-        self.buy_amounts_df = pd.DataFrame(
-            np.zeros((self.n_exp_period, self.n_symbol)),
-            index=self.exp_risk_rois.index,
-            columns=self.exp_risk_rois.columns
-        )
-
-        # selling amount DataFrame, shape: (n_exp_period, n_stock)
-        self.sell_amounts_df = pd.DataFrame(
-            np.zeros((self.n_exp_period, self.n_symbol)),
-            index=self.exp_risk_rois.index,
-            columns=self.exp_risk_rois.columns
-        )
-
-        # cumulative loss in transaction fee in the simulation
-        self.trans_fee_loss = 0
 
     def get_simulation_name(self, *args, **kwargs):
         """
