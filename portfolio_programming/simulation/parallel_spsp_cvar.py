@@ -164,7 +164,7 @@ def parameter_server(setting="compact"):
         # if a process crash or not.
         progress_node_pid.add(client_node_pid)
 
-        print("remaining parameters:{}".format(len(params)))
+        print("remaining parameters:{}".format(params.qsize()))
         print("progressing: {}".format(len(progress_node_pid)))
         for w_node, cnt in finished.items():
             print("node:{:<8} progress:{:>3} finish {:>3}".format(
