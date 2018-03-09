@@ -136,7 +136,7 @@ def parameter_server(setting="compact"):
     progress_node_pid = set()
     progress_node_count = {}
     finished = {}
-
+    print("Remaining {} parameters.".format(params.qsize()))
 
     while not params.empty():
         # Wait for request from client
