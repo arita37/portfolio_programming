@@ -6,22 +6,14 @@ stagewise mean-variance model
 """
 
 import os
-import pickle
-import platform
 from time import time
-import logging
 
 import numpy as np
 import xarray as xr
 from pyomo.environ import *
 
-from spsp_cvar import ValidMixin
-import portfolio_programming as pp
-from portfolio_programming.statistics.risk_adjusted import (
-    Sharpe, Sortino_full, Sortino_partial, maximum_drawdown)
 
-
-def mean_variance(symbols, risk_roi, money, risk_factor, solver="cplex"):
+def mean_variance(symbols, risk_rois, money, risk_factor, solver="cplex"):
     """
     Mean variance to decide the portfolio weight of next stage
     minimize risk_factor * risk  - (1-risk_factor) * mean
@@ -33,7 +25,7 @@ def mean_variance(symbols, risk_roi, money, risk_factor, solver="cplex"):
     money: float
     risk_factor: float, 0<=risk_factor<=1
         1 means the investor are very conservative
-        0 means the investor are very aggrestive
+        0 means the investor are very aggressive
 
     solver: string
 
@@ -44,9 +36,8 @@ def mean_variance(symbols, risk_roi, money, risk_factor, solver="cplex"):
     """
     t0 = time()
 
-    mean_arr = risk_roi.mean(axis=1)
-    cov_matrix = np.cov(risk_roi)
-
+    mean_arr = risk_rois.mean(axis=1)
+    cov_matrix = np.cov(risk_rois)
 
     instance = ConcreteModel()
 
@@ -92,7 +83,7 @@ def mean_variance(symbols, risk_roi, money, risk_factor, solver="cplex"):
     print(weights_xarr)
 
     return {
-        "risk_objective": risk_objective,
+        "objective": risk_objective,
         "weights": weights_xarr,
     }
 
