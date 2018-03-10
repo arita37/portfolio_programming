@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
 
 https://github.com/znxlwm/pytorch-generative-model-collections
 
@@ -51,6 +50,42 @@ class Generator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self):
         pass
+
+
+class WGAN(object):
+    def __init__(self, args):
+        # parameters
+        self.epoch = args.epoch
+        self.sample_num = 64
+        self.batch_size = args.batch_size
+        self.save_dir = args.save_dir
+        self.result_dir = args.result_dir
+        self.dataset = args.dataset
+        self.log_dir = args.log_dir
+        self.gpu_mode = args.gpu_mode
+        self.model_name = args.gan_type
+        # clipping value
+        self.c = 0.01
+
+        # the number of iterations of the critic per generator iteration
+        self.n_critic = 5
+
+        # networks init
+        self.G = Generator(self.dataset)
+        self.D = Discriminator(self.dataset)
+        self.G_optimizer = optim.Adam(self.G.parameters(), lr=args.lrG,
+                                      betas=(args.beta1, args.beta2))
+        self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD,
+                                      betas=(args.beta1, args.beta2))
+
+        if self.gpu_mode:
+            self.G.cuda()
+            self.D.cuda()
+
+        print('---------- Networks architecture -------------')
+        print_network(self.G)
+        print_network(self.D)
+        print('-----------------------------------------------')
 
 
 class WGAN_GP(nn.Module):
