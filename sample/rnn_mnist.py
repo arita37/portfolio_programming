@@ -5,6 +5,10 @@ Dependencies:
 torch: 0.1.11
 matplotlib
 torchvision
+
+mnist:
+    n_picture: 60000
+    picture (height, weight, depth): (28, 28, 1)
 """
 import matplotlib.pyplot as plt
 import torch
