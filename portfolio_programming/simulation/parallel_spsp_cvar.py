@@ -118,7 +118,7 @@ def checking_existed_spsp_cvar_report(setting, report_dir=None):
     return all_reports
 
 
-def parameter_server(setting="compact"):
+def parameter_server(setting="general"):
     node = platform.node()
     pid = os.getpid()
     server_node_pid = "{}[pid:{}]".format(node, pid)

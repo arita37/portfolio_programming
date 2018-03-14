@@ -18,10 +18,10 @@ def sv_model():
     n = 400
     returns = np.genfromtxt(pm.get_data("SP500.csv"))
     print(returns)
-    fig, ax = plt.subplots(figsize=(14, 8))
-    ax.plot(returns, label='S&P500')
-    ax.set(xlabel='time', ylabel='returns')
-    ax.legend()
+#    fig, ax = plt.subplots(figsize=(14, 8))
+#    ax.plot(returns, label='S&P500')
+#    ax.set(xlabel='time', ylabel='returns')
+#    ax.legend()
 
     with pm.Model() as model:
         step_size = pm.Exponential('sigma', 50.)
@@ -36,18 +36,18 @@ def sv_model():
 
         trace = pm.sample(tune=2000, nuts_kwargs=dict(target_accept=.9))
     pm.traceplot(trace, varnames=['sigma', 'nu'])
-    fig, ax = plt.subplots()
-    plt.plot(trace['s'].T, 'b', alpha=.03)
-    ax.set(title=str(s), xlabel='time', ylabel='log volatility')
+#    fig, ax = plt.subplots()
+#    plt.plot(trace['s'].T, 'b', alpha=.03)
+#    ax.set(title=str(s), xlabel='time', ylabel='log volatility')
 
-    fig, ax = plt.subplots(figsize=(14, 8))
-    ax.plot(returns)
-    ax.plot(np.exp(trace[s].T), 'r', alpha=.03);
-    ax.set(xlabel='time', ylabel='returns')
-    ax.legend(['S&P500', 'stoch vol'])
+#   fig, ax = plt.subplots(figsize=(14, 8))
+#    ax.plot(returns)
+#    ax.plot(np.exp(trace[s].T), 'r', alpha=.03);
+#    ax.set(xlabel='time', ylabel='returns')
+#    ax.legend(['S&P500', 'stoch vol'])
 
 
-    plt.show()
+#    plt.show()
 
 if __name__ == '__main__':
     sv_model()
