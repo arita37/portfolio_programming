@@ -37,5 +37,6 @@ def central_limit_theorem():
 
     plt.show()
 
+
 if __name__ == '__main__':
     central_limit_theorem()

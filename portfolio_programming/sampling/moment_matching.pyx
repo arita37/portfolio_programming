@@ -111,7 +111,8 @@ cpdef heuristic_moment_matching(
         # loop until errMom converge
         for _ in range(max_start_iter):
             # each random variable consists of n_scenario random sample
-            tmp_out = np.random.rand(n_scenario)
+            # the Gaussian r.v. perform better than uniform r.v.
+            tmp_out = np.random.randn(n_scenario)
 
             # 1~4th moments of the random variable, shape (4, )
             ey = y_moments[rv, :]
