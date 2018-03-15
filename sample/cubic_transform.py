@@ -89,8 +89,22 @@ def cubic_function(cubic_params, sample_moments, tgt_moments):
 
 
 def cubic_transform_sampling(tgt_moments, n_sample=10000):
+    """
+    given the target mean, standard deviation, skewness, excess kurtosis
+    the function will return the samples match the four statistics.
+
+    Parameters
+    ---------------------------
+    tgt_moments, list or numpy.array of size 4
+    n_sample, positive integer
+
+    Returns
+    -----------------
+    the samples which match the target moments.
+    """
+
     # define infinity
-    INFINITY = 1e10
+    INFINITY = 1e20
 
     # to generate samples Y with zero mean, and unit variance
     ns = float(n_sample)
@@ -111,7 +125,7 @@ def cubic_transform_sampling(tgt_moments, n_sample=10000):
     max_start_iter = 5
 
     # cubic transform iteration
-    max_cubic_iter = 5
+    max_cubic_iter = 2
 
     # error
     max_cubic_err = 1e-5
@@ -143,7 +157,7 @@ def cubic_transform_sampling(tgt_moments, n_sample=10000):
                        cubic_params[3] * (tmp_out ** 3))
 
             if cubic_err < max_cubic_err:
-                # break starter loop
+                # break cubic loop
                 break
             else:
                 print("cub_iter:{}, cub_error: {}, not converge".format(
