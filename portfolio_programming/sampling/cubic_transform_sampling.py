@@ -2,12 +2,12 @@
 """
 Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
+
+Univariate random variables sampling
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as spopt
-import scipy.special as spsp
 import scipy.stats as spstats
 
 
@@ -184,6 +184,9 @@ def statistics(samples):
 
 
 def plot_samples():
+    import scipy.special as spsp
+    import matplotlib.pyplot as plt
+
     fig, axes = plt.subplots(4)
 
     mu, std, skew, ex_kurt = 10, 3, 0, 0
