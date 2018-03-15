@@ -13,7 +13,7 @@ def q(x_star, x):
     sigma = 10
     return 1 / (math.pi * 2) ** 0.5 / sigma * np.exp(
         -(x_star - mu) ** 2 / 2 / sigma ** 2)
-
+ 
 
 def p(x):  # target distribution
     return 0.3 * np.exp(-0.2 * x ** 2) + 0.7 * np.exp(-0.2 * (x - 10) ** 2)
