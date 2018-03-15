@@ -4,10 +4,12 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 License: GPL v3
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as spopt
+import scipy.special as spsp
 import scipy.stats as spstats
-import matplotlib.pyplot as plt
+
 
 def cubic_function(cubic_params, sample_moments, tgt_moments):
     """
@@ -85,8 +87,8 @@ def cubic_function(cubic_params, sample_moments, tgt_moments):
 
     return v1, v2, v3, v4
 
-def cubic_transform_sampling(tgt_moments=[0,1,0,0], n_sample=10000):
 
+def cubic_transform_sampling(tgt_moments, n_sample=10000):
     # define infinity
     INFINITY = 1e10
 
@@ -102,14 +104,14 @@ def cubic_transform_sampling(tgt_moments=[0,1,0,0], n_sample=10000):
     y_moments[1] = ns_m1 / ns
     y_moments[2] = (tgt_moments[2] * ns_m1 * ns_m2 / ns2)
     y_moments[3] = ((tgt_moments[3] + 3 * ns_m1_2 / ns_m2 /
-                        ns_m3) * ns_m2 * ns_m3 * ns_m1_2 / (ns2 - 1) / ns2)
+                     ns_m3) * ns_m2 * ns_m3 * ns_m1_2 / (ns2 - 1) / ns2)
 
     results = np.zeros(n_sample)
     # iteration for find good start samples
     max_start_iter = 5
 
     # cubic transform iteration
-    max_cubic_iter = 10
+    max_cubic_iter = 5
 
     # error
     max_cubic_err = 1e-5
@@ -157,48 +159,71 @@ def cubic_transform_sampling(tgt_moments=[0,1,0,0], n_sample=10000):
 
     return results
 
+
 #
 def statistics(samples):
     return "{:.2f} {:.2f} {:.2f} {:.2f}".format(
-            samples.mean(),
-            samples.std(ddof=1),
-            spstats.skew(samples,bias=False),
-            spstats.kurtosis(samples, bias=False))
+        samples.mean(),
+        samples.std(ddof=1),
+        spstats.skew(samples, bias=False),
+        spstats.kurtosis(samples, bias=False))
+
 
 def plot_samples():
-
     fig, axes = plt.subplots(4)
 
-    samples = cubic_transform_sampling([10, 5, 0, 0])
-    axes[0].set_title('standard normal')
-    axes[0].hist(samples, bins=100)
+    mu, std, skew, ex_kurt = 10, 3, 0, 0
+    samples = cubic_transform_sampling([mu, std, skew, ex_kurt])
+    axes[0].set_title('normal')
+    x = np.linspace(-20, 20, len(samples))
+    y = 1 / np.sqrt(2 * np.pi * std * std) * np.exp(
+        -(x - mu) * (x - mu) / (2 * std * std))
+
+    axes[0].plot(x, y, color="green", lw=2)
+    axes[0].hist(samples, bins=100, normed=True)
     print(statistics(samples))
 
     # student(nu)
     nu = 8.
-    samples = cubic_transform_sampling([0, np.sqrt(nu/(nu-2)), 0, 6/(nu-4)])
+    mu, std, skew, ex_kurt = 0, np.sqrt(nu / (nu - 2)), 0, 6 / (nu - 4)
+    samples = cubic_transform_sampling([mu, std, skew, ex_kurt])
     axes[1].set_title('student(nu={})'.format(nu))
-    axes[1].hist(samples, bins=100)
+    x = np.linspace(-20, 20, len(samples))
+    y = spsp.gamma((nu + 1) / 2) / np.sqrt(nu * np.pi) / spsp.gamma(nu / 2) * (
+            1 + x * x / nu) ** (-(nu + 1) / 2)
+
+    axes[1].plot(x, y, color="green", lw=2)
+    axes[1].hist(samples, bins=100, normed=True)
     print(statistics(samples))
 
     # chi-square(k)
     chi_k = 8.
-    samples = cubic_transform_sampling([chi_k, np.sqrt(2*chi_k), np.sqrt(
-        8/chi_k), 12/chi_k])
+    half_k = chi_k / 2
+    samples = cubic_transform_sampling([chi_k, np.sqrt(2 * chi_k), np.sqrt(
+        8 / chi_k), 12 / chi_k])
     axes[2].set_title('chi_square(k={}))'.format(chi_k))
-    axes[2].hist(samples, bins=100)
+    x = np.linspace(0, 20, len(samples))
+    y = 1 / (2 ** (half_k) * spsp.gamma(half_k)) * x ** (half_k - 1) * np.exp(
+        -x / 2)
+
+    axes[2].plot(x, y, color="green", lw=2)
+    axes[2].hist(samples, bins=100, normed=True)
     print(statistics(samples))
 
     # gamma(k, theta)
-    k = 1
-    theta = 2
+    k = 10
+    theta = 1
     samples = cubic_transform_sampling([k * theta,
-                                        np.sqrt(k*theta*theta),
-                                        2/np.sqrt(k),
-                                        6./k
+                                        np.sqrt(k * theta * theta),
+                                        2 / np.sqrt(k),
+                                        6. / k
                                         ])
     axes[3].set_title('Gamma(k,theta)=({}, {:.2f})'.format(k, theta))
-    axes[3].hist(samples, bins=100)
+    x = np.linspace(0, 20, len(samples))
+    y = 1 / (spsp.gamma(k) * theta ** k) * x ** (k - 1) * np.exp(-x / theta)
+
+    axes[3].plot(x, y, color="green", lw=2)
+    axes[3].hist(samples, bins=100, normed=True)
     print(statistics(samples))
 
     plt.show()
