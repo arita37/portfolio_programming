@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
 
-Univariate random variables sampling
+Fleishman, Allen I. "A method for simulating non-normal distributions."
+Psychometrika 43.4 (1978): 521-532.
+
+Cubic-transform is a method to generate a univariate non-normal random variable
+with given first four moments.
 """
 
 import numpy as np
