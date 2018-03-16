@@ -49,7 +49,7 @@ def pdf_normal(x, mu=0, std=1):
         -(x - mu) * (x - mu) / (2 * std * std))
 
 
-def pdf_gamma(x, k=10, theta=0.1):
+def pdf_gamma(x, k=2, theta=2):
     return 1 / (spsp.gamma(k) * theta ** k) * x ** (k - 1) * np.exp(-x / theta)
 
 
@@ -58,9 +58,13 @@ def pdf_chi_square(x, k=8):
     return (1 / (2 ** half_k * spsp.gamma(half_k)) * x ** (half_k - 1) *
             np.exp(-x / 2))
 
+def pdf_Boltzmann_distribution(x, a=5):
+    x2 = x*x
+    return (2/np.pi)**0.5 * x2 * np.exp(-x2 * 0.5/a/a)/a**3
+
 
 def plot_samples():
-    fig, axes = plt.subplots(3)
+    fig, axes = plt.subplots(4)
 
     # standard normal distribution
     samples = mcmc_sampling(pdf_normal)
@@ -83,6 +87,13 @@ def plot_samples():
 
     axes[2].plot(x, y, color="green", lw=2)
     axes[2].hist(samples, bins=100, normed=True)
+
+    samples = mcmc_sampling(pdf_Boltzmann_distribution)
+    x = np.linspace(0, 20, len(samples))
+    y = pdf_Boltzmann_distribution(x)
+
+    axes[3].plot(x, y, color="green", lw=2)
+    axes[3].hist(samples, bins=100, normed=True)
 
     plt.show()
 

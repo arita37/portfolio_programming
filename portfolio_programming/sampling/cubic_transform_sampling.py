@@ -190,7 +190,7 @@ def plot_samples():
     import scipy.special as spsp
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(4)
+    fig, axes = plt.subplots(5)
 
     mu, std, skew, ex_kurt = 10, 3, 0, 0
     samples = cubic_transform_sampling([mu, std, skew, ex_kurt])
@@ -244,6 +244,20 @@ def plot_samples():
 
     axes[3].plot(x, y, color="green", lw=2)
     axes[3].hist(samples, bins=100, normed=True)
+    print(statistics(samples))
+
+    # Boltzmann
+    a = 10
+    samples = cubic_transform_sampling([2*a*(2/np.pi)**0.5,
+                                        np.sqrt(a*a*(3*np.pi-8)/np.pi),
+                                        2*2**0.5*(16-5*np.pi)/(3*np.pi-8)**1.5,
+                                        4*(-96+40*np.pi-3*np.pi**2)/(
+                                                3*np.pi-8)**2
+                                        ])
+    x = np.linspace(0, 20, len(samples))
+    y = (2 / np.pi) ** 0.5 * x**2 * np.exp(-x**2 * 0.5 / a / a) / a ** 3
+    axes[4].plot(x, y, color="green", lw=2)
+    axes[4].hist(samples, bins=100, normed=True)
     print(statistics(samples))
 
     plt.show()
