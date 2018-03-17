@@ -158,7 +158,7 @@ def run_tej_csv_to_xarray():
 
     # manual setting
     trim_start_date = dt.date(2000, 1, 3)
-    trim_end_date = dt.date(2017, 12, 31)
+    trim_end_date = dt.date(2018, 3, 15)
 
     # run
     tej_csv_to_df(symbols, csv_dir, df_dir)
