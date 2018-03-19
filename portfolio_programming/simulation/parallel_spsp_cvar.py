@@ -130,6 +130,7 @@ def parameter_server(setting="general"):
     # Protocols supported include tcp, udp, pgm, epgm, inproc and ipc.
     socket.bind("tcp://*:25555")
 
+    # multiprocessing queue is thread-safe.
     params = mp.Queue()
     [params.put(v) for v in
      checking_existed_spsp_cvar_report(setting).values()]
@@ -157,18 +158,23 @@ def parameter_server(setting="general"):
             # the node have done a work
             finished[c_node] += 1
         else:
-            progress_node_count.setdefault(c_node, 0)
-            progress_node_count[c_node] += 1
+            progress_node_count.setdefault(
+                c_node, {"req_time": dt.datetime.now(), "cnt": 0})
+            progress_node_count[c_node]['req_time'] = dt.datetime.now()
+            progress_node_count[c_node]['cnt'] += 1
 
         # the progress set is not robust, because we don't track
-        # if a process crash or not.
+        # if a process on a node is crashed or not.
         progress_node_pid.add(client_node_pid)
 
         print("remaining parameters:{}".format(params.qsize()))
         print("progressing: {}".format(len(progress_node_pid)))
         for w_node, cnt in finished.items():
-            print("node:{:<8} progress:{:>3} ,finish:{:>3}".format(
-                w_node, progress_node_count[w_node], cnt))
+            print("node:{:<8} progress:{:>3} ,finish:{:>3} last req:{}".format(
+                w_node, progress_node_count[w_node]['cnt'], cnt,),
+                progress_node_count[w_node]['cnt']['req_time'].strftime(
+                    "%Y%md%d-%H%M%S")
+            )
 
     print("end of serving, remaining {} parameters.".format(params.qsize()))
     socket.close()
