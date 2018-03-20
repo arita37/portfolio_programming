@@ -49,8 +49,9 @@ def _all_spsp_cvar_params(setting, yearly=False):
     if setting not in ('compact', 'general'):
         raise ValueError('Wrong setting: {}'.format(setting))
 
-    set_indices = (1, 2, 3)
-
+    # set_indices = (1, 2, 3)
+    set_indices = (1, )
+    
     if not yearly:
         # whole interval
         years = [(pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
