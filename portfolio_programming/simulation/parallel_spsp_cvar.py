@@ -193,7 +193,7 @@ def parameter_server(setting, yearly):
         for w_node, cnt in finished.items():
             print("node:{:<8} progress:{:>3} ,finish:{:>3} last req:{}".format(
                 w_node, progress_node_count[w_node]['cnt'], cnt,
-                progress_node_count[w_node]['cnt']['req_time'].strftime(
+                progress_node_count[w_node]['req_time'].strftime(
                     "%Y%md%d-%H%M%S"))
             )
 
