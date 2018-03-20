@@ -334,6 +334,88 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     print("speed up:{:.2%}".format(ar.serial_time / ar.wall_time))
 
 
+def merge_scenario(s_date1=dt.date(2005, 1, 3), e_date1=dt.date(2014, 12, 31),
+                   s_date2=dt.date(2015, 1, 5), e_date2=dt.date(2017, 12, 31)):
+    """
+    SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
+                       "scenario-set-idx{sdx}_" \
+                       "{scenario_start_date}_" \
+                       "{scenario_end_date}_" \
+                       "Mc{n_symbol}_" \
+                       "h{rolling_window_size}_s{n_scenario}.nc"
+    """
+    set_indices = (1, 2, 3)
+    # set_indices = (2,)
+    n_symbols = range(5, 50 + 5, 5)
+    window_sizes = range(60, 240 + 10, 10)
+    n_scenarios = [200, ]
+
+    merge_count = 0
+    # dict comprehension
+    # key: file_name, value: parameters
+    for sdx in set_indices:
+        for m in n_symbols:
+            for h in window_sizes:
+                for s in n_scenarios:
+                    nc1 = pp.SCENARIO_NAME_FORMAT.format(
+                        sdx=sdx,
+                        scenario_start_date=s_date1.strftime("%Y%m%d"),
+                        scenario_end_date=e_date1.strftime("%Y%m%d"),
+                        n_symbol=m,
+                        rolling_window_size=h,
+                        n_scenario=s
+                    )
+
+                    nc2 = pp.SCENARIO_NAME_FORMAT.format(
+                        sdx=sdx,
+                        scenario_start_date=s_date2.strftime("%Y%m%d"),
+                        scenario_end_date=e_date2.strftime("%Y%m%d"),
+                        n_symbol=m,
+                        rolling_window_size=h,
+                        n_scenario=s
+                    )
+
+                    concat_nc = pp.SCENARIO_NAME_FORMAT.format(
+                        sdx=sdx,
+                        scenario_start_date=s_date1.strftime("%Y%m%d"),
+                        scenario_end_date=e_date2.strftime("%Y%m%d"),
+                        n_symbol=m,
+                        rolling_window_size=h,
+                        n_scenario=s
+                    )
+
+                    scenario_path = os.path.join(pp.SCENARIO_SET_DIR,
+                                                 concat_nc)
+                    nc1_path = os.path.join(pp.SCENARIO_SET_DIR,
+                                            nc1)
+                    nc2_path = os.path.join(pp.SCENARIO_SET_DIR, nc2)
+
+                    print('merged scenario: {}'.format(merge_count))
+                    if os.path.exists(scenario_path):
+                        logging.info("{} exists.".format(concat_nc))
+                        merge_count += 1
+                        continue
+
+                    if os.path.exists(nc1_path):
+                        xarr1 = xr.open_dataarray(open(nc1_path, 'rb'))
+                    else:
+                        logging.info('{} does not exist.'.format(nc1))
+                        continue
+
+                    if os.path.exists(nc2_path):
+                        xarr2 = xr.open_dataarray(open(nc2_path, 'rb'))
+                    else:
+                        logging.info('{} does not exist.'.format(nc2))
+                        continue
+
+                    concat_xarr = xr.concat([xarr1, xarr2],
+                                            dim='trans_date')
+                    concat_xarr.to_netcdf(scenario_path)
+                    logging.info('concat scenario {} and {} to {}'.format(
+                        nc1, nc2, concat_nc
+                    ))
+                    merge_count += 1
+
 
 if __name__ == '__main__':
     # using stdout instead of stderr
@@ -351,6 +433,11 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true',
                         help="parallel mode or not")
+
+    parser.add_argument('--merge',
+                        default=False,
+                        action='store_true',
+                        help="merged scenario")
 
     parser.add_argument("-n", "--n_candidate_symbol", type=int,
                         choices=range(1, 51),
@@ -374,6 +461,8 @@ if __name__ == '__main__':
     if args.parallel:
         print("generating scenario in parallel mode")
         dispatch_scenario_names()
+    elif args.merge:
+        merge_scenario()
     else:
         print("generating scenario in single mode")
         generating_scenarios_xarr(args.scenario_set_idx,
