@@ -195,7 +195,7 @@ def parameter_server(setting, yearly):
             print("node:{:<8} progress:{:>3} ,finish:{:>3} last req:{}".format(
                 w_node, progress_node_count[w_node]['cnt'], cnt,
                 progress_node_count[w_node]['req_time'].strftime(
-                    "%Y%md%d-%H%M%S"))
+                    "%Y%m%d-%H:%M:%S"))
             )
 
     print("end of serving, remaining {} parameters.".format(params.qsize()))
