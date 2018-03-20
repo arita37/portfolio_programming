@@ -7,11 +7,11 @@ License: GPL v3
 import datetime as dt
 import glob
 import logging
+import multiprocessing as mp
 import os
 import pickle
 import platform
 import sys
-import multiprocessing as mp
 
 import numpy as np
 import xarray as xr
@@ -27,7 +27,7 @@ def get_zmq_version():
     print("Node:{} pyzmq version is {}".format(node, zmq.__version__))
 
 
-def _all_spsp_cvar_params(setting):
+def _all_spsp_cvar_params(setting, yearly=False):
     """
     "report_SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{
     }.pkl".format(
@@ -49,10 +49,29 @@ def _all_spsp_cvar_params(setting):
     if setting not in ('compact', 'general'):
         raise ValueError('Wrong setting: {}'.format(setting))
 
-    # set_indices = (1, 2, 3)
     set_indices = (1, 2, 3)
-    s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
-    e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
+
+    if not yearly:
+        # whole interval
+        years = [(pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+                  pp.SCENARIO_END_DATE.strftime("%Y%m%d"))
+                 ]
+    else:
+        # yearly interval
+        years = [(dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
+                 (dt.date(2006, 1, 2), dt.date(2006, 12, 29)),
+                 (dt.date(2007, 1, 2), dt.date(2007, 12, 31)),
+                 (dt.date(2008, 1, 2), dt.date(2008, 12, 31)),
+                 (dt.date(2009, 1, 5), dt.date(2009, 12, 31)),
+                 (dt.date(2010, 1, 4), dt.date(2010, 12, 31)),
+                 (dt.date(2011, 1, 3), dt.date(2011, 12, 30)),
+                 (dt.date(2012, 1, 2), dt.date(2012, 12, 28)),
+                 (dt.date(2013, 1, 2), dt.date(2013, 12, 31)),
+                 (dt.date(2014, 1, 2), dt.date(2014, 12, 31)),
+                 (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
+                 (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
+                 (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
+                 ]
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
@@ -74,6 +93,7 @@ def _all_spsp_cvar_params(setting):
                 n_scenario=s
             ): (setting, sdx, s_date, e_date, m, h, float(a), s)
             for sdx in set_indices
+            for s_date, e_date in years
             for m in max_portfolio_sizes
             for h in window_sizes
             for a in alphas
@@ -94,6 +114,7 @@ def _all_spsp_cvar_params(setting):
                 n_scenario=s
             ): (setting, sdx, s_date, e_date, m, h, float(a), s)
             for sdx in set_indices
+            for s_date, e_date in years
             for m in max_portfolio_sizes
             for h in window_sizes
             for a in alphas
@@ -101,13 +122,13 @@ def _all_spsp_cvar_params(setting):
         }
 
 
-def checking_existed_spsp_cvar_report(setting, report_dir=None):
+def checking_existed_spsp_cvar_report(setting, yearly, report_dir=None):
     """
     return unfinished experiment parameters.
     """
     if report_dir is None:
         report_dir = pp.REPORT_DIR
-    all_reports = _all_spsp_cvar_params(setting)
+    all_reports = _all_spsp_cvar_params(setting, yearly)
 
     os.chdir(report_dir)
     existed_reports = glob.glob("*.pkl")
@@ -118,7 +139,7 @@ def checking_existed_spsp_cvar_report(setting, report_dir=None):
     return all_reports
 
 
-def parameter_server(setting="general"):
+def parameter_server(setting, yearly):
     node = platform.node()
     pid = os.getpid()
     server_node_pid = "{}[pid:{}]".format(node, pid)
@@ -133,7 +154,7 @@ def parameter_server(setting="general"):
     # multiprocessing queue is thread-safe.
     params = mp.Queue()
     [params.put(v) for v in
-     checking_existed_spsp_cvar_report(setting).values()]
+     checking_existed_spsp_cvar_report(setting, yearly).values()]
     progress_node_pid = set()
     progress_node_count = {}
     finished = {}
@@ -171,7 +192,7 @@ def parameter_server(setting="general"):
         print("progressing: {}".format(len(progress_node_pid)))
         for w_node, cnt in finished.items():
             print("node:{:<8} progress:{:>3} ,finish:{:>3} last req:{}".format(
-                w_node, progress_node_count[w_node]['cnt'], cnt,),
+                w_node, progress_node_count[w_node]['cnt'], cnt, ),
                 progress_node_count[w_node]['cnt']['req_time'].strftime(
                     "%Y%md%d-%H%M%S")
             )
@@ -304,6 +325,14 @@ if __name__ == '__main__':
                         action='store_true',
                         help="parameter server mode")
 
+    parser.add_argument("--setting", type=str,
+                        choices=("compact", "general"),
+                        help="SPSP setting")
+
+    parser.add_argument("--yearly", default=False,
+                        action='store_true',
+                        help="yearly experiment")
+
     parser.add_argument("-c", "--client", default=False,
                         action='store_true',
                         help="run SPSP_CVaR client mode")
@@ -319,7 +348,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.server:
         print("run SPSP_CVaR parameter server mode")
-        parameter_server()
+        print("setting:{}, yearly:{}".format(args.setting, args.yearly))
+        parameter_server(args.setting, args.yearly)
     elif args.client:
         print("run SPSP_CVaR client mode")
         parameter_client()
@@ -331,4 +361,3 @@ if __name__ == '__main__':
         aggregating_reports("general")
     else:
         raise ValueError("no mode is set.")
-

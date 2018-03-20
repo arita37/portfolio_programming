@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import sys
+import datetime as dt
 
 import numpy as np
 import xarray as xr
@@ -53,6 +54,8 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
         risk_free_rois,
         initial_risk_wealth,
         initial_risk_free_wealth,
+        start_date=exp_trans_dates[0],
+        end_date = exp_trans_dates[-1],
         rolling_window_size=rolling_window_size,
         alpha=alpha,
         n_scenario=n_scenario,
@@ -77,6 +80,10 @@ if __name__ == '__main__':
                         choices=("compact", "general"),
                         help="SPSP setting")
 
+    parser.add_argument("--year", type=int,
+                        choices=range(2005, 2017+1),
+                        help="yearly experiments")
+
     parser.add_argument("-M", "--max_portfolio_size", type=int,
                         choices=range(5, 55, 5),
                         help="max_portfolio_size")
@@ -97,10 +104,36 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("run_SPSP_CVaR in single mode")
-    run_SPSP_CVaR(args.setting,
-                  args.scenario_set_idx,
-                  '20050103', '20141231',
-                  args.max_portfolio_size,
-                  args.rolling_window_size,
-                  float(args.alpha),
-                  200)
+    if not args.year:
+        run_SPSP_CVaR(args.setting,
+                      args.scenario_set_idx,
+                      '20050103', '20141231',
+                      args.max_portfolio_size,
+                      args.rolling_window_size,
+                      float(args.alpha),
+                      200)
+    else:
+        years = {
+            2005: (dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
+            2006: (dt.date(2006, 1, 2), dt.date(2006, 12, 29)),
+            2007: (dt.date(2007, 1, 2), dt.date(2007, 12, 31)),
+            2008: (dt.date(2008, 1, 2), dt.date(2008, 12, 31)),
+            2009: (dt.date(2009, 1, 5), dt.date(2009, 12, 31)),
+            2010: (dt.date(2010, 1, 4), dt.date(2010, 12, 31)),
+            2011: (dt.date(2011, 1, 3), dt.date(2011, 12, 30)),
+            2012: (dt.date(2012, 1, 2), dt.date(2012, 12, 28)),
+            2013: (dt.date(2013, 1, 2), dt.date(2013, 12, 31)),
+            2014: (dt.date(2014, 1, 2), dt.date(2014, 12, 31)),
+            2015: (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
+            2016: (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
+            2017: (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
+         }
+
+        run_SPSP_CVaR(args.setting,
+                      args.scenario_set_idx,
+                      years[args.year][0],
+                      years[args.year][1],
+                      args.max_portfolio_size,
+                      args.rolling_window_size,
+                      float(args.alpha),
+                      200)

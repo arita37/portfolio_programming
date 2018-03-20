@@ -8,7 +8,8 @@ import numpy as np
 import scipy.special as spsp
 
 
-def transition_function(x_star, x):
+
+def normal_transition_function(x_star, x):
     """
     the transition function
     """
@@ -27,7 +28,7 @@ def mcmc_sampling(tgt_function, n_sample=10000):
 
     # the transition function
     p = tgt_function
-    q = transition_function
+    q = normal_transition_function
 
     results = []
     x = 0.1
