@@ -335,7 +335,7 @@ def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
 
 def merge_scenario(s_date1=dt.date(2005, 1, 3), e_date1=dt.date(2014, 12, 31),
-                   s_date2=dt.date(2015, 1, 5), e_date2=dt.date(2017, 12, 31)):
+                   s_date2=dt.date(2015, 1, 5), e_date2=dt.date(2017, 12, 29)):
     """
     SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
                        "scenario-set-idx{sdx}_" \
