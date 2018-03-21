@@ -69,9 +69,9 @@ def _all_spsp_cvar_params(setting, yearly=False):
                  (dt.date(2012, 1, 2), dt.date(2012, 12, 28)),
                  (dt.date(2013, 1, 2), dt.date(2013, 12, 31)),
                  (dt.date(2014, 1, 2), dt.date(2014, 12, 31)),
-                 # (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
-                 # (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
-                 # (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
+                 (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
+                 (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
+                 (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
                  ]
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
