@@ -183,6 +183,7 @@ def parameter_server(setting, yearly):
         if client_node_pid in progress_node_pid:
             # the node have done a work
             finished[c_node] += 1
+            progress_node_count[c_node]['req_time'] = dt.datetime.now()
         else:
             progress_node_count.setdefault(
                 c_node, {"req_time": dt.datetime.now(), "cnt": 0})
@@ -198,10 +199,10 @@ def parameter_server(setting, yearly):
                 time()-t0, params.qsize()))
 
         print("progressing: {}".format(len(progress_node_pid)))
-        for w_node, cnt in finished.items():
+        for c_node, cnt in finished.items():
             print("node:{:<8} progress:{:>3} ,finish:{:>3} last req:{}".format(
-                w_node, progress_node_count[w_node]['cnt'], cnt,
-                progress_node_count[w_node]['req_time'].strftime(
+                c_node, progress_node_count[c_node]['cnt'], cnt,
+                progress_node_count[c_node]['req_time'].strftime(
                     "%Y%m%d-%H:%M:%S"))
             )
 
