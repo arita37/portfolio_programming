@@ -351,6 +351,7 @@ def merge_scenario(s_date1=dt.date(2005, 1, 3), e_date1=dt.date(2014, 12, 31),
     n_scenarios = [200, ]
 
     merge_count = 0
+    unfinished_params = []
     # dict comprehension
     # key: file_name, value: parameters
     for sdx in set_indices:
@@ -400,12 +401,14 @@ def merge_scenario(s_date1=dt.date(2005, 1, 3), e_date1=dt.date(2014, 12, 31),
                         xarr1 = xr.open_dataarray(open(nc1_path, 'rb'))
                     else:
                         logging.info('{} does not exist.'.format(nc1))
+                        unfinished_params.append(nc1_path)
                         continue
 
                     if os.path.exists(nc2_path):
                         xarr2 = xr.open_dataarray(open(nc2_path, 'rb'))
                     else:
                         logging.info('{} does not exist.'.format(nc2))
+                        unfinished_params.append(nc2_path)
                         continue
 
                     concat_xarr = xr.concat([xarr1, xarr2],
@@ -415,6 +418,10 @@ def merge_scenario(s_date1=dt.date(2005, 1, 3), e_date1=dt.date(2014, 12, 31),
                         nc1, nc2, concat_nc
                     ))
                     merge_count += 1
+
+    logging.info("unfinished parameters")
+    for param in unfinished_params:
+        logging.info(param)
 
 
 if __name__ == '__main__':
