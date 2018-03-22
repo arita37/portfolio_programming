@@ -12,6 +12,7 @@ import os
 import pickle
 import platform
 import sys
+from time import time
 
 import numpy as np
 import xarray as xr
@@ -159,7 +160,10 @@ def parameter_server(setting, yearly):
     progress_node_pid = set()
     progress_node_count = {}
     finished = {}
-    print("Ready to serving, remaining {} parameters.".format(params.qsize()))
+    print("Ready to serving, remaining {} n_parameter.".format(params.qsize()))
+
+    svr_start_time = dt.time.now()
+    t0 = time()
 
     while not params.empty():
         # Wait for request from client
@@ -189,7 +193,10 @@ def parameter_server(setting, yearly):
         # if a process on a node is crashed or not.
         progress_node_pid.add(client_node_pid)
 
-        print("remaining parameters:{}".format(params.qsize()))
+        print("server start time:{}, elapsed:{}\nremaining n_parameter:{}, "
+              "".format(svr_start_time.strftime( "%Y%m%d-%H:%M:%S"),
+                time()-t0, params.qsize()))
+
         print("progressing: {}".format(len(progress_node_pid)))
         for w_node, cnt in finished.items():
             print("node:{:<8} progress:{:>3} ,finish:{:>3} last req:{}".format(
