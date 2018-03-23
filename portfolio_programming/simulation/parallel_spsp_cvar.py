@@ -86,8 +86,8 @@ def _all_spsp_cvar_params(setting, yearly=False):
             REPORT_FORMAT.format(
                 setting=setting,
                 sdx=sdx,
-                exp_start_date=s_date,
-                exp_end_date=e_date,
+                exp_start_date=s_date.strftime("%Y%m%d"),
+                exp_end_date=e_date.strftime("%Y%m%d"),
                 max_portfolio=m,
                 n_candidate_symbol=m,
                 rolling_window_size=h,
@@ -107,8 +107,8 @@ def _all_spsp_cvar_params(setting, yearly=False):
             REPORT_FORMAT.format(
                 setting=setting,
                 sdx=sdx,
-                exp_start_date=s_date,
-                exp_end_date=e_date,
+                exp_start_date=s_date.strftime("%Y%m%d"),
+                exp_end_date=e_date.strftime("%Y%m%d"),
                 max_portfolio=m,
                 n_candidate_symbol=50,
                 rolling_window_size=h,
@@ -162,7 +162,7 @@ def parameter_server(setting, yearly):
     finished = {}
     print("Ready to serving, remaining {} n_parameter.".format(params.qsize()))
 
-    svr_start_time = dt.time.now()
+    svr_start_time = dt.datetime.now()
     t0 = time()
 
     while not params.empty():
@@ -212,7 +212,7 @@ def parameter_server(setting, yearly):
     params.close()
 
 
-def parameter_client(server_ip="140.117.168.49"):
+def parameter_client(server_ip="140.117.168.49", max_reconnect_count=5):
     node = platform.node()
     pid = os.getpid()
 
@@ -226,13 +226,18 @@ def parameter_client(server_ip="140.117.168.49"):
     poll.register(socket, zmq.POLLIN)
 
     node_pid = "{}_{}".format(node, pid)
+    reconnect_count = 0
     while True:
         # send request to server
         socket.send_string(node_pid)
+
+        # wait 10 seconds for server responding
         socks = dict(poll.poll(10000))
 
         if socks.get(socket) == zmq.POLLIN:
             # still connected
+            reconnect_count = 0
+
             # receive parameters from server
             work = socket.recv_pyobj()
             print("{:<15} receiving: {}".format(
@@ -242,6 +247,10 @@ def parameter_client(server_ip="140.117.168.49"):
 
         else:
             # no response from server, reconnected
+            reconnect_count += 1
+            if reconnect_count >= max_reconnect_count:
+                break
+
             socket.setsockopt(zmq.LINGER, 0)
             socket.close()
             poll.unregister(socket)
@@ -251,7 +260,7 @@ def parameter_client(server_ip="140.117.168.49"):
             socket.connect(url)
             poll.register(socket, zmq.POLLIN)
 
-            socket.send_string(node_pid)
+            # socket.send_string(node_pid)
             print('reconnect to {}'.format(url))
 
     socket.close()
