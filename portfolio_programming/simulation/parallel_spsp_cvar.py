@@ -132,6 +132,7 @@ def checking_existed_spsp_cvar_report(setting, yearly, report_dir=None):
         report_dir = pp.REPORT_DIR
     all_reports = _all_spsp_cvar_params(setting, yearly)
 
+    print("totally n_parameter: {}".format(len(all_reports)))
     os.chdir(report_dir)
     existed_reports = glob.glob("*.pkl")
     for report in existed_reports:
