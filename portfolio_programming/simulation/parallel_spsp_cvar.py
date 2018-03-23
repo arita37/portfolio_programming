@@ -86,8 +86,8 @@ def _all_spsp_cvar_params(setting, yearly=False):
             REPORT_FORMAT.format(
                 setting=setting,
                 sdx=sdx,
-                exp_start_date=s_date,
-                exp_end_date=e_date,
+                exp_start_date=s_date.strftime("%Y%m%d"),
+                exp_end_date=e_date.strftime("%Y%m%d"),
                 max_portfolio=m,
                 n_candidate_symbol=m,
                 rolling_window_size=h,
@@ -107,8 +107,8 @@ def _all_spsp_cvar_params(setting, yearly=False):
             REPORT_FORMAT.format(
                 setting=setting,
                 sdx=sdx,
-                exp_start_date=s_date,
-                exp_end_date=e_date,
+                exp_start_date=s_date.strftime("%Y%m%d"),
+                exp_end_date=e_date.strftime("%Y%m%d"),
                 max_portfolio=m,
                 n_candidate_symbol=50,
                 rolling_window_size=h,
@@ -132,6 +132,7 @@ def checking_existed_spsp_cvar_report(setting, yearly, report_dir=None):
         report_dir = pp.REPORT_DIR
     all_reports = _all_spsp_cvar_params(setting, yearly)
 
+    print("totally n_parameter: {}".format(len(all_reports)))
     os.chdir(report_dir)
     existed_reports = glob.glob("*.pkl")
     for report in existed_reports:
@@ -162,7 +163,7 @@ def parameter_server(setting, yearly):
     finished = {}
     print("Ready to serving, remaining {} n_parameter.".format(params.qsize()))
 
-    svr_start_time = dt.time.now()
+    svr_start_time = dt.datetime.now()
     t0 = time()
 
     while not params.empty():

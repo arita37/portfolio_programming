@@ -51,8 +51,8 @@ SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
                        "Mc{n_symbol}_" \
                        "h{rolling_window_size}_s{n_scenario}.nc"
 
-#SCENARIO_START_DATE = dt.date(2005, 1, 3)
+SCENARIO_START_DATE = dt.date(2005, 1, 3)
 # SCENARIO_END_DATE = dt.date(2014, 12, 31)
-SCENARIO_START_DATE = dt.date(2015, 1, 5)
+#SCENARIO_START_DATE = dt.date(2015, 1, 5)
 SCENARIO_END_DATE = dt.date(2017, 12, 29)
 
