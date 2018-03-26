@@ -213,7 +213,7 @@ def parameter_server(setting, yearly):
     params.close()
 
 
-def parameter_client(server_ip="140.117.168.49"):
+def parameter_client(server_ip="140.117.168.49", max_reconnect_count=5):
     node = platform.node()
     pid = os.getpid()
 
@@ -227,13 +227,18 @@ def parameter_client(server_ip="140.117.168.49"):
     poll.register(socket, zmq.POLLIN)
 
     node_pid = "{}_{}".format(node, pid)
+    reconnect_count = 0
     while True:
         # send request to server
         socket.send_string(node_pid)
+
+        # wait 10 seconds for server responding
         socks = dict(poll.poll(10000))
 
         if socks.get(socket) == zmq.POLLIN:
             # still connected
+            reconnect_count = 0
+
             # receive parameters from server
             work = socket.recv_pyobj()
             print("{:<15} receiving: {}".format(
@@ -243,6 +248,10 @@ def parameter_client(server_ip="140.117.168.49"):
 
         else:
             # no response from server, reconnected
+            reconnect_count += 1
+            if reconnect_count >= max_reconnect_count:
+                break
+
             socket.setsockopt(zmq.LINGER, 0)
             socket.close()
             poll.unregister(socket)
@@ -252,8 +261,8 @@ def parameter_client(server_ip="140.117.168.49"):
             socket.connect(url)
             poll.register(socket, zmq.POLLIN)
 
-            #socket.send_string(node_pid)
-            print('reconnect to {}'.format(url))
+            # socket.send_string(node_pid)
+            print('{}, reconnect to {}'.format(dt.datetime.now(), url))
 
     socket.close()
     context.term()
