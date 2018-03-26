@@ -252,7 +252,7 @@ def parameter_client(server_ip="140.117.168.49"):
             socket.connect(url)
             poll.register(socket, zmq.POLLIN)
 
-            socket.send_string(node_pid)
+            #socket.send_string(node_pid)
             print('reconnect to {}'.format(url))
 
     socket.close()
