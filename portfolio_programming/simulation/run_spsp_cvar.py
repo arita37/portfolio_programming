@@ -7,12 +7,11 @@ The SPSP CVaR experiments are not able to run in parallel setting(ipyparallel)
 because ofthe complex setting of pyomo.
 """
 
-import glob
+import datetime as dt
 import json
 import logging
 import os
 import sys
-import datetime as dt
 
 import numpy as np
 import xarray as xr
@@ -55,7 +54,7 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
         initial_risk_wealth,
         initial_risk_free_wealth,
         start_date=exp_trans_dates[0],
-        end_date = exp_trans_dates[-1],
+        end_date=exp_trans_dates[-1],
         rolling_window_size=rolling_window_size,
         alpha=alpha,
         n_scenario=n_scenario,
@@ -74,13 +73,14 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     if setting not in ("compact", "general"):
         raise ValueError("unknown setting: {}".format(setting))
 
+    start_date, end_date = dt.date(2005, 1, 3), dt.date(2014, 12, 31)
+    name = "report_SPSP_CVaR_whole_{}_{}_{}.nc".format(
+        setting, start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d"))
+
     # read report file
-    xarr = xr.open_dataarray(open(os.path.join(pp.DATA_DIR,
-                        "report_SPSP_CVaR_whole_compact_20050103_20171229.nc"),
-                                  'rb'))
+    xarr = xr.open_dataarray(open(os.path.join(pp.DATA_DIR, name), 'rb'))
 
     # parameters
-    start_date, end_date = dt.date(2005,1,3), dt.date(2014,12,31)
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
     alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
@@ -96,6 +96,9 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     if z_dim == 'cum_roi':
         cm_norm = mpl.colors.Normalize(vmin=-100, vmax=300, clip=False)
         color_range = np.arange(-100, 300 + 10, 20)
+    elif z_dim == "daily_VSS":
+        cm_norm = mpl.colors.Normalize(vmin=0, vmax=4, clip=False)
+        color_range = np.arange(0, 4 + 0.2, 0.3)
 
     xlim = (5, 50)
     ylim = (60, 240)
@@ -103,16 +106,19 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
         # x-axis, max_portfolio_size, y-axis:  window_sizes
         ax = fig.add_subplot(2, 5, adx + 1, xlim=xlim, ylim=ylim)
 
-        ax.set_title(r'$\alpha = {:.0%}\$'.format(float(alpha)),
+        ax.set_title(r'$\alpha$ = {:.0%}'.format(float(alpha)),
                      y=1.02, fontsize=18)
         # labelpad - number of points between the axis and its label
-        ax.set_xlabel(r'$M$', fontsize=14, labelpad=-2)
-        ax.set_ylabel(r'$h$', fontsize=14, labelpad=-2)
-        ax.tick_params(labelsize=10, pad=1, )
-        ax.set_xticklabels(np.arange(5, 50 + 5, 5), fontsize=12,
+        ax.set_xlabel(r'$M$', fontsize=14, labelpad=-2,
+                      fontname="Times New Roman")
+        ax.set_ylabel(r'$h$', fontsize=14, labelpad=-2,
+                      fontname="Times New Roman")
+        ax.tick_params(labelsize=10, pad=1)
+        ax.set_xticks(max_portfolio_sizes)
+        ax.set_xticklabels(max_portfolio_sizes, fontsize=10,
                            fontname="Times New Roman")
         ax.set_yticks(window_sizes)
-        ax.set_yticklabels(window_sizes, fontsize=12,
+        ax.set_yticklabels(window_sizes, fontsize=10,
                            fontname="Times New Roman")
 
         Xs, Ys = np.meshgrid(max_portfolio_sizes, window_sizes)
@@ -130,6 +136,9 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
                 mean = z_values.mean()
                 Zs[rdx, cdx] = float(mean) * 100.
 
+        print("Z_dim:", z_dim)
+        print("z_range:", np.min(Zs), np.max(Zs))
+        print(Zs)
         # contour, projecting on z
         cset = ax.contourf(Xs, Ys, Zs,
                            cmap=plt.cm.coolwarm,
@@ -140,17 +149,18 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     cbar_ax = fig.add_axes([0.92, 0.125, 0.015, 0.75])
     # print fig.get_axes()
     cbar = fig.colorbar(cset, ax=fig.get_axes(), cax=cbar_ax,
-                    ticks=color_range)
-    print ("Z_dim:", z_dim)
-    print ("z_range:", np.min(Zs), np.max(Zs))
+                        ticks=color_range)
+
     cbar.ax.tick_params(labelsize=12)
     if z_dim == "cum_roi":
         cbar_label_name = "Average cumulative returns (%)"
+    elif z_dim == "daily_VSS":
+        cbar_label_name = "Average daily VSS (%)"
+
     cbar.set_label(cbar_label_name, labelpad=1, size=20,
-               fontname="Times New Roman")
+                   fontname="Times New Roman")
 
     plt.show()
-
 
 
 if __name__ == '__main__':
@@ -160,6 +170,8 @@ if __name__ == '__main__':
                '%(message)s',
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
+
+    plot_2d_contour_by_alpha("general", z_dim="cum_roi")
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -169,7 +181,7 @@ if __name__ == '__main__':
                         help="SPSP setting")
 
     parser.add_argument("--year", type=int,
-                        choices=range(2005, 2017+1),
+                        choices=range(2005, 2017 + 1),
                         help="yearly experiments")
 
     parser.add_argument("-M", "--max_portfolio_size", type=int,
@@ -215,7 +227,7 @@ if __name__ == '__main__':
             2015: (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
             2016: (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
             2017: (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
-         }
+        }
 
         run_SPSP_CVaR(args.setting,
                       args.scenario_set_idx,
