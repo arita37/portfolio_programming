@@ -274,8 +274,8 @@ def aggregating_reports(setting, yearly=False):
 
     if not yearly:
         # whole interval
-        years = [(pp.SCENARIO_START_DATE,
-                  pp.SCENARIO_END_DATE)
+        years = [[pp.SCENARIO_START_DATE,
+                  pp.SCENARIO_END_DATE]
                  ]
 
         out_report_path = os.path.join(pp.DATA_DIR,
@@ -285,19 +285,19 @@ def aggregating_reports(setting, yearly=False):
                                            years[0][1].strftime("%Y%m%d")))
     else:
         # yearly interval
-        years = [(dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
-                 (dt.date(2006, 1, 2), dt.date(2006, 12, 29)),
-                 (dt.date(2007, 1, 2), dt.date(2007, 12, 31)),
-                 (dt.date(2008, 1, 2), dt.date(2008, 12, 31)),
-                 (dt.date(2009, 1, 5), dt.date(2009, 12, 31)),
-                 (dt.date(2010, 1, 4), dt.date(2010, 12, 31)),
-                 (dt.date(2011, 1, 3), dt.date(2011, 12, 30)),
-                 (dt.date(2012, 1, 2), dt.date(2012, 12, 28)),
-                 (dt.date(2013, 1, 2), dt.date(2013, 12, 31)),
-                 (dt.date(2014, 1, 2), dt.date(2014, 12, 31)),
-                 (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
-                 (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
-                 (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
+        years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
+                 [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
+                 [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
+                 [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
+                 [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
+                 [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
+                 [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
+                 [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
+                 [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
+                 [dt.date(2014, 1, 2), dt.date(2014, 12, 31)],
+                 [dt.date(2015, 1, 5), dt.date(2015, 12, 31)],
+                 [dt.date(2016, 1, 4), dt.date(2016, 12, 30)],
+                 [dt.date(2017, 1, 3), dt.date(2017, 12, 29)]
                  ]
         out_report_path = os.path.join(pp.DATA_DIR,
                                        "report_SPSP_CVaR_yearly_{}_{}_{"
