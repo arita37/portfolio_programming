@@ -52,7 +52,7 @@ def _all_spsp_cvar_params(setting, yearly=False):
 
     set_indices = (1, 2, 3)
     # set_indices = (1, )
-    
+
     if not yearly:
         # whole interval
         years = [(pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
@@ -196,8 +196,8 @@ def parameter_server(setting, yearly):
         progress_node_pid.add(client_node_pid)
 
         print("server start time:{}, elapsed:{}\nremaining n_parameter:{}, "
-              "".format(svr_start_time.strftime( "%Y%m%d-%H:%M:%S"),
-                time()-t0, params.qsize()))
+              "".format(svr_start_time.strftime("%Y%m%d-%H:%M:%S"),
+                        time() - t0, params.qsize()))
 
         print("progressing: {}".format(len(progress_node_pid)))
         for c_node, cnt in finished.items():
@@ -268,12 +268,44 @@ def parameter_client(server_ip="140.117.168.49", max_reconnect_count=5):
     context.term()
 
 
-def aggregating_reports(setting):
+def aggregating_reports(setting, yearly=False):
     if setting not in ("compact", "general"):
         raise ValueError("Unknown SPSP_CVaR setting: {}".format(setting))
 
-    s_date = pp.SCENARIO_START_DATE.strftime("%Y%m%d")
-    e_date = pp.SCENARIO_END_DATE.strftime("%Y%m%d")
+    if not yearly:
+        # whole interval
+        years = [(pp.SCENARIO_START_DATE,
+                  pp.SCENARIO_END_DATE)
+                 ]
+
+        out_report_path = os.path.join(pp.DATA_DIR,
+                                       "report_SPSP_CVaR_whole_{}_{}_{}.nc".format(
+                                           setting,
+                                           years[0][0].strftime("%Y%m%d"),
+                                           years[0][1].strftime("%Y%m%d")))
+    else:
+        # yearly interval
+        years = [(dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
+                 (dt.date(2006, 1, 2), dt.date(2006, 12, 29)),
+                 (dt.date(2007, 1, 2), dt.date(2007, 12, 31)),
+                 (dt.date(2008, 1, 2), dt.date(2008, 12, 31)),
+                 (dt.date(2009, 1, 5), dt.date(2009, 12, 31)),
+                 (dt.date(2010, 1, 4), dt.date(2010, 12, 31)),
+                 (dt.date(2011, 1, 3), dt.date(2011, 12, 30)),
+                 (dt.date(2012, 1, 2), dt.date(2012, 12, 28)),
+                 (dt.date(2013, 1, 2), dt.date(2013, 12, 31)),
+                 (dt.date(2014, 1, 2), dt.date(2014, 12, 31)),
+                 (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
+                 (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
+                 (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
+                 ]
+        out_report_path = os.path.join(pp.DATA_DIR,
+                                       "report_SPSP_CVaR_yearly_{}_{}_{"
+                                       "}.nc".format(
+                                           setting,
+                                           years[0][0].strftime("%Y%m%d"),
+                                           years[-1][1].strftime("%Y%m%d")))
+    start_dates, end_dates = zip(*years)
     set_indices = [1, 2, 3]
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
@@ -287,12 +319,14 @@ def aggregating_reports(setting):
         'Sharpe', 'Sortino_full', 'Sortino_partial'
     ]
     report_xarr = xr.DataArray(
-        np.zeros((
-            len(set_indices), len(max_portfolio_sizes), len(window_sizes),
-            len(alphas), len(attributes))),
-        dims=("scenario_set_idx", "max_portfolio_size", "rolling_window_size",
+        np.zeros((len(start_dates), len(end_dates),
+                  len(set_indices), len(max_portfolio_sizes), len(window_sizes),
+                  len(alphas), len(attributes))),
+        dims=("start_date", "end_date",
+              "scenario_set_idx", "max_portfolio_size", "rolling_window_size",
               "alpha", "attribute"),
-        coords=(set_indices, max_portfolio_sizes, window_sizes, alphas,
+        coords=(start_dates, end_dates,
+                set_indices, max_portfolio_sizes, window_sizes, alphas,
                 attributes)
     )
 
@@ -311,7 +345,8 @@ def aggregating_reports(setting):
                 print("{} {:.2%}".format(report['simulation_name'],
                                          report['cum_roi']))
                 for attr in attributes:
-                    report_xarr.loc[sdx, m, h, alpha, attr] = report[attr]
+                    report_xarr.loc[s_date, e_date, sdx, m, h, alpha, attr] = \
+                        report[attr]
         except FileNotFoundError as e:
             no_report_count += 1
             continue
@@ -319,10 +354,7 @@ def aggregating_reports(setting):
     print("report count:{}, no report count:{}".format(
         report_count, no_report_count))
 
-    report_xarr_path = os.path.join(pp.DATA_DIR,
-                                    "report_SPSP_CVaR_{}_{}_{}.nc".format(
-                                        setting, s_date, e_date))
-    report_xarr.to_netcdf(report_xarr_path)
+    report_xarr.to_netcdf(out_report_path)
 
 
 if __name__ == '__main__':
@@ -374,9 +406,9 @@ if __name__ == '__main__':
         parameter_client()
     elif args.compact_report:
         print("SPSP CVaR compact setting report")
-        aggregating_reports("compact")
+        aggregating_reports("compact", args.yearly)
     elif args.general_report:
         print("SPSP CVaR general setting report")
-        aggregating_reports("general")
+        aggregating_reports("general", args.yearly)
     else:
         raise ValueError("no mode is set.")
