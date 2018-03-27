@@ -122,12 +122,15 @@ def _all_spsp_cvar_params(setting, yearly=False):
         }
 
 
-def checking_existed_spsp_cvar_report(setting, yearly, report_dir=None):
+def checking_existed_spsp_cvar_report(setting, yearly):
     """
     return unfinished experiment parameters.
     """
-    if report_dir is None:
+    if yearly:
         report_dir = pp.REPORT_DIR
+    else:
+        report_dir = os.path.join(pp.REPORT_DIR,
+                              "SPSP_CVaR_{}_20050103_20141231".format(setting))
     all_reports = _all_spsp_cvar_params(setting, yearly)
 
     print("totally n_parameter: {}".format(len(all_reports)))
