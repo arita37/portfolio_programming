@@ -333,6 +333,7 @@ def aggregating_reports(setting, yearly=False):
                 attributes)
     )
 
+    t0 = time()
     # key: report_name, value: parameters
     report_dict = _all_spsp_cvar_params(setting, yearly)
     report_count = 0
@@ -345,10 +346,12 @@ def aggregating_reports(setting, yearly=False):
             with open(path, 'rb') as fin:
                 report = pickle.load(fin)
                 report_count += 1
-                print("[{}/{}] {} {:.2%}".format(
+                print("[{}/{}] {} {:.2%} elapsed:{:.2f} secs".format(
                     idx+1, len(report_dict),
                     report['simulation_name'],
-                    report['cum_roi']))
+                    report['cum_roi'],
+                    time() - t0
+                ))
                 for attr in attributes:
                     report_xarr.loc[s_date, e_date, sdx, m, h, alpha, attr] = \
                         report[attr]
