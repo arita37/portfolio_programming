@@ -55,9 +55,7 @@ def _all_spsp_cvar_params(setting, yearly=False):
 
     if not yearly:
         # whole interval
-        years = [(pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
-                  pp.SCENARIO_END_DATE.strftime("%Y%m%d"))
-                 ]
+        years = [(dt.date(2005,1,3), dt.date(2014,12,31))]
     else:
         # yearly interval
         years = [(dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
