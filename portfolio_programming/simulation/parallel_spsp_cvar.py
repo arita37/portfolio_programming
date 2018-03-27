@@ -337,7 +337,7 @@ def aggregating_reports(setting, yearly=False):
     report_dict = _all_spsp_cvar_params(setting, yearly)
     report_count = 0
     no_report_count = 0
-    for name, param in report_dict.items():
+    for idx, (name, param) in enumerate(report_dict.items()):
         path = os.path.join(pp.REPORT_DIR, name)
         setting, sdx, s_date, e_date, m, h, a, s = param
         alpha = "{:.2f}".format(a)
@@ -345,8 +345,10 @@ def aggregating_reports(setting, yearly=False):
             with open(path, 'rb') as fin:
                 report = pickle.load(fin)
                 report_count += 1
-                print("{} {:.2%}".format(report['simulation_name'],
-                                         report['cum_roi']))
+                print("[{}/{}] {} {:.2%}".format(
+                    idx+1, len(report_dict),
+                    report['simulation_name'],
+                    report['cum_roi']))
                 for attr in attributes:
                     report_xarr.loc[s_date, e_date, sdx, m, h, alpha, attr] = \
                         report[attr]
