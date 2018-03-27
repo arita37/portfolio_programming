@@ -279,7 +279,8 @@ def aggregating_reports(setting, yearly=False):
                  ]
 
         out_report_path = os.path.join(pp.DATA_DIR,
-                                       "report_SPSP_CVaR_whole_{}_{}_{}.nc".format(
+                                       "report_SPSP_CVaR_whole_{}_{}_{"
+                                       "}.pkl".format(
                                            setting,
                                            years[0][0].strftime("%Y%m%d"),
                                            years[0][1].strftime("%Y%m%d")))
@@ -301,11 +302,13 @@ def aggregating_reports(setting, yearly=False):
                  ]
         out_report_path = os.path.join(pp.DATA_DIR,
                                        "report_SPSP_CVaR_yearly_{}_{}_{"
-                                       "}.nc".format(
+                                       "}.pkl".format(
                                            setting,
                                            years[0][0].strftime("%Y%m%d"),
                                            years[-1][1].strftime("%Y%m%d")))
-    start_dates, end_dates = zip(*years)
+    # start_dates, end_dates = zip(*years)
+    start_dates = [s for s,e in years]
+    end_dates = [e for s,e in years]
     set_indices = [1, 2, 3]
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
@@ -331,7 +334,7 @@ def aggregating_reports(setting, yearly=False):
     )
 
     # key: report_name, value: parameters
-    report_dict = _all_spsp_cvar_params(setting)
+    report_dict = _all_spsp_cvar_params(setting, yearly)
     report_count = 0
     no_report_count = 0
     for name, param in report_dict.items():
@@ -354,7 +357,8 @@ def aggregating_reports(setting, yearly=False):
     print("report count:{}, no report count:{}".format(
         report_count, no_report_count))
 
-    report_xarr.to_netcdf(out_report_path)
+    with open(out_report_path, 'wb') as fout:
+        pickle.dump(report_xarr, fout, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
@@ -367,7 +371,6 @@ if __name__ == '__main__':
     import argparse
 
     get_zmq_version()
-
     import argparse
 
     parser = argparse.ArgumentParser()
