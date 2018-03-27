@@ -332,6 +332,7 @@ def aggregating_reports(setting, yearly=False):
     # key: report_name, value: parameters
     report_dict = _all_spsp_cvar_params(setting, yearly)
     report_count = 0
+    no_report_count_params = []
     no_report_count = 0
     if yearly:
         parent_dir = pp.REPORT_DIR
@@ -359,9 +360,13 @@ def aggregating_reports(setting, yearly=False):
                 for attr in attributes:
                     report_xarr.loc[interval, sdx, m, h, alpha, attr] = \
                         report[attr]
-        except FileNotFoundError as e:
+        except FileNotFoundError:
+            no_report_count_params.append(name)
             no_report_count += 1
             continue
+
+    for name in no_report_count_params:
+        print("no data:", name)
 
     print("report count:{}, no report count:{}".format(
         report_count, no_report_count))
