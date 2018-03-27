@@ -153,5 +153,6 @@ def run_yahoo_us_csv_to_xarray(trim_start_date=dt.date(1990, 1, 2),
     dataframe_to_xarray(symbols, df_dir, trim_start_date, trim_end_date,
                         os.path.join(pp.TMP_DIR, "DJIA_symbols_20170901.nc"))
 
+
 if __name__ == '__main__':
     run_yahoo_us_csv_to_xarray()
