@@ -280,7 +280,7 @@ def aggregating_reports(setting, yearly=False):
 
         out_report_path = os.path.join(pp.DATA_DIR,
                                        "report_SPSP_CVaR_whole_{}_{}_{"
-                                       "}.pkl".format(
+                                       "}.nc".format(
                                            setting,
                                            years[0][0].strftime("%Y%m%d"),
                                            years[0][1].strftime("%Y%m%d")))
@@ -306,9 +306,9 @@ def aggregating_reports(setting, yearly=False):
                                            setting,
                                            years[0][0].strftime("%Y%m%d"),
                                            years[-1][1].strftime("%Y%m%d")))
-    # start_dates, end_dates = zip(*years)
-    start_dates = [s for s,e in years]
-    end_dates = [e for s,e in years]
+
+    intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
+                 for s, e in years]
     set_indices = [1, 2, 3]
     max_portfolio_sizes = range(5, 50 + 5, 5)
     window_sizes = range(60, 240 + 10, 10)
@@ -322,13 +322,13 @@ def aggregating_reports(setting, yearly=False):
         'Sharpe', 'Sortino_full', 'Sortino_partial'
     ]
     report_xarr = xr.DataArray(
-        np.zeros((len(start_dates), len(end_dates),
+        np.zeros((len(years),
                   len(set_indices), len(max_portfolio_sizes), len(window_sizes),
                   len(alphas), len(attributes))),
-        dims=("start_date", "end_date",
+        dims=("interval",
               "scenario_set_idx", "max_portfolio_size", "rolling_window_size",
               "alpha", "attribute"),
-        coords=(start_dates, end_dates,
+        coords=(intervals,
                 set_indices, max_portfolio_sizes, window_sizes, alphas,
                 attributes)
     )
@@ -341,19 +341,21 @@ def aggregating_reports(setting, yearly=False):
     for idx, (name, param) in enumerate(report_dict.items()):
         path = os.path.join(pp.REPORT_DIR, name)
         setting, sdx, s_date, e_date, m, h, a, s = param
+        interval = "{}_{}".format(s_date.strftime("%Y%m%d"),
+                                  e_date.strftime("%Y%m%d"))
         alpha = "{:.2f}".format(a)
         try:
             with open(path, 'rb') as fin:
                 report = pickle.load(fin)
                 report_count += 1
                 print("[{}/{}] {} {:.2%} elapsed:{:.2f} secs".format(
-                    idx+1, len(report_dict),
+                    idx + 1, len(report_dict),
                     report['simulation_name'],
                     report['cum_roi'],
                     time() - t0
                 ))
                 for attr in attributes:
-                    report_xarr.loc[s_date, e_date, sdx, m, h, alpha, attr] = \
+                    report_xarr.loc[interval, sdx, m, h, alpha, attr] = \
                         report[attr]
         except FileNotFoundError as e:
             no_report_count += 1
@@ -362,8 +364,7 @@ def aggregating_reports(setting, yearly=False):
     print("report count:{}, no report count:{}".format(
         report_count, no_report_count))
 
-    with open(out_report_path, 'wb') as fout:
-        pickle.dump(report_xarr, fout, pickle.HIGHEST_PROTOCOL)
+    report_xarr.to_netcdf(out_report_path)
 
 
 if __name__ == '__main__':
@@ -373,6 +374,7 @@ if __name__ == '__main__':
                '%(message)s',
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
+
     import argparse
 
     get_zmq_version()
