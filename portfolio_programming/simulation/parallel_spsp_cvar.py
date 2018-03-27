@@ -365,8 +365,8 @@ def aggregating_reports(setting, yearly=False):
             no_report_count += 1
             continue
 
-    for name in no_report_count_params:
-        print("no data:", name)
+    for rp in no_report_count_params:
+        print("no data:", rp)
 
     print("report count:{}, no report count:{}".format(
         report_count, no_report_count))
@@ -413,6 +413,9 @@ if __name__ == '__main__':
                         action="store_true",
                         help="SPSP_CVaR general setting report")
 
+    parser.add_argument("--unfinished_param", default=False,
+                        action="store_true")
+
     args = parser.parse_args()
     if args.server:
         print("run SPSP_CVaR parameter server mode")
@@ -427,5 +430,10 @@ if __name__ == '__main__':
     elif args.general_report:
         print("SPSP CVaR general setting report")
         aggregating_reports("general", args.yearly)
+    elif args.unfinished_param:
+        params_dict = checking_existed_spsp_cvar_report(args.setting,
+                                                       args.yearly)
+        for rp in params_dict.keys():
+            print("no data:", rp)
     else:
         raise ValueError("no mode is set.")
