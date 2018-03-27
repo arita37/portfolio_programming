@@ -335,8 +335,15 @@ def aggregating_reports(setting, yearly=False):
     report_dict = _all_spsp_cvar_params(setting, yearly)
     report_count = 0
     no_report_count = 0
+    if yearly:
+        parent_dir = pp.REPORT_DIR
+    else:
+        parent_dir = os.path.join(pp.REPORT_DIR,
+                                  'SPSP_CVaR_{}_20050103_20141231'.format(
+                                      setting))
+
     for idx, (name, param) in enumerate(report_dict.items()):
-        path = os.path.join(pp.REPORT_DIR, name)
+        path = os.path.join(parent_dir, name)
         setting, sdx, s_date, e_date, m, h, a, s = param
         interval = "{}_{}".format(s_date.strftime("%Y%m%d"),
                                   e_date.strftime("%Y%m%d"))
