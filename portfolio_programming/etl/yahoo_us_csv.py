@@ -66,6 +66,9 @@ def yahoo_us_csv_to_df(symbols, csv_dir, df_dir):
             r'Volume': 'volume'},
             inplace=True)
 
+        # compute roi
+        df['simple_roi'] = df['close_price'].pct_change()
+
         # output data file path
         fout_path = os.path.join(df_dir, '{}_df.pkl'.format(symbol))
         df.to_pickle(fout_path)
@@ -105,11 +108,13 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
     trans_dates = df[start_date:end_date].index
     trans_dates.name = 'trans_date'
     minor_indices = ['open_price', 'high_price', 'low_price', 'close_price',
-                     'adj_close_price', 'volume']
+                     'adj_close_price', 'volume', 'simple_roi']
 
     # setting xarray (date, symbol, indices)
+    arr = np.zeros((len(trans_dates), len(symbols), len(minor_indices)))
+    arr.fill(np.nan)
     xarr = xr.DataArray(
-        np.zeros((len(trans_dates), len(symbols), len(minor_indices))),
+        arr,
         dims=('trans_date', 'symbol', 'data'),
         coords=[trans_dates, symbols, minor_indices]
     )
@@ -125,7 +130,7 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
         xarr.loc[dates, symbol, :] = trimmed_df.loc[
             dates, ('open_price', 'high_price',
                     'low_price', 'close_price', 'adj_close_price',
-                    'volume')]
+                    'volume', 'simple_roi')]
 
         print("[{}/{}] {} load to xarray OK, {:.3f} secs".format(
             sdx + 1, len(symbols), symbol, time() - t1))
