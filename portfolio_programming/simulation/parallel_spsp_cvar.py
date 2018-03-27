@@ -274,10 +274,7 @@ def aggregating_reports(setting, yearly=False):
 
     if not yearly:
         # whole interval
-        years = [[pp.SCENARIO_START_DATE,
-                  pp.SCENARIO_END_DATE]
-                 ]
-
+        years = [[dt.date(2005, 1, 3), dt.date(2014, 12, 31)]]
         out_report_path = os.path.join(pp.DATA_DIR,
                                        "report_SPSP_CVaR_whole_{}_{}_{"
                                        "}.nc".format(
@@ -302,7 +299,7 @@ def aggregating_reports(setting, yearly=False):
                  ]
         out_report_path = os.path.join(pp.DATA_DIR,
                                        "report_SPSP_CVaR_yearly_{}_{}_{"
-                                       "}.pkl".format(
+                                       "}.nc".format(
                                            setting,
                                            years[0][0].strftime("%Y%m%d"),
                                            years[-1][1].strftime("%Y%m%d")))
