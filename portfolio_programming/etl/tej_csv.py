@@ -211,7 +211,7 @@ def symbol_statistics(start_date=dt.date(2005, 1, 1),
 
             spa_value = 0
             for _ in range(5):
-                spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=1000)
+                spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=5000)
                 spa.seed(np.random.randint(0, 2 ** 31 - 1))
                 spa.compute()
                 # preserve the worse p_value
