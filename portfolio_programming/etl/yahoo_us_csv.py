@@ -190,7 +190,7 @@ def symbol_statistics(start_date=dt.date(1990, 1, 1),
             trans_dates = rois.get_index('trans_date')
             rois = rois.data # to numpy
             rois = rois[~np.isnan(rois)] # filter the nan
-            n_roi = int(rois.count())
+            n_roi = len(rois)
             rois[0] = 0
             cumulative_roi = float((1 + rois).prod() - 1)
             annual_roi = float(np.power(cumulative_roi + 1, 1. / 10) - 1)
@@ -208,7 +208,7 @@ def symbol_statistics(start_date=dt.date(1990, 1, 1),
 
             spa_value = 0
             for _ in range(5):
-                spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=1000)
+                spa = arch_comp.SPA(rois, np.zeros(n_roi), reps=1000)
                 spa.seed(np.random.randint(0, 2 ** 31 - 1))
                 spa.compute()
                 # preserve the worse p_value
