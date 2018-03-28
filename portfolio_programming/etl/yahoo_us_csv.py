@@ -188,6 +188,8 @@ def symbol_statistics(start_date=dt.date(1990, 1, 1),
         for sdx, symbol in enumerate(symbols):
             rois = data_xarr.loc[start_date:end_date, symbol, 'simple_roi']
             trans_dates = rois.get_index('trans_date')
+            rois = rois.data # to numpy
+            rois = rois[~np.isnan(rois)] # filter the nan
             n_roi = int(rois.count())
             rois[0] = 0
             cumulative_roi = float((1 + rois).prod() - 1)
