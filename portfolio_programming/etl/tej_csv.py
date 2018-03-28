@@ -177,12 +177,13 @@ def symbol_statistics(start_date=dt.date(2005, 1, 1),
     import arch.bootstrap.multiple_comparison as arch_comp
 
     symbols = json.load(open(os.path.join(pp.DATA_DIR,
-                           'TAIEX_20050103_50largest_listed_market_cap.json')))
+                                          'TAIEX_20050103_50largest_listed_market_cap.json')))
     data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
-                       'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
+                                               'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
 
     with open(os.path.join(pp.TMP_DIR,
-       'TAIEX_20050103_50largest_listed_market_cap_stat.csv'), 'w') as csv_file:
+                           'TAIEX_20050103_50largest_listed_market_cap_stat.csv'),
+              'w') as csv_file:
         fields = ["rank", 'symbol', 'start_date', 'end_date', "n_data",
                   "cum_roi", "annual_roi", "roi_mu", "std", "skew", "ex_kurt",
                   "Sharpe", "Sortino", "JB", "worst_ADF", "SPA_c"]
@@ -237,11 +238,95 @@ def symbol_statistics(start_date=dt.date(2005, 1, 1),
                 "SPA_c": spa_value,
             })
             print("[{}/{}] {}, cum_roi:{:.2%}".format(
-                sdx+1, len(symbols),
+                sdx + 1, len(symbols),
                 symbol, cumulative_roi))
 
 
+def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
+             end_date=dt.date(2017, 12, 31)):
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+
+    data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
+                       'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
+
+    ys = data_xarr.loc[start_date:end_date, symbol, 'simple_roi'] * 100
+    n_point = int(ys.count())
+    xs = ys.get_index('trans_date')
+
+    years = mdates.YearLocator()  # every year
+    months = mdates.MonthLocator()  # every month
+    yearsFmt = mdates.DateFormatter('%Y')
+
+    pts = np.arange(n_point)
+
+    # freq domain
+    freq_ys = np.fft.fft(ys)
+    freq_ys = freq_ys[range(int(n_point / 2))]
+
+    fig, ax = plt.subplots(2, 2)
+
+    fig.suptitle('TAIEX {} {}-{}'.format(
+        symbol,
+        xs[0].strftime("%Y-%m-%d"), xs[-1].strftime("%Y-%m-%d")),
+        fontsize=20)
+    price_ax = ax[0, 0]
+    hist_ax = ax[0, 1]
+    roi_ax = ax[1, 0]
+    fft_ax = ax[1, 1]
+
+    datemin = np.datetime64(xs.date[0], 'Y')
+    datemax = np.datetime64(xs.date[-1], 'Y') + np.timedelta64(1, 'Y')
+
+    price_ax.plot(xs, data_xarr.loc[start_date:end_date, symbol,
+                      'close_price'])
+    price_ax.set_xlabel('Year', fontsize=12)
+    price_ax.set_ylabel('Close price', fontsize=12)
+    price_ax.xaxis.set_major_locator(years)
+    price_ax.xaxis.set_major_formatter(yearsFmt)
+    price_ax.xaxis.set_minor_locator(months)
+    price_ax.set_xlim(datemin, datemax)
+    price_ax.grid(True)
+
+    hist_ax.hist(ys.data, bins=100, density=True, facecolor='green')
+    hist_ax.set_xlabel('Return(%)', fontsize=12)
+    hist_ax.set_ylabel('Probability density', fontsize=12)
+    hist_ax.set_xlim(-10, 10)
+
+    roi_ax.set_ylabel('Return(%)', fontsize=12)
+    roi_ax.xaxis.set_major_locator(years)
+    roi_ax.xaxis.set_major_formatter(yearsFmt)
+    roi_ax.xaxis.set_minor_locator(months)
+    roi_ax.plot(xs, ys)
+    roi_ax.set_xlabel('Year', fontsize=12)
+    roi_ax.set_xlim(datemin, datemax)
+    roi_ax.grid(True)
+
+    fft_ax.plot(abs(freq_ys), 'r')  # plotting the spectrum
+    fft_ax.set_xlabel('Frequency (Hz)', fontsize=12)
+    fft_ax.set_ylabel('|Y(freq)|', fontsize=12)
+    fft_ax.set_xlim(0, n_point // 2)
+    fft_ax.grid(True)
+
+    fig_path = os.path.join(pp.TMP_DIR, '{}_roi_{}_{}.png'.format(
+        symbol, xs[0].strftime("%Y%m%d"), xs[-1].strftime("%Y%m%d")))
+    # mng = plt.get_current_fig_manager()
+    # mng.window.showMaximized()
+    fig.set_size_inches(16, 9)
+    plt.savefig(fig_path, dpi=240, format='png')
+    plt.show()
+    print("symbol {} plot FFT coomplete".format(symbol))
+
+
 if __name__ == '__main__':
+    # import json
+    #
+    # symbols = json.load(open(os.path.join(pp.DATA_DIR,
+    #                             'TAIEX_20050103_50largest_listed_market_cap.json')))
+    # for symbol in symbols:
+    #     plot_fft(symbol)
+    plot_fft("2330")
+
     import argparse
 
     parser = argparse.ArgumentParser()
