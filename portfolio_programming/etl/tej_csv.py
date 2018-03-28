@@ -179,9 +179,10 @@ def symbol_statistics(start_date=dt.date(2005, 1, 1),
     symbols = json.load(open(os.path.join(pp.DATA_DIR,
                            'TAIEX_20050103_50largest_listed_market_cap.json')))
     data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
-                                               'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
+                       'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
 
-    with open(os.path.join(pp.TMP_DIR, 'stat.csv'), 'w') as csv_file:
+    with open(os.path.join(pp.TMP_DIR,
+       'TAIEX_20050103_50largest_listed_market_cap_stat.csv'), 'w') as csv_file:
         fields = ["rank", 'symbol', 'start_date', 'end_date', "n_data",
                   "cum_roi", "annual_roi", "roi_mu", "std", "skew", "ex_kurt",
                   "Sharpe", "Sortino", "JB", "worst_ADF", "SPA_c"]
@@ -234,9 +235,24 @@ def symbol_statistics(start_date=dt.date(2005, 1, 1),
                 "worst_ADF": adf,
                 "SPA_c": spa_value,
             })
-            print("{}, cum_roi:{}".format(symbol, cumulative_roi))
+            print("[{}/{}] {}, cum_roi:{:.2%}".format(
+                sdx+1, len(symbols),
+                symbol, cumulative_roi))
 
 
 if __name__ == '__main__':
-    # run_tej_csv_to_xarray()
-    symbol_statistics()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--csv", default=False,
+                        action='store_true',
+                        help="csv to xarray")
+    parser.add_argument("-s", '--stat', default=False,
+                        action='store_true',
+                        help="symbol statistics")
+
+    args = parser.parse_args()
+    if args.csv:
+        run_tej_csv_to_xarray()
+    elif args.stat:
+        symbol_statistics()
