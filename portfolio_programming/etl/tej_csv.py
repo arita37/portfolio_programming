@@ -194,6 +194,7 @@ def symbol_statistics(start_date=dt.date(2005, 1, 1),
             rois = data_xarr.loc[start_date:end_date, symbol, 'simple_roi']
             trans_dates = rois.get_index('trans_date')
             n_roi = int(rois.count())
+            rois[0] = 0
             cumulative_roi = float((1 + rois).prod() - 1)
             annual_roi = float(np.power(cumulative_roi + 1, 1. / 10) - 1)
 
