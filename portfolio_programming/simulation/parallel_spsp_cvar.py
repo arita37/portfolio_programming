@@ -438,5 +438,6 @@ if __name__ == '__main__':
                                                        args.yearly)
         for rp in params_dict.keys():
             print("no data:", rp)
+        print("no data count: {}.".format(len(params_dict)))
     else:
         raise ValueError("no mode is set.")
