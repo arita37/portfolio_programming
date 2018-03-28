@@ -149,7 +149,7 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
     print("all exp_symbols load to xarray OK, {:.3f} secs".format(time() - t0))
 
 
-def run_tej_csv_to_xarray(trim_start_date = dt.date(2000, 1, 3),
+def run_tej_csv_to_xarray(trim_start_date=dt.date(2000, 1, 3),
                           trim_end_date=dt.date(2018, 3, 15)
                           ):
     with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
