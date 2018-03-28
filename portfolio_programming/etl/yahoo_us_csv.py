@@ -159,5 +159,96 @@ def run_yahoo_us_csv_to_xarray(trim_start_date=dt.date(1990, 1, 2),
                         os.path.join(pp.TMP_DIR, "DJIA_symbols_20170901.nc"))
 
 
+def symbol_statistics(start_date=dt.date(1990, 1, 1),
+                      end_date=dt.date(2017, 12, 31)):
+    """
+    the statistics of the return of the specified stocks
+    """
+    import csv
+    import json
+    import statsmodels.tsa.stattools as tsa_tools
+    import scipy.stats as spstats
+    import portfolio_programming.statistics.risk_adjusted as risk_adj
+    import arch.bootstrap.multiple_comparison as arch_comp
+
+    symbols = json.load(open(os.path.join(pp.DATA_DIR,
+                                          'DJIA_symbols_20170901.json')))
+    data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
+                                               'DJIA_symbols_20170901.nc'))
+
+    with open(os.path.join(pp.TMP_DIR,
+                           'DJIA_symbols_20170901_stat.csv'), 'w') as csv_file:
+        fields = ["rank", 'symbol', 'start_date', 'end_date', "n_data",
+                  "cum_roi", "annual_roi", "roi_mu", "std", "skew", "ex_kurt",
+                  "Sharpe", "Sortino", "JB", "worst_ADF", "SPA_c"]
+
+        writer = csv.DictWriter(csv_file, fieldnames=fields)
+        writer.writeheader()
+
+        for sdx, symbol in enumerate(symbols):
+            rois = data_xarr.loc[start_date:end_date, symbol, 'simple_roi']
+            trans_dates = rois.get_index('trans_date')
+            n_roi = int(rois.count())
+            rois[0] = 0
+            cumulative_roi = float((1 + rois).prod() - 1)
+            annual_roi = float(np.power(cumulative_roi + 1, 1. / 10) - 1)
+
+            sharpe = risk_adj.Sharpe(rois)
+            sortino = risk_adj.Sortino_full(rois)[0]
+            jb = spstats.jarque_bera(rois)[1]
+
+            # worse case of adf
+            adf_c = tsa_tools.adfuller(rois, regression='c')[1]
+            adf_ct = tsa_tools.adfuller(rois, regression='ct')[1]
+            adf_ctt = tsa_tools.adfuller(rois, regression='ctt')[1]
+            adf_nc = tsa_tools.adfuller(rois, regression='nc')[1]
+            adf = max(adf_c, adf_ct, adf_ctt, adf_nc)
+
+            spa_value = 0
+            for _ in range(5):
+                spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=1000)
+                spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                spa.compute()
+                # preserve the worse p_value
+                if spa.pvalues[1] > spa_value:
+                    spa_value = spa.pvalues[1]
+
+            writer.writerow({
+                "rank": sdx + 1,
+                "symbol": symbol,
+                "start_date": trans_dates[0].strftime("%Y-%m-%d"),
+                "end_date": trans_dates[-1].strftime("%Y-%m-%d"),
+                "n_data": n_roi,
+                "cum_roi": cumulative_roi,
+                "annual_roi": annual_roi,
+                "roi_mu": float(rois.mean()),
+                "std": float(rois.std(ddof=1)),
+                "skew": spstats.skew(rois, bias=False),
+                "ex_kurt": spstats.kurtosis(rois, bias=False),
+                "Sharpe": sharpe,
+                "Sortino": sortino,
+                "JB": jb,
+                "worst_ADF": adf,
+                "SPA_c": spa_value,
+            })
+            print("[{}/{}] {}, cum_roi:{:.2%}".format(
+                sdx + 1, len(symbols),
+                symbol, cumulative_roi))
+
+
 if __name__ == '__main__':
-    run_yahoo_us_csv_to_xarray()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--csv", default=False,
+                        action='store_true',
+                        help="csv to xarray")
+    parser.add_argument("-s", '--stat', default=False,
+                        action='store_true',
+                        help="symbol statistics")
+
+    args = parser.parse_args()
+    if args.csv:
+        run_yahoo_us_csv_to_xarray()
+    elif args.stat:
+        symbol_statistics()
