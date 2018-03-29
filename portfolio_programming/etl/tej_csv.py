@@ -324,6 +324,9 @@ def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
 
 def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
              end_date=dt.date(2017, 12, 31)):
+    import matplotlib
+    # Force matplotlib to not use any Xwindows backend.
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
     import pyhht
@@ -350,7 +353,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             }
 
     for emd_name, emd in emds.items():
-        t0 = time()
+        t1 = time()
         if emd_name == 'hht_emd':
             obj = emd(ys.data)
             imfs = obj.decompose()
@@ -397,7 +400,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             emd_name))
         fig.set_size_inches(16, 9)
         plt.savefig(fig_path, dpi=240, format='png')
-        print("save figure:{} OK, {:.4f} secs".format(fig_path, time()-t0))
+        print("save figure:{} OK, {:.4f} secs".format(fig_path, time()-t1))
         plt.subplots_adjust(hspace=0.8)
 
     # plt.show()
