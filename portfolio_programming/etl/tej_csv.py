@@ -348,8 +348,9 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             "pyemd_eemd": PyEMD.EEMD,
             "pyemd_eemdan": PyEMD.CEEMDAN
             }
-    t0 = time()
+
     for emd_name, emd in emds.items():
+        t0 = time()
         if emd_name == 'hht_emd':
             obj = emd(ys.data)
             imfs = obj.decompose()
@@ -396,7 +397,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             emd_name))
         fig.set_size_inches(16, 9)
         plt.savefig(fig_path, dpi=240, format='png')
-
+        print("save figure:{} OK, {:.4f} secs".format(fig_path, time()-t0))
         plt.subplots_adjust(hspace=0.8)
 
     # plt.show()
