@@ -351,7 +351,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
     t0 = time()
     for emd_name, emd in emds.items():
         if emd_name == 'hht_emd':
-            imfs = emd.decompose(ys.data)
+            imfs = emd(ys.data).decompose()
         else:
             imfs = emd(ys.data)
 
