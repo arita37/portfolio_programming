@@ -350,7 +350,11 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             }
     t0 = time()
     for emd_name, emd in emds.items():
-        imfs = emd(ys.data)
+        if emd_name == 'hht_emd':
+            imfs = emd.decompose(ys.data)
+        else:
+            imfs = emd(ys.data)
+
         n_imfs = imfs.shape[0]
         global_ylim = max(np.max(np.abs(imfs[:-1, :]), axis=0))
 
