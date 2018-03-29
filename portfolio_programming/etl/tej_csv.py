@@ -247,6 +247,8 @@ def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
 
+
+    t0 = time()
     data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
                        'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
 
@@ -308,15 +310,83 @@ def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
     fft_ax.set_xlim(0, n_point // 2)
     fft_ax.grid(True)
 
-    fig_path = os.path.join(pp.TMP_DIR, '{}_roi_{}_{}.png'.format(
-        symbol, xs[0].strftime("%Y%m%d"), xs[-1].strftime("%Y%m%d")))
     # mng = plt.get_current_fig_manager()
     # mng.window.showMaximized()
+    fig_path = os.path.join(pp.TMP_DIR, '{}_roi_{}_{}.png'.format(
+        symbol, xs[0].strftime("%Y%m%d"), xs[-1].strftime("%Y%m%d")))
     fig.set_size_inches(16, 9)
     plt.savefig(fig_path, dpi=240, format='png')
-    plt.show()
-    print("symbol {} plot FFT coomplete".format(symbol))
 
+    plt.show()
+    print("symbol {} plot FFT complete, {:.4f} secs".format(symbol,
+                                                            time()-t0))
+
+
+def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
+             end_date=dt.date(2017, 12, 31)):
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+    import pyhht as hht
+
+    t0 = time()
+    data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
+                                               'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
+
+    ys = data_xarr.loc[start_date:end_date, symbol, 'simple_roi'] * 100
+    n_point = int(ys.count())
+    xs = ys.get_index('trans_date')
+    datemin = np.datetime64(xs.date[0], 'Y')
+    datemax = np.datetime64(xs.date[-1], 'Y') + np.timedelta64(1, 'Y')
+    
+    years = mdates.YearLocator()  # every year
+    months = mdates.MonthLocator()  # every month
+    yearsFmt = mdates.DateFormatter('%Y')
+
+    # HHT
+    decomposer = hht.EMD(ys.data)
+    imfs = decomposer.decompose()
+    n_imfs = imfs.shape[0]
+    print('imfs shape:', imfs.shape)
+    print(imfs[-1, :])
+    print(imfs[n_imfs - 1, :])
+
+    global_ylim = max(np.max(np.abs(imfs[:-1, :]), axis=0))
+
+    plt.figure(figsize=(32, 18))
+    hht_ax = plt.subplot(n_imfs + 1, 1, 1)
+    hht_ax.plot(xs, ys.data)
+    hht_ax.xaxis.set_major_locator(years)
+    hht_ax.xaxis.set_major_formatter(yearsFmt)
+    hht_ax.xaxis.set_minor_locator(months)
+    hht_ax.set_xlim(datemin, datemax)
+    hht_ax.set_ylim(ys.min(), ys.max())
+    hht_ax.tick_params(axis='both', which='both', labelsize=8)
+    # hht_ax.tick_params(which='both', left=False, bottom=False, labelleft=False,
+    #                labelbottom=False)
+    hht_ax.grid(False)
+    hht_ax.set_ylabel('Signal')
+    hht_ax.set_title('Empirical Mode Decomposition')
+    # Plot the IMFs
+    for idx in range(n_imfs):
+        imf_ax = plt.subplot(n_imfs + 1, 1, idx + 2)
+        imf_ax.plot(xs, imfs[idx, :])
+        imf_ax.xaxis.set_major_locator(years)
+        imf_ax.xaxis.set_major_formatter(yearsFmt)
+        imf_ax.xaxis.set_minor_locator(months)
+        imf_ax.set_xlim(datemin, datemax)
+        # imf_ax.set_ylim(-axis_extent, axis_extent)
+        imf_ax.tick_params(axis='both', which='both', labelsize=8)
+        imf_ax.grid(False)
+        if idx != n_imfs - 1:
+            imf_ax.set_ylabel('IMF' + str(idx + 1))
+        else:
+            imf_ax.set_ylabel('Residual')
+
+    # res_ax = plt.subplot(n_imfs + 1, 1, n_imfs + 1)
+    # res_ax.plot(xs, imfs[-1, :], 'r')
+    plt.subplots_adjust(hspace=0.8)
+    # hht.visualization.plot_imfs(ys.data, imfs)
+    plt.show()
 
 if __name__ == '__main__':
     # import json
@@ -325,7 +395,7 @@ if __name__ == '__main__':
     #                             'TAIEX_20050103_50largest_listed_market_cap.json')))
     # for symbol in symbols:
     #     plot_fft(symbol)
-    plot_fft("2330")
+    plot_hht("2412")
 
     import argparse
 
