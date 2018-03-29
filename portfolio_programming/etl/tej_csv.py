@@ -348,7 +348,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             "pyemd_eemd": PyEMD.EEMD,
             "pyemd_eemdan": PyEMD.CEEMDAN
             }
-
+    print("start HHT")
     for emd_name, emd in emds.items():
         t0 = time()
         if emd_name == 'hht_emd':
