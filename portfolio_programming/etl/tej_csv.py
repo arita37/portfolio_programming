@@ -354,6 +354,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
     print("start HHT")
     for emd_name, emd in emds.items():
         t1 = time()
+        print(emd_name)
         if emd_name == 'hht_emd':
             obj = emd(ys.data)
             imfs = obj.decompose()
@@ -362,7 +363,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             imfs = obj(ys.data)
 
         n_imfs = imfs.shape[0]
-        print("{} {}".format(emd_name, n_imfs))
+        print("{}, n_IMFs:{}".format(emd_name, n_imfs))
         global_ylim = max(np.max(np.abs(imfs[:-1, :]), axis=0))
 
         fig = plt.figure(figsize=(32, 18))
