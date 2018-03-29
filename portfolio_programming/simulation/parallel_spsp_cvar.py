@@ -12,7 +12,7 @@ import os
 import pickle
 import platform
 import sys
-from time import time
+from time import (time, sleep)
 
 import numpy as np
 import xarray as xr
@@ -214,7 +214,7 @@ def parameter_server(setting, yearly):
     params.close()
 
 
-def parameter_client(server_ip="140.117.168.49", max_reconnect_count=5):
+def parameter_client(server_ip="140.117.168.49", max_reconnect_count=30):
     node = platform.node()
     pid = os.getpid()
 
@@ -250,6 +250,7 @@ def parameter_client(server_ip="140.117.168.49", max_reconnect_count=5):
         else:
             # no response from server, reconnected
             reconnect_count += 1
+            sleep(10)
             if reconnect_count >= max_reconnect_count:
                 break
 
