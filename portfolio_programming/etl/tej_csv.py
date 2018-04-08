@@ -247,10 +247,9 @@ def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
 
-
     t0 = time()
     data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
-                       'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
+                                               'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
 
     ys = data_xarr.loc[start_date:end_date, symbol, 'simple_roi'] * 100
     n_point = int(ys.count())
@@ -319,19 +318,18 @@ def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
 
     plt.show()
     print("symbol {} plot FFT complete, {:.4f} secs".format(symbol,
-                                                            time()-t0))
+                                                            time() - t0))
 
 
 def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
              end_date=dt.date(2017, 12, 31)):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
-    import pyhht
     import PyEMD
 
     t0 = time()
     data_xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
-                       'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
+                                               'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
 
     ys = data_xarr.loc[start_date:end_date, symbol, 'simple_roi'] * 100
     xs = ys.get_index('trans_date')
@@ -343,11 +341,12 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
     yearsFmt = mdates.DateFormatter('%Y')
 
     # HHT
-    emds = {"hht_emd": pyhht.EMD,
-            "pyemd_emd": PyEMD.EMD,
-            "pyemd_eemd": PyEMD.EEMD,
-            "pyemd_eemdan": PyEMD.CEEMDAN
-            }
+    emds = {
+        # "hht_emd": pyhht.EMD,
+        "pyemd_emd": PyEMD.EMD,
+        # "pyemd_eemd": PyEMD.EEMD,
+        # "pyemd_eemdan": PyEMD.CEEMDAN
+    }
     print("start HHT")
     for emd_name, emd in emds.items():
         t0 = time()
@@ -397,10 +396,80 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
             emd_name))
         fig.set_size_inches(16, 9)
         plt.savefig(fig_path, dpi=240, format='png')
-        print("save figure:{} OK, {:.4f} secs".format(fig_path, time()-t0))
+        print("save figure:{} OK, {:.4f} secs".format(fig_path, time() - t0))
         plt.subplots_adjust(hspace=0.8)
 
     # plt.show()
+
+
+def plot_wavelet(symbol, start_date=dt.date(2017, 1, 1),
+             end_date=dt.date(2017, 12, 31)):
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+    import pywt
+
+    t0 = time()
+    data_xarr = xr.open_dataarray(os.path.join(
+        pp.DATA_DIR,
+       'TAIEX_20050103_50largest_listed_market_cap_xarray.nc'))
+
+    ys = data_xarr.loc[start_date:end_date, symbol, 'simple_roi'] * 100
+    xs = ys.get_index('trans_date')
+    datemin = np.datetime64(xs.date[0], 'Y')
+    datemax = np.datetime64(xs.date[-1], 'Y') + np.timedelta64(1, 'Y')
+
+    years = mdates.YearLocator()  # every year
+    months = mdates.MonthLocator()  # every month
+    yearsFmt = mdates.DateFormatter('%Y')
+
+    print(pywt.wavelist())
+    waves = {'db20', }
+             #'sym20', 'coif5'
+             #}
+    for wave in waves:
+        if wave in ('mexh', 'morl'):
+            w = pywt.ContinuousWavelet(wave)
+        else:
+            w = pywt.Wavelet(wave)
+        a = ys.data
+        ca = []
+        cd = []
+        for idx in range(10):
+            (a, d) = pywt.dwt(a, w)
+            ca.append(a)
+            cd.append(d)
+
+        rec_a = []
+        rec_d = []
+
+        for idx, coeff in enumerate(ca):
+            coeff_list = [coeff, None] + [None] * idx
+            rec_a.append(pywt.waverec(coeff_list, w))
+
+        for idx, coeff in enumerate(cd):
+            coeff_list = [None, coeff] + [None] * idx
+            rec_d.append(pywt.waverec(coeff_list, w))
+
+        fig = plt.figure()
+        ax_main = fig.add_subplot(len(rec_a) + 1, 1, 1)
+        ax_main.set_title("{} wave:{}".format(symbol, w.name))
+        ax_main.plot(ys.data)
+        ax_main.set_xlim(0, len(ys) - 1)
+
+        for idx, y in enumerate(rec_a):
+            ax = fig.add_subplot(len(rec_a) + 1, 2, 3 + idx * 2)
+            ax.plot(y, 'r')
+            ax.set_xlim(0, len(y) - 1)
+            ax.set_ylabel("A%d" % (idx + 1))
+
+        for idx, y in enumerate(rec_d):
+            ax = fig.add_subplot(len(rec_d) + 1, 2, 4 + idx * 2)
+            ax.plot(y, 'g')
+            ax.set_xlim(0, len(y) - 1)
+            ax.set_ylabel("D%d" % (idx + 1))
+
+    plt.show()
+
 
 if __name__ == '__main__':
     # import json
@@ -409,7 +478,7 @@ if __name__ == '__main__':
     #                             'TAIEX_20050103_50largest_listed_market_cap.json')))
     # for symbol in symbols:
     #     plot_fft(symbol)
-    plot_hht("2412")
+    plot_wavelet("2330")
 
     import argparse
 
