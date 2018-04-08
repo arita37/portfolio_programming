@@ -478,7 +478,7 @@ if __name__ == '__main__':
     #                             'TAIEX_20050103_50largest_listed_market_cap.json')))
     # for symbol in symbols:
     #     plot_fft(symbol)
-    plot_wavelet("2330")
+    # plot_wavelet("2330")
 
     import argparse
 
