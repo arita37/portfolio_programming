@@ -40,6 +40,12 @@ extensions = [
               ["moment_matching.pyx"],
               include_dirs = [np.get_include()],
     ),
+
+    Extension(
+        "cubic_transform_sampling",
+        ["cubic_transform_sampling.pyx"],
+        include_dirs=[np.get_include()],
+    ),
 ]
 
 setup(

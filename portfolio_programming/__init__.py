@@ -51,11 +51,11 @@ SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
                        "Mc{n_symbol}_" \
                        "h{rolling_window_size}_s{n_scenario}.nc"
 
-SYMBOL_SCENARIO_NAME_FORMAT = "{symbol}_" \
+SYMBOL_SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
                        "scenario-set-idx{sdx}_" \
                        "{scenario_start_date}_" \
                        "{scenario_end_date}_" \
-                       "Mc{n_symbol}_" \
+                       "symbol{symbol}_" \
                        "h{rolling_window_size}_s{n_scenario}.nc"
 
 SCENARIO_START_DATE = dt.date(2005, 1, 3)

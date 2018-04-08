@@ -12,9 +12,13 @@ with given first four moments.
 import numpy as np
 import scipy.optimize as spopt
 import scipy.stats as spstats
+from numpy.math cimport INFINITY
+cimport numpy as cnp
 
 
-def cubic_function(cubic_params, sample_moments, tgt_moments):
+cpdef cubic_function(cnp.ndarray[cnp.float64_t, ndim=1] cubic_params,
+                     cnp.ndarray[cnp.float64_t, ndim=1] sample_moments,
+                     cnp.ndarray[cnp.float64_t, ndim=1] tgt_moments):
     """
     Parameters:
     ----------------
@@ -22,6 +26,15 @@ def cubic_function(cubic_params, sample_moments, tgt_moments):
     sample_moments: numpy.array, shape:(12,), 1~12 moments of samples
     tgt_moments: numpy.array, shape:(4,), 1~4th moments of target
     """
+    cdef:
+        double a, b, c, d
+        double a2, a3, a4
+        double b2, b3, b4
+        double c2, c3, c4
+        double d2, d3, d4
+        double ab, ac, ad, acd, bd, bc, bcd, cd
+        cnp.ndarray[cnp.float64_t, ndim=1] ex, ey
+        double v1, v2, v3, v4
 
     a, b, c, d = cubic_params
     ex = sample_moments
@@ -62,7 +75,7 @@ def cubic_function(cubic_params, sample_moments, tgt_moments):
           2 * ab * ex[0] +
           a2 - ey[1])
 
-    v3 = (d3 * ex[8] +
+    v3 = ((d3) * ex[8] +
           (3 * c * d2) * ex[7] +
           3 * (b * d2 + c2 * d) * ex[6] +
           (3 * a * d2 + 6 * bcd + c3) * ex[5] +
@@ -91,7 +104,9 @@ def cubic_function(cubic_params, sample_moments, tgt_moments):
     return v1, v2, v3, v4
 
 
-def cubic_transform_sampling(tgt_moments, n_sample=10000):
+
+def cubic_transform_sampling(tgt_moments, n_sample=10000, max_cubic_err=1e-3
+    ):
     """
     given the target mean, standard deviation, skewness, excess kurtosis
     the function will return the samples match the four statistics.
@@ -107,7 +122,7 @@ def cubic_transform_sampling(tgt_moments, n_sample=10000):
     """
 
     # define infinity
-    INFINITY = 1e20
+    # INFINITY = 1e20
 
     # to generate samples Y with zero mean, and unit variance
     ns = float(n_sample)
@@ -130,8 +145,6 @@ def cubic_transform_sampling(tgt_moments, n_sample=10000):
     # cubic transform iteration
     max_cubic_iter = 2
 
-    # error
-    max_cubic_err = 1e-5
 
     cubic_err, best_cub_err = INFINITY, INFINITY
     for _ in range(max_start_iter):

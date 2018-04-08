@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
 
 https://github.com/ipython/ipyparallel/blob/master/examples/customresults.py
 https://github.com/ipython/ipyparallel/blob/master/ipyparallel/client/asyncresult.py
@@ -22,11 +21,11 @@ import scipy.stats as spstats
 import xarray as xr
 
 import portfolio_programming as pp
-from portfolio_programming.sampling.moment_matching import (
-    heuristic_moment_matching as HeMM)
 from portfolio_programming.sampling.cubic_transform_sampling import (
     cubic_transform_sampling as ct_sampling
 )
+from portfolio_programming.sampling.moment_matching import (
+    heuristic_moment_matching as HeMM)
 
 
 def ct_generating_scenarios_xarr(scenario_set_idx,
@@ -61,10 +60,10 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
         os.makedirs(pp.SCENARIO_SET_DIR)
 
     scenario_file = pp.SYMBOL_SCENARIO_NAME_FORMAT.format(
-        symbol=symbol,
         sdx=scenario_set_idx,
         scenario_start_date=scenario_start_date.strftime("%Y%m%d"),
         scenario_end_date=scenario_end_date.strftime("%Y%m%d"),
+        symbol=symbol,
         rolling_window_size=rolling_window_size,
         n_scenario=n_scenario
     )
@@ -89,6 +88,7 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
     risky_asset_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
 
+    print(risky_asset_xarr.dims)
     # all trans_date, pandas.core.indexes.datetimes.DatetimeIndex
     trans_dates = risky_asset_xarr.get_index('trans_date')
 
@@ -101,7 +101,7 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
     # estimating moments and correlation matrix
     est_moments = xr.DataArray(np.zeros(4),
                                dims=('moment',),
-                               coords=(['mean', 'std', 'skew', 'ex-kurt']))
+                               coords=(['mean', 'std', 'skew', 'ex-kurt'],))
 
     # output scenario xarray, shape: (n_sc_period, n_scenario)
     scenario_xarr = xr.DataArray(
@@ -122,14 +122,14 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
         assert hist_interval[-1] == sc_date
 
         # hist_data, shape: (win_length, n_stock)
-        hist_data = risky_asset_xarr.loc[hist_interval, 'simple_roi']
+        hist_data = risky_asset_xarr.loc[hist_interval, symbol, 'simple_roi']
 
         # unbiased moments and corrs estimators
         est_moments.loc['mean'] = hist_data.mean(axis=0)
         est_moments.loc['std'] = hist_data.std(axis=0, ddof=1)
         est_moments.loc['skew'] = spstats.skew(hist_data, axis=0, bias=False)
         est_moments.loc['ex-kurt'] = spstats.kurtosis(hist_data, axis=0,
-                                                         bias=False)
+                                                      bias=False)
 
         # generating unbiased scenario
         for error_count in range(retry_cnt):
@@ -137,15 +137,14 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
                 for error_exponent in range(-3, 0):
                     try:
                         # default moment and corr errors (1e-3, 1e-3)
-                        # df shape: (n_stock, n_scenario)
-                        max_moment_err = 10 ** error_exponent
-                        max_corr_err = 10 ** error_exponent
-                        scenario_df = ct_sampling(
-                            est_moments.values, n_scenario)
+                        # df shape: (n_scenario,)
+                        max_cubic_err = 10 ** error_exponent
+                        scenarios = ct_sampling(
+                            est_moments.values, n_scenario, max_cubic_err)
                     except ValueError as _:
                         logging.warning(
-                            "{} {} relaxing max err: {}_max_mom_err:{}, "
-                            "".format(parameters, sc_date, max_moment_err))
+                            "{} {} relaxing max_cubic_err:{}".format(
+                                sc_date, parameters, max_cubic_err))
                     else:
                         # generating scenarios success
                         break
@@ -159,7 +158,7 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
                 break
 
         # store scenarios, scenario_df shape: (n_scenario)
-        scenario_xarr.loc[sc_date, :] = scenario_df
+        scenario_xarr.loc[sc_date, :] = scenarios
 
         # clear est data
         if tdx % print_interval == 0:
@@ -167,6 +166,7 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
                 sc_date.strftime("%Y%m%d"),
                 tdx + 1,
                 n_sc_period,
+                parameters,
                 time() - t1))
 
     # write scenario
@@ -344,7 +344,41 @@ def hemm_generating_scenarios_xarr(scenario_set_idx,
     return msg
 
 
-def _all_scenario_names():
+def _ct_all_scenario_names():
+    """
+    "TAIEX_2005_largested_market_cap_" \
+       "scenario-set-idx{sdx}_" \
+       "{scenario_start_date}_" \
+       "{scenario_end_date}_" \
+       "symbol{symbol}_" \
+       "h{rolling_window_size}_s{n_scenario}.nc"
+    """
+    set_indices = (1, 2, 3)
+    s_date = pp.SCENARIO_START_DATE
+    e_date = pp.SCENARIO_END_DATE
+    symbols = []
+    window_sizes = range(60, 240 + 10, 10)
+    n_scenarios = [200, ]
+
+    # dict comprehension
+    # key: file_name, value: parameters
+    return {
+        pp.SYMBOL_SCENARIO_NAME_FORMAT.format(
+            sdx=sdx,
+            scenario_start_date=s_date.strftime("%Y%m%d"),
+            scenario_end_date=e_date.strftime("%Y%m%d"),
+            symbol=symbol,
+            rolling_window_size=h,
+            n_scenario=s
+        ): (sdx, s_date, e_date, symbol, h, s)
+        for sdx in set_indices
+        for symbol in symbols
+        for h in window_sizes
+        for s in n_scenarios
+    }
+
+
+def _hemm_all_scenario_names():
     """
     SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
                        "scenario-set-idx{sdx}_" \
@@ -379,13 +413,13 @@ def _all_scenario_names():
     }
 
 
-def checking_existed_scenario_names(scenario_set_dir=None):
+def hemm_checking_existed_scenario_names(scenario_set_dir=None):
     """
     return unfinished experiment parameters.
     """
     if scenario_set_dir is None:
         scenario_set_dir = pp.SCENARIO_SET_DIR
-    all_names = _all_scenario_names()
+    all_names = _hemm_all_scenario_names()
 
     os.chdir(scenario_set_dir)
     existed_names = glob.glob("*.nc")
@@ -396,34 +430,8 @@ def checking_existed_scenario_names(scenario_set_dir=None):
     return all_names
 
 
-def wait_watching_stdout(ar, dt=1, truncate=1000):
-    from IPython.display import clear_output
-    import sys
-    import platform
-    import os
-    from time import sleep
-
-    while not ar.ready():
-        stdouts = ar.stdout
-        if not any(stdouts):
-            continue
-        # clear_output doesn't do much in terminal environments
-        clear_output()
-        print('-' * 50)
-        print("node:{} pid:{} {:.3f}s elapsed".format(
-            platform.node(),
-            os.getpid(),
-            ar.elapsed))
-
-        for stdout in ar.stdout:
-            if stdout:
-                print(stdout[-truncate:])
-        sys.stdout.flush()
-        sleep(dt)
-
-
-def dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
-    unfinished_names = checking_existed_scenario_names(scenario_set_dir)
+def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
+    unfinished_names = hemm_checking_existed_scenario_names(scenario_set_dir)
     print("number of unfinished scenario: {}".format(len(unfinished_names)))
     params = unfinished_names.values()
 
@@ -619,7 +627,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.parallel:
         print("generating scenario in parallel mode")
-        dispatch_scenario_names()
+        hemm_dispatch_scenario_names()
     elif args.merge:
         merge_scenario()
     else:
