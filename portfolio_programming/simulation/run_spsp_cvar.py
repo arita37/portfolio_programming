@@ -277,8 +277,14 @@ def plot_yearly_2d_contour_by_alpha(setting, z_dim="cum_roi"):
 
         cbar.set_label(cbar_label_name, labelpad=1, size=20,
                        fontname="Times New Roman")
+        fig_path = os.path.join(pp.TMP_DIR,
+                                'SPSP_CVaR_cum_roi_yearly_{}_{}.png'.format(
+                                    setting, start.year))
+        fig.set_size_inches(16, 9)
+        plt.savefig(fig_path, dpi=240, format='png')
 
     plt.show()
+
 
 if __name__ == '__main__':
     logging.basicConfig(
@@ -288,7 +294,7 @@ if __name__ == '__main__':
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
 
-    plot_yearly_2d_contour_by_alpha("compact", z_dim="cum_roi")
+    plot_yearly_2d_contour_by_alpha("general", z_dim="cum_roi")
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -300,6 +306,9 @@ if __name__ == '__main__':
     parser.add_argument("--year", type=int,
                         choices=range(2005, 2017 + 1),
                         help="yearly experiments")
+
+    parser.add_argument("--symbol", type=str,
+                       help="target symbol")
 
     parser.add_argument("-M", "--max_portfolio_size", type=int,
                         choices=range(5, 55, 5),
@@ -321,6 +330,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("run_SPSP_CVaR in single mode")
+
     if not args.year:
         run_SPSP_CVaR(args.setting,
                       args.scenario_set_idx,
