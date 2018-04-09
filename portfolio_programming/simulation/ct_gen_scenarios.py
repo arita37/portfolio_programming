@@ -188,7 +188,7 @@ def _ct_all_scenario_names():
     e_date = pp.SCENARIO_END_DATE
     symbols = json.load(open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
     window_sizes = range(60, 240 + 10, 10)
-    n_scenarios = [200, ]
+    n_scenarios = [1000, 200]
 
     # dict comprehension
     # key: file_name, value: parameters
