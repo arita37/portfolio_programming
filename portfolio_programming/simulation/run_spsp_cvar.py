@@ -310,7 +310,7 @@ if __name__ == '__main__':
                        help="target symbol")
 
     parser.add_argument("-M", "--max_portfolio_size", type=int,
-                        choices=range(5, 55, 5),
+                        choices=list(range(5, 55, 5)) + [1,],
                         help="max_portfolio_size")
 
     parser.add_argument("-w", "--rolling_window_size", type=int,
