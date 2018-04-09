@@ -21,15 +21,15 @@ import portfolio_programming.simulation.spsp_cvar
 
 
 def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
-                  max_portfolio_size, rolling_window_size, alpha, n_scenario):
+                  symbols, max_portfolio_size, rolling_window_size,
+                  alpha, n_scenario):
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
 
-    candidate_symbols = json.load(
-        open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
-
     if setting == 'compact':
-        candidate_symbols = candidate_symbols[:max_portfolio_size]
+        candidate_symbols = symbols[:max_portfolio_size]
+    else:
+        candidate_symbols = symbols
 
     n_symbol = len(candidate_symbols)
     risky_rois = risky_roi_xarr.loc[exp_start_date:exp_end_date,
@@ -294,7 +294,6 @@ if __name__ == '__main__':
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
 
-    plot_yearly_2d_contour_by_alpha("general", z_dim="cum_roi")
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -331,10 +330,17 @@ if __name__ == '__main__':
 
     print("run_SPSP_CVaR in single mode")
 
+    if args.symbol:
+        candidate_symbols = [args.symbol, ]
+    else:
+        candidate_symbols = json.load(
+           open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
+
     if not args.year:
         run_SPSP_CVaR(args.setting,
                       args.scenario_set_idx,
                       '20050103', '20141231',
+                      candidate_symbols,
                       args.max_portfolio_size,
                       args.rolling_window_size,
                       float(args.alpha),
@@ -360,6 +366,7 @@ if __name__ == '__main__':
                       args.scenario_set_idx,
                       years[args.year][0],
                       years[args.year][1],
+                      candidate_symbols,
                       args.max_portfolio_size,
                       args.rolling_window_size,
                       float(args.alpha),

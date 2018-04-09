@@ -12,6 +12,7 @@ import os
 import pickle
 import platform
 import sys
+import json
 from time import (time, sleep)
 
 import numpy as np
@@ -52,10 +53,12 @@ def _all_spsp_cvar_params(setting, yearly=False):
 
     set_indices = (1, 2, 3)
     # set_indices = (1, )
+    candidate_symbols = json.load(
+        open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
 
     if not yearly:
         # whole interval
-        years = [(dt.date(2005,1,3), dt.date(2014,12,31))]
+        years = [(dt.date(2005, 1, 3), dt.date(2014, 12, 31))]
     else:
         # yearly interval
         years = [(dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
@@ -91,7 +94,8 @@ def _all_spsp_cvar_params(setting, yearly=False):
                 rolling_window_size=h,
                 alpha=a,
                 n_scenario=s
-            ): (setting, sdx, s_date, e_date, m, h, float(a), s)
+            ): (setting, sdx, s_date, e_date,
+                candidate_symbols, m, h, float(a), s)
             for sdx in set_indices
             for s_date, e_date in years
             for m in max_portfolio_sizes
@@ -112,7 +116,8 @@ def _all_spsp_cvar_params(setting, yearly=False):
                 rolling_window_size=h,
                 alpha=a,
                 n_scenario=s
-            ): (setting, sdx, s_date, e_date, m, h, float(a), s)
+            ): (setting, sdx, s_date, e_date, candidate_symbols,
+                m, h, float(a), s)
             for sdx in set_indices
             for s_date, e_date in years
             for m in max_portfolio_sizes

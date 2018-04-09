@@ -716,20 +716,19 @@ class SPSP_CVaR(ValidMixin):
             )
         else:
              name = (
-                "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_symbol{}_h{}_a{:.2f}_s{"
-                "}".format(
+                "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_symbol{}_Mc{}_h{}_a{"
+                ":.2f}_s{}".format(
                     self.setting,
                     self.scenario_set_idx,
                     self.exp_start_date.strftime("%Y%m%d"),
                     self.exp_end_date.strftime("%Y%m%d"),
-                    self.max_portfolio_size,
                     self.candidate_symbols[0],
+                    self.max_portfolio_size,
                     self.rolling_window_size,
                     self.alpha,
                     self.n_scenario
                 )
             )
-
 
         return name
 
