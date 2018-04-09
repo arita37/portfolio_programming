@@ -368,6 +368,9 @@ def aggregating_reports(setting, yearly=False):
             no_report_count_params.append(name)
             no_report_count += 1
             continue
+        except Exception as e:
+            print("{} Error: {}".format(name, e))
+            sys.exit(-1)
 
     for rp in no_report_count_params:
         print("no data:", rp)
