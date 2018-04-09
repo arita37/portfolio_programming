@@ -10,6 +10,7 @@ import os
 import platform
 import sys
 from time import (time, sleep)
+import json
 
 import ipyparallel as ipp
 import numpy as np
@@ -185,7 +186,7 @@ def _ct_all_scenario_names():
     # set_indices = (2,)
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
-    symbols = []
+    symbols = json.load(open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
     window_sizes = range(60, 240 + 10, 10)
     n_scenarios = [200, ]
 
