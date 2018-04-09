@@ -171,7 +171,7 @@ if __name__ == '__main__':
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
 
-    plot_2d_contour_by_alpha("general", z_dim="cum_roi")
+   
     import argparse
 
     parser = argparse.ArgumentParser()
