@@ -620,6 +620,8 @@ class SPSP_CVaR(ValidMixin):
                 n_scenario=self.n_scenario
             )
 
+
+
         scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
 
         if not os.path.exists(scenario_path):
@@ -632,6 +634,11 @@ class SPSP_CVaR(ValidMixin):
                 # truncate xarr
                 scenario_xarr = scenario_xarr.loc[
                                 self.exp_start_date:self.exp_end_date]
+
+        if self.n_symbol == 1:
+            # reshape
+            scenario_xarr.expand_dims('symbol', axis=1)
+            scenario_xarr.coords['symbol'] = self.candidate_symbols[0]
 
         return scenario_xarr
 
