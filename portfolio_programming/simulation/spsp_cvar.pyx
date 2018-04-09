@@ -601,14 +601,24 @@ class SPSP_CVaR(ValidMixin):
             dims=(trans_date, symbol, sceenario),
             shape: (n_exp_period, n_stock,  n_scenario)
         """
-        scenario_file = pp.SCENARIO_NAME_FORMAT.format(
-            sdx=self.scenario_set_idx,
-            scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
-            scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
-            n_symbol=self.n_symbol,
-            rolling_window_size=self.rolling_window_size,
-            n_scenario=self.n_scenario
-        )
+        if self.n_symbol > 1:
+            scenario_file = pp.SCENARIO_NAME_FORMAT.format(
+                sdx=self.scenario_set_idx,
+                scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+                scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+                n_symbol=self.n_symbol,
+                rolling_window_size=self.rolling_window_size,
+                n_scenario=self.n_scenario
+            )
+        else:
+             scenario_file = pp.SYMBOL_SCENARIO_NAME_FORMAT.format(
+                sdx=self.scenario_set_idx,
+                scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+                scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+                symbol=self.candidate_symbols[0],
+                rolling_window_size=self.rolling_window_size,
+                n_scenario=self.n_scenario
+            )
 
         scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
 
@@ -690,19 +700,35 @@ class SPSP_CVaR(ValidMixin):
         string
            simulation name of this experiment
         """
-        name = (
-            "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{}".format(
-                self.setting,
-                self.scenario_set_idx,
-                self.exp_start_date.strftime("%Y%m%d"),
-                self.exp_end_date.strftime("%Y%m%d"),
-                self.max_portfolio_size,
-                self.n_symbol,
-                self.rolling_window_size,
-                self.alpha,
-                self.n_scenario
+        if self.n_symbol > 1:
+            name = (
+                "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{}".format(
+                    self.setting,
+                    self.scenario_set_idx,
+                    self.exp_start_date.strftime("%Y%m%d"),
+                    self.exp_end_date.strftime("%Y%m%d"),
+                    self.max_portfolio_size,
+                    self.n_symbol,
+                    self.rolling_window_size,
+                    self.alpha,
+                    self.n_scenario
+                )
             )
-        )
+        else:
+             name = (
+                "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_symbol{}_Mc{}_h{}_a{"
+                ":.2f}_s{}".format(
+                    self.setting,
+                    self.scenario_set_idx,
+                    self.exp_start_date.strftime("%Y%m%d"),
+                    self.exp_end_date.strftime("%Y%m%d"),
+                    self.candidate_symbols[0],
+                    self.max_portfolio_size,
+                    self.rolling_window_size,
+                    self.alpha,
+                    self.n_scenario
+                )
+            )
 
         return name
 
