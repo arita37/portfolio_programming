@@ -76,7 +76,7 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     start_date, end_date = dt.date(2005, 1, 3), dt.date(2014, 12, 31)
     name = "report_SPSP_CVaR_whole_{}_{}_{}.nc".format(
         setting, start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d"))
-
+   
     # read report file
     xarr = xr.open_dataarray(open(os.path.join(pp.DATA_DIR, name), 'rb'))
 
@@ -162,6 +162,123 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
 
     plt.show()
 
+def plot_yearly_2d_contour_by_alpha(setting, z_dim="cum_roi"):
+    # verify setting
+    if setting not in ("compact", "general"):
+        raise ValueError("unknown setting: {}".format(setting))
+
+
+    start_date, end_date = dt.date(2005, 1, 3), dt.date(2017, 12, 29)
+    name = "report_SPSP_CVaR_yearly_{}_{}_{}.nc".format(
+        setting, start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d"))
+
+    # yearly interval
+    years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
+             [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
+             [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
+             [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
+             [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
+             [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
+             [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
+             [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
+             [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
+             [dt.date(2014, 1, 2), dt.date(2014, 12, 31)],
+             [dt.date(2015, 1, 5), dt.date(2015, 12, 31)],
+             [dt.date(2016, 1, 4), dt.date(2016, 12, 30)],
+             [dt.date(2017, 1, 3), dt.date(2017, 12, 29)]
+             ]
+
+    # read report file
+    xarr = xr.open_dataarray(open(os.path.join(pp.DATA_DIR, name), 'rb'))
+
+    # parameters
+    max_portfolio_sizes = range(5, 50 + 5, 5)
+    window_sizes = range(60, 240 + 10, 10)
+    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+    set_indices = [1, 2, 3]
+
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    for start, end in years:
+        # figure size in inches
+        fig = plt.figure(figsize=(64, 48), facecolor='white')
+        fig.suptitle('TAIEX_20050103_50largest_listed_market_cap {} {}-{}'.format(
+            setting, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")),
+            fontsize=20)
+
+
+        xlim = (5, 50)
+        ylim = (60, 240)
+        for adx, alpha in enumerate(alphas):
+            # x-axis, max_portfolio_size, y-axis:  window_sizes
+            ax = fig.add_subplot(2, 5, adx + 1, xlim=xlim, ylim=ylim)
+
+            ax.set_title(r'$\alpha$ = {:.0%}'.format(float(alpha)),
+                         y=1.02, fontsize=18)
+            # labelpad - number of points between the axis and its label
+            ax.set_xlabel(r'$M$', fontsize=14, labelpad=-2,
+                          fontname="Times New Roman")
+            ax.set_ylabel(r'$h$', fontsize=14, labelpad=-2,
+                          fontname="Times New Roman")
+            ax.tick_params(labelsize=10, pad=1)
+            ax.set_xticks(max_portfolio_sizes)
+            ax.set_xticklabels(max_portfolio_sizes, fontsize=10,
+                               fontname="Times New Roman")
+            ax.set_yticks(window_sizes)
+            ax.set_yticklabels(window_sizes, fontsize=10,
+                               fontname="Times New Roman")
+
+            Xs, Ys = np.meshgrid(max_portfolio_sizes, window_sizes)
+            Zs = np.zeros_like(Xs, dtype=np.float)
+            n_row, n_col = Xs.shape
+
+            for rdx in range(n_row):
+                for cdx in range(n_col):
+                    n_symbol, win_size = Xs[rdx, cdx], Ys[rdx, cdx]
+                    z_values = xarr.loc[
+                        "{}_{}".format(start.strftime("%Y%m%d"),
+                                       end.strftime("%Y%m%d")),
+                        set_indices, n_symbol, win_size,
+                        alpha, z_dim]
+                    mean = z_values.mean()
+                    Zs[rdx, cdx] = float(mean) * 100.
+                    # if Zs[rdx, cdx] > 10:
+                    #     Zs[rdx, cdx] = 10.5
+
+            print("Z_dim:", z_dim)
+            print("z_range:", np.min(Zs), np.max(Zs))
+            z_min = int(np.floor(np.min(Zs)))
+            z_max = int(np.ceil(np.max(Zs)))
+
+            # set color range
+            if z_dim == 'cum_roi':
+                cm_norm = mpl.colors.Normalize(vmin=z_min, vmax=z_max,
+                                               clip=False)
+                color_range = np.arange(z_min, z_max + 1)
+
+            # contour, projecting on z
+            cset = ax.contourf(Xs, Ys, Zs,
+                               cmap=plt.cm.coolwarm,
+                               norm=cm_norm,
+                               levels=color_range)
+
+        # share color bar,  rect [left, bottom, width, height]
+        cbar_ax = fig.add_axes([0.92, 0.125, 0.015, 0.75])
+        # print fig.get_axes()
+        cbar = fig.colorbar(cset, ax=fig.get_axes(), cax=cbar_ax,
+                            ticks=color_range)
+
+        cbar.ax.tick_params(labelsize=12)
+        if z_dim == "cum_roi":
+            cbar_label_name = "Average cumulative returns (%)"
+        elif z_dim == "daily_VSS":
+            cbar_label_name = "Average daily VSS (%)"
+
+        cbar.set_label(cbar_label_name, labelpad=1, size=20,
+                       fontname="Times New Roman")
+
+    plt.show()
 
 if __name__ == '__main__':
     logging.basicConfig(
@@ -171,7 +288,7 @@ if __name__ == '__main__':
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
 
-   
+    plot_yearly_2d_contour_by_alpha("compact", z_dim="cum_roi")
     import argparse
 
     parser = argparse.ArgumentParser()
