@@ -29,7 +29,7 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
                                  rolling_window_size,
                                  n_scenario=1000,
                                  retry_cnt=5,
-                                 print_interval=10):
+                                 print_interval=100):
     """
     generating scenarios xarray using cubic transform
 
