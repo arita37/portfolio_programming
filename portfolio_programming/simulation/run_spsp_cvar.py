@@ -326,6 +326,12 @@ if __name__ == '__main__':
                         choices=range(1, 4),
                         default=1,
                         help="pre-generated scenario set index.")
+
+    parser.add_argument("-s", "--n_scenario", type=int,
+                        choices=[200, 1000],
+                        default=200,
+                        help="number of scenario")
+
     args = parser.parse_args()
 
     print("run_SPSP_CVaR in single mode")
@@ -344,7 +350,7 @@ if __name__ == '__main__':
                       args.max_portfolio_size,
                       args.rolling_window_size,
                       float(args.alpha),
-                      200)
+                      args.n_scenario)
     else:
         years = {
             2005: (dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
@@ -370,4 +376,4 @@ if __name__ == '__main__':
                       args.max_portfolio_size,
                       args.rolling_window_size,
                       float(args.alpha),
-                      200)
+                      args.n_scenario)
