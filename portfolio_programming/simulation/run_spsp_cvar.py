@@ -336,16 +336,6 @@ if __name__ == '__main__':
 
     print("run_SPSP_CVaR in single mode")
 
-    run_SPSP_CVaR("compact",
-                  2,
-                  dt.date(2005,1,3),
-                  dt.date(2005,12,30),
-                  ["2330",],
-                  1,
-                  100,
-                  float("0.50"),
-                  1000)
-
     if args.symbol:
         candidate_symbols = [args.symbol, ]
     else:

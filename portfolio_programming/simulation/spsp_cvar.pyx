@@ -566,6 +566,8 @@ class SPSP_CVaR(ValidMixin):
         # load scenario panel, shape:(n_exp_period, n_stock, n_scenario)
         self.scenario_set_idx = scenario_set_idx
         self.scenario_xarr = self.load_generated_scenario()
+        print("scenario shape:", self.scenario_xarr.shape)
+        print(self.scenario_xarr)
 
         # results data
         # decision xarray, shape: (n_exp_period, n_symbol+1, 4)
@@ -620,8 +622,6 @@ class SPSP_CVaR(ValidMixin):
                 n_scenario=self.n_scenario
             )
 
-
-
         scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
 
         if not os.path.exists(scenario_path):
@@ -636,9 +636,9 @@ class SPSP_CVaR(ValidMixin):
                                 self.exp_start_date:self.exp_end_date]
 
         if self.n_symbol == 1:
-            # reshape
-            scenario_xarr.expand_dims('symbol', axis=1)
-            scenario_xarr.coords['symbol'] = self.candidate_symbols[0]
+            # the shape of original file is (n_trans_date, n_scenario)
+            # reshape to (n_trans_date, symbol(1), n_scenario)
+            scenario_xarr = scenario_xarr.expand_dims('symbol', axis=1)
 
         return scenario_xarr
 
