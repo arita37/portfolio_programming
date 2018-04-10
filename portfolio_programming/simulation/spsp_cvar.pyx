@@ -144,10 +144,13 @@ def spsp_cvar(candidate_symbols,
     # common setting constraint
     def scenario_constraint_rule(model, int sdx):
         """ auxiliary variable Y depends on scenario. CVaR <= VaR """
-        predict_wealth = sum((1. + model.predict_risk_rois[mdx, sdx]) *
+        predict_risk_wealth = sum((1. + model.predict_risk_rois[mdx, sdx]) *
                              model.risk_wealth[mdx]
                              for mdx in model.symbols)
-        return model.Ys[sdx] >= (model.Z - predict_wealth)
+        predict_risk_free_wealth = (model.risk_free_wealth *
+                                    (1. + model.predict_risk_free_roi))
+        return model.Ys[sdx] >= (model.Z - predict_risk_wealth -
+                                 predict_risk_free_wealth)
 
     instance.scenario_constraint = Constraint(instance.scenarios,
                                               rule=scenario_constraint_rule)
@@ -159,11 +162,13 @@ def spsp_cvar(candidate_symbols,
 
         # general setting constraint
         def chosen_constraint_rule(model, int mdx):
-            portfolio_wealth = (sum(model.allocated_risk_wealth) +
-                                model.allocated_risk_free_wealth *
-                                (1. + model.risk_rois[mdx]))
-            return model.risk_wealth[mdx] <= model.chosen[
-                mdx] * portfolio_wealth
+            portfolio_wealth = (sum(model.risk_wealth[idx] for idx in
+                                   model.symbols) + model.risk_free_wealth)
+
+            # portfolio_wealth = (sum(model.allocated_risk_wealth) +
+            #                     model.allocated_risk_free_wealth *
+            #                     (1. + model.risk_rois[mdx]))
+            return model.risk_wealth[mdx] <= model.chosen[mdx] * portfolio_wealth
 
         instance.chosen_constraint = Constraint(instance.symbols,
                                                 rule=chosen_constraint_rule)
