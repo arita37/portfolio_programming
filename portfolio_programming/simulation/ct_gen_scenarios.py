@@ -182,13 +182,14 @@ def _ct_all_scenario_names():
                        "symbol{symbol}_" \
                        "h{rolling_window_size}_s{n_scenario}.nc"
     """
-    set_indices = (1, 2, 3)
-    # set_indices = (2,)
+    # set_indices = (1, 2, 3)
+    set_indices = (1,)
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
     symbols = json.load(open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
-    window_sizes = range(60, 240 + 10, 10)
-    n_scenarios = [1000, 200]
+    # window_sizes = range(60, 240 + 10, 10)
+    window_sizes = [3, 5, 10, 20]
+    n_scenarios = [200, ]
 
     # dict comprehension
     # key: file_name, value: parameters
@@ -309,7 +310,7 @@ if __name__ == '__main__':
                         help="the target symbol")
 
     parser.add_argument("-w", "--rolling_window_size", type=int,
-                        choices=range(50, 250),
+                        choices=range(3, 250),
                         help="rolling window size for estimating statistics.")
 
     parser.add_argument("-s", '--n_scenario', type=int,
