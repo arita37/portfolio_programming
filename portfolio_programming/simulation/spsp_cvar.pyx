@@ -7,7 +7,6 @@
 
 """
 Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
 """
 
 import os
@@ -141,6 +140,9 @@ def spsp_cvar(candidate_symbols,
     instance.risk_free_wealth_constraint = Constraint(
         rule=risk_free_wealth_constraint_rule)
 
+    # def min_return_constraint_5 >=
+
+
     # common setting constraint
     def scenario_constraint_rule(model, int sdx):
         """ auxiliary variable Y depends on scenario. CVaR <= VaR """
@@ -151,6 +153,7 @@ def spsp_cvar(candidate_symbols,
                                     (1. + model.predict_risk_free_roi))
         return model.Ys[sdx] >= (model.Z - predict_risk_wealth -
                                  predict_risk_free_wealth)
+        # return model.Ys[sdx] >= (model.Z - predict_risk_wealth)
 
     instance.scenario_constraint = Constraint(instance.scenarios,
                                               rule=scenario_constraint_rule)
@@ -196,6 +199,7 @@ def spsp_cvar(candidate_symbols,
     instance.solutions.load_from(results)
 
     # logging.DEBUG(display(instance))
+    display(instance)
 
     # buy and sell amounts
     actions = ['buy', 'sell', 'chosen']
