@@ -22,7 +22,7 @@ from pyomo.environ import *
 
 import portfolio_programming as pp
 from portfolio_programming.statistics.risk_adjusted import (
-    Sharpe, Sortino_full, Sortino_partial, maximum_drawdown)
+    Sharpe, Sortino_full, Sortino_partial)
 
 def spsp_cvar(candidate_symbols,
               str setting,
@@ -149,11 +149,7 @@ def spsp_cvar(candidate_symbols,
         predict_risk_wealth = sum((1. + model.predict_risk_rois[mdx, sdx]) *
                              model.risk_wealth[mdx]
                              for mdx in model.symbols)
-        predict_risk_free_wealth = (model.risk_free_wealth *
-                                    (1. + model.predict_risk_free_roi))
-        return model.Ys[sdx] >= (model.Z - predict_risk_wealth -
-                                 predict_risk_free_wealth)
-        # return model.Ys[sdx] >= (model.Z - predict_risk_wealth)
+        return model.Ys[sdx] >= (model.Z - predict_risk_wealth)
 
     instance.scenario_constraint = Constraint(instance.scenarios,
                                               rule=scenario_constraint_rule)

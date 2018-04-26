@@ -21,14 +21,14 @@ def min_cost_transportation():
                            within=PercentFraction)
 
     def mine_rule(model, mdx):
-        return (supply[mdx] == sum(model.amounts[mdx, cdx]
+        return (supply[mdx] <= sum(model.amounts[mdx, cdx]
                                    for cdx in model.companies))
 
     instance.mine_constraint = Constraint(
         instance.mines, rule=mine_rule)
 
     def company_rule(model, cdx):
-        return (demand[cdx] == sum(model.amounts[mdx, cdx] for mdx in
+        return (demand[cdx] >= sum(model.amounts[mdx, cdx] for mdx in
                                    model.mines))
 
     instance.company_constraint = Constraint(
@@ -91,5 +91,5 @@ def max_profit_transportation():
 
 
 if __name__ == '__main__':
-    # min_cost_transportation()
-    max_profit_transportation()
+    min_cost_transportation()
+    # max_profit_transportation()
