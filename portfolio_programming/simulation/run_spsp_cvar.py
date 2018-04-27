@@ -314,7 +314,7 @@ if __name__ == '__main__':
                         help="max_portfolio_size")
 
     parser.add_argument("-w", "--rolling_window_size", type=int,
-                        choices=range(50, 250, 10),
+                        choices=range(1, 250),
                         help="rolling window size for estimating statistics.")
 
     parser.add_argument("-a", "--alpha", type=str,
