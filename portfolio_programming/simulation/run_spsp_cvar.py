@@ -26,7 +26,7 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
     risky_roi_xarr = xr.open_dataarray(
         pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
 
-    if setting == 'compact':
+    if setting in ('compact', "compact_mu0"):
         candidate_symbols = symbols[:max_portfolio_size]
     else:
         candidate_symbols = symbols
@@ -70,7 +70,7 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     """
 
     # verify setting
-    if setting not in ("compact", "general"):
+    if setting not in ("compact", "general", "compact_mu0"):
         raise ValueError("unknown setting: {}".format(setting))
 
     start_date, end_date = dt.date(2005, 1, 3), dt.date(2014, 12, 31)
@@ -299,7 +299,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--setting", type=str,
-                        choices=("compact", "general"),
+                        choices=("compact", "general", "compact_mu0"),
                         help="SPSP setting")
 
     parser.add_argument("--year", type=int,

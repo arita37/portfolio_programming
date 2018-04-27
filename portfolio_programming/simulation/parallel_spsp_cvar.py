@@ -48,7 +48,7 @@ def _all_spsp_cvar_params(setting, yearly=False):
                     "exp_start_date}_{exp_end_date}_M{max_portfolio}_Mc{" \
                     "n_candidate_symbol}_h{rolling_window_size" \
                     "}_a{alpha}_s{n_scenario}.pkl"
-    if setting not in ('compact', 'general'):
+    if setting not in ('compact', 'general', "compact_mu0"):
         raise ValueError('Wrong setting: {}'.format(setting))
 
     set_indices = (1, 2, 3)
@@ -82,7 +82,7 @@ def _all_spsp_cvar_params(setting, yearly=False):
 
     # dict comprehension
     # key: file_name, value: parameters
-    if setting == "compact":
+    if setting in ("compact", "compact_mu0"):
         return {
             REPORT_FORMAT.format(
                 setting=setting,
@@ -406,7 +406,7 @@ if __name__ == '__main__':
                         help="parameter server mode")
 
     parser.add_argument("--setting", type=str,
-                        choices=("compact", "general"),
+                        choices=("compact", "general", "compact_mu0"),
                         help="SPSP setting")
 
     parser.add_argument("--yearly", default=False,

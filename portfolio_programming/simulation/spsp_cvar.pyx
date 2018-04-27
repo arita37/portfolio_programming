@@ -47,7 +47,7 @@ def spsp_cvar(candidate_symbols,
     --------------------------
     candidate_symbols: list of string
     setting: string
-        {"compact", "general"}
+        {"compact", "general", "compact_mu0"}
     max_portfolio_size, int
     risk_rois: numpy.array, shape: (n_stock, )
     risk_free_roi: float,
@@ -154,6 +154,18 @@ def spsp_cvar(candidate_symbols,
     instance.scenario_constraint = Constraint(instance.scenarios,
                                               rule=scenario_constraint_rule)
 
+
+    # additional constraints for compact_mu0
+    if setting == "compact_mu0":
+        def expected_ret_constraint_rule(model):
+            exp_ret = sum(model.risk_wealth[mdx] *
+                          model.mean_predict_risk_rois[mdx]
+                          for mdx in model.symbols)
+            return exp_ret >= 0.
+
+        instance.expected_ret_constraint = Constraint(
+            rule=expected_ret_constraint_rule)
+
     # additional variables and setting in the general setting
     if setting == "general":
         # aux variable, switching stock variable
@@ -195,7 +207,7 @@ def spsp_cvar(candidate_symbols,
     instance.solutions.load_from(results)
 
     # logging.DEBUG(display(instance))
-    display(instance)
+    # display(instance)
 
     # buy and sell amounts
     actions = ['buy', 'sell', 'chosen']
@@ -291,7 +303,7 @@ def spsp_cvar(candidate_symbols,
     chosen_symbols = None
     if setting == "general":
         chosens = [instance.chosen[mdx].value for mdx in range(n_symbol)]
-    elif setting == "compact":
+    elif setting in ("compact", "compact_mu0"):
         chosens = [1 for mdx in range(n_symbol)]
 
     amounts.loc[candidate_symbols, 'chosen'] = chosens
@@ -419,7 +431,7 @@ class SPSP_CVaR(ValidMixin):
             The size of the candidate set is n_stock.
 
         setting : string,
-            {"compact", "general"}
+            {"compact", "general", "compact_mu0"}
 
         max_portfolio_size : positive integer
             The max number of stock we can invest in the portfolio.
@@ -490,10 +502,11 @@ class SPSP_CVaR(ValidMixin):
         self.n_all_period = len(self.all_trans_dates)
 
         # verify setting
-        if setting not in ("compact", "general"):
+        if setting not in ("compact", "general", "compact_mu0"):
             raise (ValueError("Incorrect setting: {}".format(setting)))
 
-        if setting == "compact" and max_portfolio_size != self.n_symbol:
+        if (setting in ("compact", "compact_mu0") and
+                max_portfolio_size != self.n_symbol):
             raise (ValueError(
                 "The max portfolio size {} must be the same "
                 "as the number of symbols {}".format(
