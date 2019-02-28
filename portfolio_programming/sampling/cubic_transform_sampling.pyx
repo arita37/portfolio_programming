@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
+Author: Hung-Hsin Chen <chen1116@gmail.com>
 
 Fleishman, Allen I. "A method for simulating non-normal distributions."
 Psychometrika 43.4 (1978): 521-532.

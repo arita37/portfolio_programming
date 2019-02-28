@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
+Authors: Hung-Hsin Chen <chen1116@gmail.com>
 
 https://github.com/ipython/ipyparallel/blob/master/examples/customresults.py
 https://github.com/ipython/ipyparallel/blob/master/ipyparallel/client/asyncresult.py

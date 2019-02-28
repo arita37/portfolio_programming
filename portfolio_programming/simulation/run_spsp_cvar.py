@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
+Author: Hung-Hsin Chen <chen1116@gmail.com>
+
 
 The SPSP CVaR experiments are not able to run in parallel setting(ipyparallel)
 because ofthe complex setting of pyomo.

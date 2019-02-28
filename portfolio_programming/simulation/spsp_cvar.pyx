@@ -6,7 +6,7 @@
 #cython: nonecheck=False
 
 """
-Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
+Authors: Hung-Hsin Chen <chen1116@gmail.com>
 """
 
 import os
