@@ -2,7 +2,6 @@
 """
 Authors: Hung-Hsin Chen <chen1116@gmail.com>
 
-
 transforming TEJ's stock csv to pandas panel data
 """
 

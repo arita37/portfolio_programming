@@ -19,3 +19,11 @@ mathematical programming of portfolio
 
 ---
 nosetests .
+
+---
+MSVC compiler for windows 
+https://github.com/cython/cython/wiki/CythonExtensionsOnWindows
+
+Win 10 SDK
+https://developer.microsoft.com/zh-tw/windows/downloads/windows-10-sdk
+
