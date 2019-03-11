@@ -58,10 +58,10 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
                 "market_value_million_dollars": np.float,
                 "continuous_roi_%": np.float,
             },
-            converters={
+            #converters={
                 # "symbol": lambda x: x.strip(),
                 # "abbreviation": lambda x: x.strip(),
-            },
+            #},
         )
 
         # output data file path
