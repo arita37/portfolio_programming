@@ -70,8 +70,8 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
 
         print(
             "[{}/{}]{} csv to dataframe OK dates:{}_{}, {:.4f} secs".format(
-                rdx + 1, len(symbols), symbol, df.index[0], df.index[-1], time() - t0
-            )
+                rdx + 1, len(symbols), symbol, df.index[0], df.index[-1],
+                time() - t0)
         )
 
     print("tej csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
@@ -130,7 +130,8 @@ def yahoo_us_to_df(symbols, csv_dir, df_dir):
             inplace=True)
 
         # simple roi
-        df["simple_roi_%"] = df.loc[:, 'adj_close_price'].pct_change(fill_method=None) * 100
+        df["simple_roi_%"] = df.loc[:, 'adj_close_price'].pct_change(
+            fill_method=None) * 100
 
         # output data file path
         fout_path = os.path.join(df_dir, "{}_df.pkl".format(symbol))
@@ -138,7 +139,8 @@ def yahoo_us_to_df(symbols, csv_dir, df_dir):
 
         print(
             "[{}/{}]{} csv to dataframe OK dates:{}_{}, {:.4f} secs".format(
-                rdx + 1, len(symbols), symbol, df.index[0], df.index[-1], time() - t0
+                rdx + 1, len(symbols), symbol, df.index[0], df.index[-1],
+                time() - t0
             )
         )
 
@@ -197,9 +199,11 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
         # rename columns
         dates = trimmed_df.index
         trimmed_df["simple_roi_%"] /= 100.0
-        trimmed_df.rename(columns={r"simple_roi_%": "simple_roi"}, inplace=True)
+        trimmed_df.rename(columns={r"simple_roi_%": "simple_roi"},
+                          inplace=True)
 
-        trimmed_df.rename(columns={r"volume_1000_shares": "volume"}, inplace=True)
+        trimmed_df.rename(columns={r"volume_1000_shares": "volume"},
+                          inplace=True)
 
         xarr.loc[dates, symbol, :] = trimmed_df.loc[
             dates,
@@ -241,7 +245,8 @@ def run_tej_csv_to_xarray(exp_name):
         # run
         tej_csv_to_df(tw_symbols, csv_dir, df_dir)
         dataframe_to_xarray(
-            tw_symbols, df_dir, trim_start_date, trim_end_date, pp.TAIEX_2005_MKT_CAP_NC
+            tw_symbols, df_dir, trim_start_date, trim_end_date,
+            pp.TAIEX_2005_MKT_CAP_NC
         )
 
     elif exp_name == "dissertation":
@@ -294,7 +299,7 @@ def symbol_statistics(exp_name):
 
         with open(
                 os.path.join(pp.TMP_DIR,
-                             "TAIEX_20050103_50largest_listed_market_cap_stat.csv"),
+                    "TAIEX_20050103_50largest_listed_market_cap_stat.csv"),
                 "w",
         ) as csv_file:
             fields = [
@@ -340,7 +345,8 @@ def symbol_statistics(exp_name):
 
                 spa_value = 0
                 for _ in range(5):
-                    spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=5000)
+                    spa = arch_comp.SPA(rois.data, np.zeros(rois.size),
+                                        reps=5000)
                     spa.seed(np.random.randint(0, 2 ** 31 - 1))
                     spa.compute()
                     # preserve the worse p_value
@@ -386,7 +392,8 @@ def symbol_statistics(exp_name):
             tw_symbols = json.load(tw_fin)
 
         tw_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
-        tw_stats_file =  os.path.join(pp.TMP_DIR, "TAIEX_2005_market_cap_stat.csv")
+        tw_stats_file = os.path.join(pp.TMP_DIR,
+                                     "TAIEX_2005_market_cap_stat.csv")
 
         for mkt, symbols, data_xarr, stat_file in zip(['djia', 'tw'],
                                            [djia_symbols, tw_symbols],
@@ -416,12 +423,14 @@ def symbol_statistics(exp_name):
                 writer.writeheader()
 
                 for sdx, symbol in enumerate(symbols):
-                    rois = data_xarr.loc[start_date:end_date, symbol, "simple_roi"]
+                    rois = data_xarr.loc[start_date:end_date, symbol,
+                           "simple_roi"]
                     trans_dates = rois.get_index("trans_date")
                     n_roi = int(rois.count())
                     rois[0] = 0
                     cumulative_roi = float((1 + rois).prod() - 1)
-                    annual_roi = float(np.power(cumulative_roi + 1, 1.0 / 14) - 1)
+                    annual_roi = float(np.power(cumulative_roi + 1, 1.0 / 14)
+                                       - 1)
 
                     sharpe = risk_adj.Sharpe(rois)
                     sortino = risk_adj.Sortino_full(rois)[0]
@@ -436,7 +445,8 @@ def symbol_statistics(exp_name):
 
                     spa_value = 0
                     for _ in range(5):
-                        spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=5000)
+                        spa = arch_comp.SPA(rois.data, np.zeros(rois.size),
+                                            reps=5000)
                         spa.seed(np.random.randint(0, 2 ** 31 - 1))
                         spa.compute()
                         # preserve the worse p_value
@@ -473,7 +483,8 @@ def symbol_statistics(exp_name):
         raise ValueError("unknown exp_name:{}".format(exp_name))
 
 
-def plot_fft(symbol, start_date=dt.date(2005, 1, 1), end_date=dt.date(2017, 12, 31)):
+def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
+             end_date=dt.date(2017, 12, 31)):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
 
@@ -558,7 +569,8 @@ def plot_fft(symbol, start_date=dt.date(2005, 1, 1), end_date=dt.date(2017, 12, 
     print("symbol {} plot FFT complete, {:.4f} secs".format(symbol, time() - t0))
 
 
-def plot_hht(symbol, start_date=dt.date(2005, 1, 1), end_date=dt.date(2017, 12, 31)):
+def plot_hht(symbol, start_date=dt.date(2005, 1, 1),
+             end_date=dt.date(2017, 12, 31)):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
     import PyEMD
@@ -633,7 +645,8 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1), end_date=dt.date(2017, 12, 
         fig_path = os.path.join(
             pp.TMP_DIR,
             "{}_roi_{}_{}_{}.png".format(
-                symbol, xs[0].strftime("%Y%m%d"), xs[-1].strftime("%Y%m%d"), emd_name
+                symbol, xs[0].strftime("%Y%m%d"), xs[-1].strftime("%Y%m%d"),
+                emd_name
             ),
         )
         fig.set_size_inches(16, 9)
@@ -719,7 +732,8 @@ def plot_wavelet(
 def run_plot_group_line_chart():
     import matplotlib.pyplot as plt
     plt.rcParams['font.family'] = 'serif'
-    plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+    plt.rcParams['font.serif'] = (['Times New Roman'] +
+                                  plt.rcParams['font.serif'])
 
     start_date = dt.date(2005, 1, 1)
     end_date = dt.date(2018, 12, 31)
@@ -776,8 +790,9 @@ def run_plot_group_line_chart():
 
             for gdx, sdx in enumerate(range(0, 15, 5)):
 
-                df = xarr.loc[start_date: end_date, symbols[fdx*15+sdx:fdx*15+sdx+5],
-                                 'simple_roi'].to_pandas()
+                df = xarr.loc[start_date: end_date,
+                              symbols[fdx*15+sdx:fdx*15+sdx+5],
+                             'simple_roi'].to_pandas()
                 # frequency,  'M': calendar month end, 'Q'	calendar quarter end
                 # 'A': calendar year end
 
@@ -789,14 +804,16 @@ def run_plot_group_line_chart():
                 mon_df.plot.line(ax=axes[gdx], grid=True,
                                  style=['-', '--', '-.', ':', '-'],
                                  fontsize=14)
-                axes[gdx].set_title('{}_G{}'.format(mkt, fdx*3+gdx + 1), fontsize=20)
+                axes[gdx].set_title('{}_G{}'.format(mkt, fdx*3+gdx + 1),
+                                    fontsize=20)
                 axes[gdx].set_xlabel('', fontsize=14)
                 axes[gdx].set_ylabel("Monthly return(%)", fontsize=16)
                 axes[gdx].legend(loc='lower right',
                           ncol=5, fancybox=True, shadow=True, fontsize=13)
 
             img_file = os.path.join(pp.TMP_DIR,
-                                    '{}_monthly_roi_chart_{}.pdf'.format(mkt, fdx+1))
+                                    '{}_monthly_roi_chart_{}.pdf'.format(
+                                        mkt, fdx+1))
             plt.savefig(img_file, format='pdf')
 
     #
@@ -808,10 +825,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-c", "--csv", default=False, action="store_true", help="csv to xarray"
+        "-c", "--csv", default=False, action="store_true",
+        help="csv to xarray"
     )
     parser.add_argument(
-        "-s", "--stat", default=False, action="store_true", help="symbol statistics"
+        "-s", "--stat", default=False, action="store_true",
+        help="symbol statistics"
     )
     parser.add_argument(
         "-p", "--plot",  default=False, action="store_true"
