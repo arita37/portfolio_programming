@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
+Authors: Hung-Hsin Chen <chen1116@gmail.com>
 
 https://github.com/ipython/ipyparallel/blob/master/examples/customresults.py
 https://github.com/ipython/ipyparallel/blob/master/ipyparallel/client/asyncresult.py
@@ -84,10 +84,10 @@ def hemm_generating_scenarios_xarr(scenario_set_idx,
     # read roi data
     # shape: (n_period, n_stock, 6 attributes)
     risky_asset_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
+        pp.TAIEX_2005_MKT_CAP_NC)
 
     # symbols
-    with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
+    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
         candidate_symbols = json.load(fin)[:n_symbol]
 
     # all trans_date, pandas.core.indexes.datetimes.DatetimeIndex

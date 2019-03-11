@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
+Author: Hung-Hsin Chen <chen1116@gmail.com>
+
 
 The SPSP CVaR experiments are not able to run in parallel setting(ipyparallel)
 because ofthe complex setting of pyomo.
@@ -24,7 +24,7 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
                   symbols, max_portfolio_size, rolling_window_size,
                   alpha, n_scenario):
     risky_roi_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
+        pp.TAIEX_2005_MKT_CAP_NC)
 
     if setting in ('compact', "compact_mu0"):
         candidate_symbols = symbols[:max_portfolio_size]
@@ -340,7 +340,7 @@ if __name__ == '__main__':
         candidate_symbols = [args.symbol, ]
     else:
         candidate_symbols = json.load(
-           open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
+           open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
 
     if not args.year:
         run_SPSP_CVaR(args.setting,

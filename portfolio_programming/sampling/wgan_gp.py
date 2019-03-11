@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
+Author: Hung-Hsin Chen <chen1116@gmail.com>
 
 https://github.com/znxlwm/pytorch-generative-model-collections
 
@@ -230,7 +230,7 @@ class WGAN_GP(nn.Module):
 
 def generate_data():
     risky_roi_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
+        pp.TAIEX_2005_MKT_CAP_NC)
     print(risky_roi_xarr)
 
     start_date = pp.EXP_START_DATE

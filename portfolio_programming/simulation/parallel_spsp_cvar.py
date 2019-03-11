@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
+Authors: Hung-Hsin Chen <chen1116@gmail.com>
+
 """
 
 import datetime as dt
@@ -54,7 +54,7 @@ def _all_spsp_cvar_params(setting, yearly=False):
     set_indices = (1, 2, 3)
     # set_indices = (1, )
     candidate_symbols = json.load(
-        open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
+        open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
 
     if not yearly:
         # whole interval
