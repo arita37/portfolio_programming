@@ -59,8 +59,8 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
                 "continuous_roi_%": np.float,
             },
             converters={
-                "symbol": lambda x: x.strip(),
-                "abbreviation": lambda x: x.strip(),
+                # "symbol": lambda x: x.strip(),
+                # "abbreviation": lambda x: x.strip(),
             },
         )
 
