@@ -36,6 +36,8 @@ nosetests.xml
 .pydevproject
 .settings
 .directory
+.pytest_cache/
+build/
 .idea
 __pycache__
 *.log
