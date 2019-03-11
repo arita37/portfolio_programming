@@ -340,7 +340,7 @@ class BAHPortfolio(ValidMixin):
 
 def run_bah(n_symbol):
     risky_roi_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
+        pp.TAIEX_2005_MKT_CAP_NC)
     symbols = list(risky_roi_xarr.get_index('symbol')[:n_symbol])
     exp_start_date = pp.EXP_START_DATE
     exp_end_date = pp.EXP_END_DATE

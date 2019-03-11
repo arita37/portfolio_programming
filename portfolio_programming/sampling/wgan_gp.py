@@ -230,7 +230,7 @@ class WGAN_GP(nn.Module):
 
 def generate_data():
     risky_roi_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
+        pp.TAIEX_2005_MKT_CAP_NC)
     print(risky_roi_xarr)
 
     start_date = pp.EXP_START_DATE

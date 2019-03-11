@@ -81,7 +81,7 @@ def ct_generating_scenarios_xarr(scenario_set_idx,
     # read roi data
     # shape: (n_period, n_stock, 6 attributes)
     risky_asset_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC)
+        pp.TAIEX_2005_MKT_CAP_NC)
 
     print(risky_asset_xarr.dims)
     # all trans_date, pandas.core.indexes.datetimes.DatetimeIndex
@@ -186,7 +186,7 @@ def _ct_all_scenario_names():
     set_indices = (1,)
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
-    symbols = json.load(open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
+    symbols = json.load(open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
     # window_sizes = range(60, 240 + 10, 10)
     window_sizes = [3, 5, 10, 20]
     n_scenarios = [200, ]

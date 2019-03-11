@@ -163,7 +163,7 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
 def run_tej_csv_to_xarray(
     trim_start_date=dt.date(2000, 1, 3), trim_end_date=dt.date(2018, 3, 15)
 ):
-    with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
+    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
         symbols = json.load(fin)
 
     csv_dir = os.path.join(pp.DATA_DIR, "tej_csv")
@@ -176,14 +176,14 @@ def run_tej_csv_to_xarray(
         df_dir,
         trim_start_date,
         trim_end_date,
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC,
+        pp.TAIEX_2005_MKT_CAP_NC,
     )
 
 
 def stocksp_cor15_tej_csv_to_xarray(
     trim_start_date=dt.date(2000, 1, 3), trim_end_date=dt.date(2018, 3, 15)
 ):
-    with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
+    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
         symbols = json.load(fin)
 
     csv_dir = os.path.join(pp.DATA_DIR, "tej_csv")
@@ -196,14 +196,14 @@ def stocksp_cor15_tej_csv_to_xarray(
         df_dir,
         trim_start_date,
         trim_end_date,
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC,
+        pp.TAIEX_2005_MKT_CAP_NC,
     )
 
 
 def dissertation_tej_csv_to_xarray(
     trim_start_date=dt.date(2000, 1, 3), trim_end_date=dt.date(2019, 12, 31)
 ):
-    with open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON) as fin:
+    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
         symbols = json.load(fin)
 
     csv_dir = os.path.join(pp.DATA_DIR, "tej_csv")
@@ -216,7 +216,7 @@ def dissertation_tej_csv_to_xarray(
         df_dir,
         trim_start_date,
         trim_end_date,
-        pp.TAIEX_2005_LARGESTED_MARKET_CAP_DATA_NC,
+        pp.TAIEX_2005_MKT_CAP_NC,
     )
 
 
