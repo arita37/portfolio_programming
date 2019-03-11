@@ -716,8 +716,53 @@ def plot_wavelet(
     plt.show()
 
 
-def plot_group_line_chart(symbols, grp_name, start_date, end_date):
-    pass
+def run_plot_group_line_chart():
+    import matplotlib.pyplot as plt
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+
+    start_date = dt.date(2005, 1, 1)
+    end_date = dt.date(2018, 12, 31)
+
+    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as tw_fin:
+        tw_symbols = json.load(tw_fin)
+
+    tw_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+
+    with open(pp.DJIA_2005_SYMBOL_JSON) as us_fin:
+        djia_symbols = json.load(us_fin)
+
+    djia_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
+
+    for mkt, xarr, symbols in zip(['US', 'TW'], [djia_xarr, tw_xarr],
+                                  [djia_symbols, tw_symbols]):
+        # A3: 11.3 * 17 inch
+        for fdx in range(2):
+            fig, axes = plt.subplots(figsize=(11.3, 17), ncols=1, nrows=3)
+
+            for gdx, sdx in enumerate(range(0, 15, 5)):
+
+                df = xarr.loc[start_date: end_date, symbols[fdx*15+sdx:fdx*15+sdx+5],
+                                 'simple_roi'].to_pandas()
+                # frequency,  'M': calendar month end, 'Q'	calendar quarter end
+                # 'A': calendar year end
+
+                interval_grouper = (df+1).groupby(pd.Grouper(freq="M"))
+                mon_df = (interval_grouper.prod()-1) * 100
+
+                # axes[gdx].set_yticks(range(-60, 80, 10))
+
+                mon_df.plot.line(ax=axes[gdx], grid=True, style=['-', '--', '-.', ':', '-'],
+                                 fontsize=14)
+                axes[gdx].set_title('{}_G{}'.format(mkt, fdx*3+gdx + 1), fontsize=20)
+                axes[gdx].set_xlabel('', fontsize=14)
+                axes[gdx].set_ylabel("Monthly return(%)", fontsize=16)
+                axes[gdx].legend(loc='lower right',
+                          ncol=5, fancybox=True, shadow=True, fontsize=13)
+
+            img_file = os.path.join(pp.TMP_DIR, '{}_monthly_roi_chart_{}.pdf'.format(mkt, fdx+1))
+            plt.savefig(img_file, format='pdf')
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -730,6 +775,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--stat", default=False, action="store_true", help="symbol statistics"
     )
+    parser.add_argument(
+        "-p", "--plot",  default=False, action="store_true"
+    )
 
     args = parser.parse_args()
     print("current experiment name: {}".format(pp.EXP_NAME))
@@ -737,3 +785,5 @@ if __name__ == "__main__":
         run_tej_csv_to_xarray(pp.EXP_NAME)
     elif args.stat:
         symbol_statistics(pp.EXP_NAME)
+    elif args.plot:
+        run_plot_group_line_chart()
