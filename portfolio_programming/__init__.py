@@ -7,6 +7,7 @@ Author: Hung-Hsin Chen <chen1116@gmail.com>
 import platform
 import os
 import datetime as dt
+import json
 
 # data storage
 node_name = platform.node()
@@ -54,20 +55,22 @@ if EXP_NAME == "stocksp_cor15":
     # SCENARIO_SET_DIR = TMP_DIR
     SCENARIO_SET_DIR = os.path.join(DATA_DIR, "scenario")
     SCENARIO_NAME_FORMAT = (
-        "TAIEX_2005_largested_market_cap_"
-        "scenario-set-idx{sdx}_"
-        "{scenario_start_date}_"
-        "{scenario_end_date}_"
+        "{market}_"
+        "{group_name}_"
         "Mc{n_symbol}_"
-        "h{rolling_window_size}_s{n_scenario}.nc"
+        "h{rolling_window_size}_"
+        "s{n_scenario}_"
+        "sdx{sdx}_"
+        "{scenario_start_date}_"
+        "{scenario_end_date}.nc"
     )
 
     SYMBOL_SCENARIO_NAME_FORMAT = (
-        "TAIEX_2005_largested_market_cap_"
-        "scenario-set-idx{sdx}_"
+        "{market}_"
+        "{group_id}_"
+        "sdx{sdx}_"
         "{scenario_start_date}_"
         "{scenario_end_date}_"
-        "symbol{symbol}_"
         "h{rolling_window_size}_s{n_scenario}.nc"
     )
 
@@ -106,21 +109,22 @@ if EXP_NAME == "dissertation":
     # SCENARIO_SET_DIR = TMP_DIR
     SCENARIO_SET_DIR = os.path.join(DATA_DIR, "scenario")
     SCENARIO_NAME_FORMAT = (
-        "TAIEX_2005_market_cap_"
-        "scenario-set-idx{sdx}_"
-        "{scenario_start_date}_"
-        "{scenario_end_date}_"
+        "{market}_"
+        "{group_name}_"
         "Mc{n_symbol}_"
-        "h{rolling_window_size}_s{n_scenario}.nc"
-    )
-
-    GROUP_SCENARIO_NAME_FORMAT = (
-        "gid_{group_id}_"
-        "scenario-sdx{sdx}_"
+        "h{rolling_window_size}_"
+        "s{n_scenario}_"
+        "sdx{sdx}_"
         "{scenario_start_date}_"
-        "{scenario_end_date}_"
-        "h{rolling_window_size}_s{n_scenario}.nc"
+        "{scenario_end_date}.nc"
     )
 
+    tw_symbols = json.load(open(TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
+    us_symbols = json.load(open(DJIA_2005_SYMBOL_JSON))
+    GROUP_SYMBOLS = {
+        '{}_G{}'.format(mkt, idx+1) : symbols[sdx:sdx+5]
+        for mkt, symbols in zip(['TW', 'US'], [tw_symbols, us_symbols])
+        for idx, sdx in enumerate(range(0, 30, 5))
+    }
     SCENARIO_START_DATE = dt.date(2005, 1, 3)
     SCENARIO_END_DATE = dt.date(2018, 12, 31)

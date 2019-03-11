@@ -27,10 +27,12 @@ from portfolio_programming.sampling.moment_matching import (
 
 
 def hemm_generating_scenarios_xarr(
+    market,
+    group_name,
+    symbols,
     scenario_set_idx,
     scenario_start_date,
     scenario_end_date,
-    n_symbol,
     rolling_window_size,
     n_scenario,
     retry_cnt=5,
@@ -41,6 +43,9 @@ def hemm_generating_scenarios_xarr(
 
     Parameters:
     ------------------
+    market: str, market name
+    group_name: name of the symbols
+    symbols: list[str], name of symbols
     scenario_set_idx: positive integer
     scenario_start_date, scenario_end_date : datetime.date
     n_stock: positive integer, number of stocks in the candidate symbols
@@ -60,40 +65,47 @@ def hemm_generating_scenarios_xarr(
     if not os.path.exists(pp.SCENARIO_SET_DIR):
         os.makedirs(pp.SCENARIO_SET_DIR)
 
+    n_symbol = len(symbols)
     scenario_file = pp.SCENARIO_NAME_FORMAT.format(
-        sdx=scenario_set_idx,
-        scenario_start_date=scenario_start_date.strftime("%Y%m%d"),
-        scenario_end_date=scenario_end_date.strftime("%Y%m%d"),
+        market=market,
+        group_name=group_name,
         n_symbol=n_symbol,
         rolling_window_size=rolling_window_size,
         n_scenario=n_scenario,
+        sdx=scenario_set_idx,
+        scenario_start_date=scenario_start_date.strftime("%Y%m%d"),
+        scenario_end_date=scenario_end_date.strftime("%Y%m%d"),
     )
 
     scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
     if os.path.exists(scenario_path):
         return "{} exists.".format(scenario_file)
 
-    parameters = "{}_{} scenarios-set-idx{}_{}_{}_Mc{}_h{}_s{}".format(
+    parameters = "{}_{} {}_{}_Mc{}_h{}_s{}_{}_{}".format(
         platform.node(),
         os.getpid(),
-        scenario_set_idx,
-        scenario_start_date.strftime("%Y%m%d"),
-        scenario_end_date.strftime("%Y%m%d"),
+        market,
+        group_name,
         n_symbol,
         rolling_window_size,
         n_scenario,
+        scenario_set_idx,
+        scenario_start_date.strftime("%Y%m%d"),
+        scenario_end_date.strftime("%Y%m%d")
     )
 
-    # read roi data
-    # shape: (n_period, n_stock, 6 attributes)
-    risky_asset_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+    # read roi data and symbols
+    # shape: (n_period, n_stock, attributes)
+    if market == 'TW':
+        asset_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
 
-    # symbols
-    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
-        candidate_symbols = json.load(fin)[:n_symbol]
+    elif market =='US':
+        asset_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
+    else:
+        raise ValueError('unknown market: {}'.format(market))
 
     # all trans_date, pandas.core.indexes.datetimes.DatetimeIndex
-    trans_dates = risky_asset_xarr.get_index("trans_date")
+    trans_dates = asset_xarr.get_index("trans_date")
 
     # experiment trans_dates
     sc_start_idx = trans_dates.get_loc(scenario_start_date)
@@ -105,14 +117,14 @@ def hemm_generating_scenarios_xarr(
     est_moments = xr.DataArray(
         np.zeros((n_symbol, 4)),
         dims=("symbol", "moment"),
-        coords=(candidate_symbols, ["mean", "std", "skew", "ex-kurt"]),
+        coords=(symbols, ["mean", "std", "skew", "ex-kurt"]),
     )
 
     # output scenario xarray, shape: (n_sc_period, n_stock, n_scenario)
     scenario_xarr = xr.DataArray(
         np.zeros((n_sc_period, n_symbol, n_scenario)),
         dims=("trans_date", "symbol", "scenario"),
-        coords=(sc_trans_dates, candidate_symbols, range(n_scenario)),
+        coords=(sc_trans_dates, symbols, range(n_scenario)),
     )
 
     for tdx, sc_date in enumerate(sc_trans_dates):
@@ -127,13 +139,15 @@ def hemm_generating_scenarios_xarr(
         assert hist_interval[-1] == sc_date
 
         # hist_data, shape: (win_length, n_stock)
-        hist_data = risky_asset_xarr.loc[hist_interval, candidate_symbols, "simple_roi"]
+        hist_data = asset_xarr.loc[hist_interval, symbols, "simple_roi"]
 
         # unbiased moments and corrs estimators
         est_moments.loc[:, "mean"] = hist_data.mean(axis=0)
         est_moments.loc[:, "std"] = hist_data.std(axis=0, ddof=1)
-        est_moments.loc[:, "skew"] = spstats.skew(hist_data, axis=0, bias=False)
-        est_moments.loc[:, "ex-kurt"] = spstats.kurtosis(hist_data, axis=0, bias=False)
+        est_moments.loc[:, "skew"] = spstats.skew(hist_data,
+                                                  axis=0, bias=False)
+        est_moments.loc[:, "ex-kurt"] = spstats.kurtosis(hist_data,
+                                                         axis=0, bias=False)
         # est_corrs = (hist_data.T).corr("pearson")
         est_corrs = np.corrcoef(hist_data.T)
 
@@ -191,26 +205,31 @@ def hemm_generating_scenarios_xarr(
     # write scenario
     scenario_xarr.to_netcdf(scenario_path)
 
-    msg = "generating scenarios {} OK, {:.3f} secs".format(parameters, time() - t0)
+    msg = "generating scenarios {} OK, {:.3f} secs".format(parameters,
+                                                           time() - t0)
     logging.info(msg)
     return msg
 
 
 def _hemm_all_scenario_names():
     """
-    "TAIEX_2005_largested_market_cap_" \
-       "scenario-set-idx{sdx}_" \
-       "{scenario_start_date}_" \
-       "{scenario_end_date}_" \
-       "Mc{n_symbol}_" \
-       "h{rolling_window_size}_s{n_scenario}.nc"
+    SCENARIO_NAME_FORMAT = (
+        "{market}_"
+        "{group_name}_"
+        "Mc{n_symbol}_"
+        "h{rolling_window_size}_"
+        "s{n_scenario}_"
+        "sdx{sdx}_"
+        "{scenario_start_date}_"
+        "{scenario_end_date}.nc"
+    )
     """
     set_indices = (1, 2, 3)
     s_date = pp.SCENARIO_START_DATE
     e_date = pp.SCENARIO_END_DATE
-    n_symbols = range(5, 55, 5)
-    window_sizes = range(60, 240 + 10, 10)
-    n_scenarios = [200]
+    n_symbols = range(5, 30, 5)
+    window_sizes = range(50, 240 + 10, 10)
+    n_scenarios = [1000,]
 
     # dict comprehension
     # key: file_name, value: parameters
@@ -429,18 +448,24 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-n",
-        "--n_candidate_symbol",
-        type=int,
-        choices=range(1, 51),
-        help="number of candidate symbol",
+        "--market",
+        type=str,
+        choices=["TW", "US"],
+        help="market",
+    )
+
+    parser.add_argument(
+        "-g",
+        "--group_name",
+        type=str,
+        help="name of the portfolio",
     )
 
     parser.add_argument(
         "-w",
         "--rolling_window_size",
         type=int,
-        choices=range(50, 250),
+        choices=range(50, 250, 10),
         help="rolling window size for estimating statistics.",
     )
 
@@ -449,12 +474,12 @@ if __name__ == "__main__":
         "--n_scenario",
         type=int,
         choices=range(200, 1000, 10),
-        default=200,
+        default=1000,
         help="number of generated scenario.",
     )
 
     parser.add_argument(
-        "--scenario-set-idx",
+        "--sdx",
         type=int,
         choices=range(1, 4),
         default=1,
@@ -470,7 +495,7 @@ if __name__ == "__main__":
     else:
         print("generating scenario in single mode")
         hemm_generating_scenarios_xarr(
-            args.scenario_set_idx,
+            args.market,
             pp.SCENARIO_START_DATE,
             pp.SCENARIO_END_DATE,
             args.n_candidate_symbol,

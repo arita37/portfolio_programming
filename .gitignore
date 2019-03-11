@@ -38,6 +38,7 @@ nosetests.xml
 .directory
 .pytest_cache/
 build/
+venv/
 .idea
 __pycache__
 *.log
