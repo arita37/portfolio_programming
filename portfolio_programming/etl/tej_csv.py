@@ -734,9 +734,43 @@ def run_plot_group_line_chart():
 
     djia_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
 
+    # A3: 11.3 * 17 inch
+    mkt_fig, mkt_axes= plt.subplots(figsize=(11.3, 17), ncols=1, nrows=2)
+    taiex_df = tw_xarr.loc[start_date:end_date, 'TAIEX',
+               ['close_price', 'simple_roi']].to_pandas()
+    djia_df = djia_xarr.loc[start_date:end_date, 'DJIA',
+              ['close_price', 'simple_roi']].to_pandas()
+    mkt_df = taiex_df.merge(djia_df, how="left", on='trans_date',
+                            suffixes=('_TAIEX', '_DJIA'))
+    mkt_df.loc[:, ['close_price_TAIEX','close_price_DJIA']].plot.line(
+        ax=mkt_axes[0], grid=True, style=['-', '--'], fontsize=14)
+    mkt_axes[0].set_title('Market index', fontsize=20)
+    mkt_axes[0].set_xlabel('', fontsize=14)
+    mkt_axes[0].set_ylabel("Close price", fontsize=16)
+    # mkt_axes[0].set_xticklabels(range(2005, 2019+1))
+    mkt_axes[0].set_xlim(dt.date(2004,12,20), dt.date(2019,1,10))
+    mkt_axes[0].legend(['TAIEX', 'DJIA'], loc='lower right',
+                     ncol=2, fancybox=True, shadow=True, fontsize=13)
+
+    rois_df = mkt_df.loc[:, ['simple_roi_TAIEX', 'simple_roi_DJIA']]
+    interval_grouper = (rois_df + 1).groupby(pd.Grouper(freq="M"))
+    mon_df = (interval_grouper.prod() - 1) * 100
+
+    mon_df.plot.line(
+        ax=mkt_axes[1], grid=True, style=['-', '--'], fontsize=14)
+
+    mkt_axes[1].set_title('', fontsize=20)
+    mkt_axes[1].set_xlabel('', fontsize=14)
+    mkt_axes[1].set_ylabel("Monthly return(%)", fontsize=16)
+    mkt_axes[1].set_xlim(dt.date(2004,12,31), dt.date(2019,1,1))
+    mkt_axes[1].legend(['TAIEX', 'DJIA'], loc='lower right',
+                     ncol=2, fancybox=True, shadow=True, fontsize=13)
+    mkt_img_file = os.path.join(pp.TMP_DIR, 'market_chart.pdf')
+    plt.savefig(mkt_img_file, format='pdf')
+
     for mkt, xarr, symbols in zip(['US', 'TW'], [djia_xarr, tw_xarr],
                                   [djia_symbols, tw_symbols]):
-        # A3: 11.3 * 17 inch
+
         for fdx in range(2):
             fig, axes = plt.subplots(figsize=(11.3, 17), ncols=1, nrows=3)
 
@@ -752,7 +786,8 @@ def run_plot_group_line_chart():
 
                 # axes[gdx].set_yticks(range(-60, 80, 10))
 
-                mon_df.plot.line(ax=axes[gdx], grid=True, style=['-', '--', '-.', ':', '-'],
+                mon_df.plot.line(ax=axes[gdx], grid=True,
+                                 style=['-', '--', '-.', ':', '-'],
                                  fontsize=14)
                 axes[gdx].set_title('{}_G{}'.format(mkt, fdx*3+gdx + 1), fontsize=20)
                 axes[gdx].set_xlabel('', fontsize=14)
@@ -760,8 +795,11 @@ def run_plot_group_line_chart():
                 axes[gdx].legend(loc='lower right',
                           ncol=5, fancybox=True, shadow=True, fontsize=13)
 
-            img_file = os.path.join(pp.TMP_DIR, '{}_monthly_roi_chart_{}.pdf'.format(mkt, fdx+1))
+            img_file = os.path.join(pp.TMP_DIR,
+                                    '{}_monthly_roi_chart_{}.pdf'.format(mkt, fdx+1))
             plt.savefig(img_file, format='pdf')
+
+    #
     plt.show()
 
 

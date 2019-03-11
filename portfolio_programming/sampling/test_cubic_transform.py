@@ -8,7 +8,7 @@ import scipy.stats as spstats
 from portfolio_programming.sampling.cubic_transform_sampling import (
     cubic_transform_sampling,)
 
-#
+
 def statistics(samples):
     return "{:.2f} {:.2f} {:.2f} {:.2f}".format(
         samples.mean(),
