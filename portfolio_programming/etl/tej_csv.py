@@ -74,7 +74,75 @@ def tej_csv_to_df(symbols, csv_dir, df_dir):
             )
         )
 
-    print("csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
+    print("tej csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
+
+
+def yahoo_us_to_df(symbols, csv_dir, df_dir):
+    """
+    extract data from csv, and transforms the csv to dataframe
+
+    Parameters:
+    --------------
+    symbols : list
+       list of stock symbols given in data directory
+    csv_dir : string
+       csv file directory of symbols
+    df_dir : string
+       pandas dataframe output directory
+
+    Returns:
+    --------------
+    list of pandas.dataframe files
+
+    """
+    t0 = time()
+
+    for rdx, symbol in enumerate(symbols):
+        csv_name = os.path.join(csv_dir, "{}.csv".format(symbol))
+        print(csv_name)
+        df = pd.read_csv(
+            open(csv_name),
+            index_col="Date",
+            parse_dates=True,  # parse the index column
+            dtype={
+                "Date": str,
+                "Open": np.float,
+                "High": np.float,
+                "Low": np.float,
+                "Close": np.float,
+                "Adj Close": np.float,
+                "Volume": np.float,
+            },
+            converters={
+            },
+        )
+
+        # rename index and columns
+        df.index.name = "year_month_day"
+        df.rename(
+            columns={'Open': 'open_price',
+                     'High': 'high_price',
+                     "Low": "low_price",
+                     'Close': 'close_price',
+                     'Adj Close': "adj_close_price",
+                     'Volume': "volume_shares"
+                     },
+            inplace=True)
+
+        # simple roi
+        df["simple_roi_%"] = df.loc[:, 'adj_close_price'].pct_change(fill_method=None) * 100
+
+        # output data file path
+        fout_path = os.path.join(df_dir, "{}_df.pkl".format(symbol))
+        df.to_pickle(fout_path)
+
+        print(
+            "[{}/{}]{} csv to dataframe OK dates:{}_{}, {:.4f} secs".format(
+                rdx + 1, len(symbols), symbol, df.index[0], df.index[-1], time() - t0
+            )
+        )
+
+    print("US csv_to_to OK, elapsed {:.4f} secs".format(time() - t0))
 
 
 def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
@@ -160,67 +228,51 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
     print("all exp_symbols load to xarray OK, {:.3f} secs".format(time() - t0))
 
 
-def run_tej_csv_to_xarray(
-    trim_start_date=dt.date(2000, 1, 3), trim_end_date=dt.date(2018, 3, 15)
-):
-    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
-        symbols = json.load(fin)
+def run_tej_csv_to_xarray(exp_name):
+    if exp_name == "stocksp_cor15":
+        with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
+            tw_symbols = json.load(fin)
 
-    csv_dir = os.path.join(pp.DATA_DIR, "tej_csv")
-    df_dir = pp.TMP_DIR
+        csv_dir = os.path.join(pp.DATA_DIR, exp_name, "tej_csv")
+        df_dir = pp.TMP_DIR
+        trim_start_date = dt.date(2000, 1, 3)
+        trim_end_date = dt.date(2018, 3, 15)
 
-    # run
-    tej_csv_to_df(symbols, csv_dir, df_dir)
-    dataframe_to_xarray(
-        symbols,
-        df_dir,
-        trim_start_date,
-        trim_end_date,
-        pp.TAIEX_2005_MKT_CAP_NC,
-    )
+        # run
+        tej_csv_to_df(tw_symbols, csv_dir, df_dir)
+        dataframe_to_xarray(
+            tw_symbols, df_dir, trim_start_date, trim_end_date, pp.TAIEX_2005_MKT_CAP_NC
+        )
 
+    elif exp_name == "dissertation":
+        with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as tw_fin:
+            tw_symbols = json.load(tw_fin)
 
-def stocksp_cor15_tej_csv_to_xarray(
-    trim_start_date=dt.date(2000, 1, 3), trim_end_date=dt.date(2018, 3, 15)
-):
-    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
-        symbols = json.load(fin)
+        with open(pp.DJIA_2005_SYMBOL_JSON) as us_fin:
+            djia_symbols = json.load(us_fin)
 
-    csv_dir = os.path.join(pp.DATA_DIR, "tej_csv")
-    df_dir = pp.TMP_DIR
+        tw_csv_dir = os.path.join(pp.DATA_DIR, "tej_csv")
+        djia_csv_dir = os.path.join(pp.DATA_DIR, "yahoo_us_csv")
+        df_dir = pp.TMP_DIR
+        trim_start_date = dt.date(2000, 1, 3)
+        trim_end_date = dt.date(2018, 12, 31)
 
-    # run
-    tej_csv_to_df(symbols, csv_dir, df_dir)
-    dataframe_to_xarray(
-        symbols,
-        df_dir,
-        trim_start_date,
-        trim_end_date,
-        pp.TAIEX_2005_MKT_CAP_NC,
-    )
-
-
-def dissertation_tej_csv_to_xarray(
-    trim_start_date=dt.date(2000, 1, 3), trim_end_date=dt.date(2019, 12, 31)
-):
-    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
-        symbols = json.load(fin)
-
-    csv_dir = os.path.join(pp.DATA_DIR, "tej_csv")
-    df_dir = pp.TMP_DIR
-
-    # run
-    tej_csv_to_df(symbols, csv_dir, df_dir)
-    dataframe_to_xarray(
-        symbols,
-        df_dir,
-        trim_start_date,
-        trim_end_date,
-        pp.TAIEX_2005_MKT_CAP_NC,
-    )
+        # run
+        yahoo_us_to_df(djia_symbols, djia_csv_dir, df_dir)
+        dataframe_to_xarray(
+            djia_symbols, df_dir, trim_start_date, trim_end_date,
+            pp.DJIA_2005_NC
+        )
+        tej_csv_to_df(tw_symbols, tw_csv_dir, df_dir)
+        dataframe_to_xarray(
+            tw_symbols, df_dir, trim_start_date, trim_end_date,
+            pp.TAIEX_2005_MKT_CAP_NC
+        )
+    else:
+        raise ValueError("unknown exp_name:{}".format(exp_name))
 
 
-def symbol_statistics(start_date=dt.date(2005, 1, 1), end_date=dt.date(2014, 12, 31)):
+def symbol_statistics(exp_name):
     """
     the statistics of the return of the specified stocks
     """
@@ -231,96 +283,194 @@ def symbol_statistics(start_date=dt.date(2005, 1, 1), end_date=dt.date(2014, 12,
     import portfolio_programming.statistics.risk_adjusted as risk_adj
     import arch.bootstrap.multiple_comparison as arch_comp
 
-    symbols = json.load(
-        open(
-            os.path.join(pp.DATA_DIR, "TAIEX_20050103_50largest_listed_market_cap.json")
-        )
-    )
-    data_xarr = xr.open_dataarray(
-        os.path.join(
-            pp.DATA_DIR, "TAIEX_20050103_50largest_listed_market_cap_xarray.nc"
-        )
-    )
+    if exp_name == 'stocksp_cor15':
+        start_date = dt.date(2005, 1, 1)
+        end_date = dt.date(2014, 12, 31)
 
-    with open(
-        os.path.join(pp.TMP_DIR, "TAIEX_20050103_50largest_listed_market_cap_stat.csv"),
-        "w",
-    ) as csv_file:
-        fields = [
-            "rank",
-            "symbol",
-            "start_date",
-            "end_date",
-            "n_data",
-            "cum_roi",
-            "annual_roi",
-            "roi_mu",
-            "std",
-            "skew",
-            "ex_kurt",
-            "Sharpe",
-            "Sortino",
-            "JB",
-            "worst_ADF",
-            "SPA_c",
-        ]
+        with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as fin:
+            symbols = json.load(fin)
 
-        writer = csv.DictWriter(csv_file, fieldnames=fields)
-        writer.writeheader()
+        data_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
 
-        for sdx, symbol in enumerate(symbols):
-            rois = data_xarr.loc[start_date:end_date, symbol, "simple_roi"]
-            trans_dates = rois.get_index("trans_date")
-            n_roi = int(rois.count())
-            rois[0] = 0
-            cumulative_roi = float((1 + rois).prod() - 1)
-            annual_roi = float(np.power(cumulative_roi + 1, 1.0 / 10) - 1)
+        with open(
+                os.path.join(pp.TMP_DIR,
+                             "TAIEX_20050103_50largest_listed_market_cap_stat.csv"),
+                "w",
+        ) as csv_file:
+            fields = [
+                "rank",
+                "symbol",
+                "start_date",
+                "end_date",
+                "n_data",
+                "cum_roi",
+                "annual_roi",
+                "roi_mu",
+                "std",
+                "skew",
+                "ex_kurt",
+                "Sharpe",
+                "Sortino",
+                "JB",
+                "worst_ADF",
+                "SPA_c",
+            ]
 
-            sharpe = risk_adj.Sharpe(rois)
-            sortino = risk_adj.Sortino_full(rois)[0]
-            jb = spstats.jarque_bera(rois)[1]
+            writer = csv.DictWriter(csv_file, fieldnames=fields)
+            writer.writeheader()
 
-            # worse case of adf
-            adf_c = tsa_tools.adfuller(rois, regression="c")[1]
-            adf_ct = tsa_tools.adfuller(rois, regression="ct")[1]
-            adf_ctt = tsa_tools.adfuller(rois, regression="ctt")[1]
-            adf_nc = tsa_tools.adfuller(rois, regression="nc")[1]
-            adf = max(adf_c, adf_ct, adf_ctt, adf_nc)
+            for sdx, symbol in enumerate(symbols):
+                rois = data_xarr.loc[start_date:end_date, symbol, "simple_roi"]
+                trans_dates = rois.get_index("trans_date")
+                n_roi = int(rois.count())
+                rois[0] = 0
+                cumulative_roi = float((1 + rois).prod() - 1)
+                annual_roi = float(np.power(cumulative_roi + 1, 1.0 / 10) - 1)
 
-            spa_value = 0
-            for _ in range(5):
-                spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=5000)
-                spa.seed(np.random.randint(0, 2 ** 31 - 1))
-                spa.compute()
-                # preserve the worse p_value
-                if spa.pvalues[1] > spa_value:
-                    spa_value = spa.pvalues[1]
+                sharpe = risk_adj.Sharpe(rois)
+                sortino = risk_adj.Sortino_full(rois)[0]
+                jb = spstats.jarque_bera(rois)[1]
 
-            writer.writerow(
-                {
-                    "rank": sdx + 1,
-                    "symbol": symbol,
-                    "start_date": trans_dates[0].strftime("%Y-%m-%d"),
-                    "end_date": trans_dates[-1].strftime("%Y-%m-%d"),
-                    "n_data": n_roi,
-                    "cum_roi": cumulative_roi,
-                    "annual_roi": annual_roi,
-                    "roi_mu": float(rois.mean()),
-                    "std": float(rois.std(ddof=1)),
-                    "skew": spstats.skew(rois, bias=False),
-                    "ex_kurt": spstats.kurtosis(rois, bias=False),
-                    "Sharpe": sharpe,
-                    "Sortino": sortino,
-                    "JB": jb,
-                    "worst_ADF": adf,
-                    "SPA_c": spa_value,
-                }
-            )
-            print(
-                "[{}/{}] {}, cum_roi:{:.2%}".format(
-                    sdx + 1, len(symbols), symbol, cumulative_roi
+                # worse case of adf
+                adf_c = tsa_tools.adfuller(rois, regression="c")[1]
+                adf_ct = tsa_tools.adfuller(rois, regression="ct")[1]
+                adf_ctt = tsa_tools.adfuller(rois, regression="ctt")[1]
+                adf_nc = tsa_tools.adfuller(rois, regression="nc")[1]
+                adf = max(adf_c, adf_ct, adf_ctt, adf_nc)
+
+                spa_value = 0
+                for _ in range(5):
+                    spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=5000)
+                    spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                    spa.compute()
+                    # preserve the worse p_value
+                    if spa.pvalues[1] > spa_value:
+                        spa_value = spa.pvalues[1]
+
+                writer.writerow(
+                    {
+                        "rank": sdx + 1,
+                        "symbol": symbol,
+                        "start_date": trans_dates[0].strftime("%Y-%m-%d"),
+                        "end_date": trans_dates[-1].strftime("%Y-%m-%d"),
+                        "n_data": n_roi,
+                        "cum_roi": cumulative_roi,
+                        "annual_roi": annual_roi,
+                        "roi_mu": float(rois.mean()),
+                        "std": float(rois.std(ddof=1)),
+                        "skew": spstats.skew(rois, bias=False),
+                        "ex_kurt": spstats.kurtosis(rois, bias=False),
+                        "Sharpe": sharpe,
+                        "Sortino": sortino,
+                        "JB": jb,
+                        "worst_ADF": adf,
+                        "SPA_c": spa_value,
+                    }
                 )
-            )
+                print(
+                    "[{}/{}] {}, cum_roi:{:.2%}".format(
+                        sdx + 1, len(symbols), symbol, cumulative_roi
+                    )
+                )
+    elif exp_name == 'dissertation':
+        start_date = dt.date(2005, 1, 1)
+        end_date = dt.date(2018, 12, 31)
+
+        with open(pp.DJIA_2005_SYMBOL_JSON) as us_fin:
+            djia_symbols = json.load(us_fin)
+
+        djia_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
+        djia_stats_file = os.path.join(pp.TMP_DIR, "DJIA_2005_symbols_stat.csv")
+
+        with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as tw_fin:
+            tw_symbols = json.load(tw_fin)
+
+        tw_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+        tw_stats_file =  os.path.join(pp.TMP_DIR, "TAIEX_2005_market_cap_stat.csv")
+
+        for mkt, symbols, data_xarr, stat_file in zip(['djia', 'tw'],
+                                           [djia_symbols, tw_symbols],
+                                           [djia_xarr, tw_xarr],
+                                           [djia_stats_file, tw_stats_file]):
+
+            with open(stat_file, "w",) as csv_file:
+                fields = [
+                    "rank",
+                    "symbol",
+                    "start_date",
+                    "end_date",
+                    "n_data",
+                    "cum_roi",
+                    "annual_roi",
+                    "roi_mu",
+                    "std",
+                    "skew",
+                    "ex_kurt",
+                    "Sharpe",
+                    "Sortino",
+                    "JB",
+                    "worst_ADF",
+                    "SPA_c",
+                ]
+                writer = csv.DictWriter(csv_file, fieldnames=fields)
+                writer.writeheader()
+
+                for sdx, symbol in enumerate(symbols):
+                    rois = data_xarr.loc[start_date:end_date, symbol, "simple_roi"]
+                    trans_dates = rois.get_index("trans_date")
+                    n_roi = int(rois.count())
+                    rois[0] = 0
+                    cumulative_roi = float((1 + rois).prod() - 1)
+                    annual_roi = float(np.power(cumulative_roi + 1, 1.0 / 14) - 1)
+
+                    sharpe = risk_adj.Sharpe(rois)
+                    sortino = risk_adj.Sortino_full(rois)[0]
+                    jb = spstats.jarque_bera(rois)[1]
+
+                    # worse case of adf
+                    adf_c = tsa_tools.adfuller(rois, regression="c")[1]
+                    adf_ct = tsa_tools.adfuller(rois, regression="ct")[1]
+                    adf_ctt = tsa_tools.adfuller(rois, regression="ctt")[1]
+                    adf_nc = tsa_tools.adfuller(rois, regression="nc")[1]
+                    adf = max(adf_c, adf_ct, adf_ctt, adf_nc)
+
+                    spa_value = 0
+                    for _ in range(5):
+                        spa = arch_comp.SPA(rois.data, np.zeros(rois.size), reps=5000)
+                        spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                        spa.compute()
+                        # preserve the worse p_value
+                        if spa.pvalues[1] > spa_value:
+                            spa_value = spa.pvalues[1]
+
+                    writer.writerow(
+                        {
+                            "rank": sdx + 1,
+                            "symbol": symbol,
+                            "start_date": trans_dates[0].strftime("%Y-%m-%d"),
+                            "end_date": trans_dates[-1].strftime("%Y-%m-%d"),
+                            "n_data": n_roi,
+                            "cum_roi": cumulative_roi,
+                            "annual_roi": annual_roi,
+                            "roi_mu": float(rois.mean()),
+                            "std": float(rois.std(ddof=1)),
+                            "skew": spstats.skew(rois, bias=False),
+                            "ex_kurt": spstats.kurtosis(rois, bias=False),
+                            "Sharpe": sharpe,
+                            "Sortino": sortino,
+                            "JB": jb,
+                            "worst_ADF": adf,
+                            "SPA_c": spa_value,
+                        }
+                    )
+                    print(
+                        "[{}/{}] {}, cum_roi:{:.2%}".format(
+                            sdx + 1, len(symbols), symbol, cumulative_roi
+                        )
+                    )
+
+    else:
+        raise ValueError("unknown exp_name:{}".format(exp_name))
 
 
 def plot_fft(symbol, start_date=dt.date(2005, 1, 1), end_date=dt.date(2017, 12, 31)):
@@ -495,7 +645,7 @@ def plot_hht(symbol, start_date=dt.date(2005, 1, 1), end_date=dt.date(2017, 12, 
 
 
 def plot_wavelet(
-    symbol, start_date=dt.date(2017, 1, 1), end_date=dt.date(2017, 12, 31)
+        symbol, start_date=dt.date(2017, 1, 1), end_date=dt.date(2017, 12, 31)
 ):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
@@ -566,15 +716,11 @@ def plot_wavelet(
     plt.show()
 
 
-if __name__ == "__main__":
-    # import json
-    #
-    # symbols = json.load(open(os.path.join(pp.DATA_DIR,
-    #                             'TAIEX_20050103_50largest_listed_market_cap.json')))
-    # for symbol in symbols:
-    #     plot_fft(symbol)
-    # plot_wavelet("2330")
+def plot_group_line_chart(symbols, grp_name, start_date, end_date):
+    pass
 
+
+if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -586,7 +732,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    print("current experiment name: {}".format(pp.EXP_NAME))
     if args.csv:
-        run_tej_csv_to_xarray()
+        run_tej_csv_to_xarray(pp.EXP_NAME)
     elif args.stat:
-        symbol_statistics()
+        symbol_statistics(pp.EXP_NAME)

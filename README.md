@@ -12,6 +12,7 @@ mathematical programming of portfolio
     - pyomo
     - cython
     - arch (pip install git+https://github.com/bashtage/arch.git)
+    - netCDF4 (for xarray)
     
 + optional packages:
     - pytorch

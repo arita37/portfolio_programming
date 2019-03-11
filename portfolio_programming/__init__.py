@@ -28,7 +28,7 @@ else:
 
 
 if EXP_NAME == "stocksp_cor15":
-    DATA_DIR = os.path.join(PROJECT_DIR, "data")
+    DATA_DIR = os.path.join(PROJECT_DIR, "data", EXP_NAME)
 
     # candidate_symbol sets
     TAIEX_2005_MKT_CAP_50_SYMBOL_JSON = os.path.join(
@@ -75,7 +75,7 @@ if EXP_NAME == "stocksp_cor15":
     SCENARIO_END_DATE = dt.date(2017, 12, 29)
 
 if EXP_NAME == "dissertation":
-    DATA_DIR = os.path.join(PROJECT_DIR, "data")
+    DATA_DIR = os.path.join(PROJECT_DIR, "data", EXP_NAME)
 
     # candidate_symbol sets
     TAIEX_2005_MKT_CAP_50_SYMBOL_JSON = os.path.join(
