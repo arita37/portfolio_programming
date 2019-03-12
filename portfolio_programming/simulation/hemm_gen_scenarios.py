@@ -538,14 +538,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
     if args.exp_name not in pp.valid_exp_name():
         raise ValueError('unknown exp_name:{}'.format(args.exp_name))
-
-    group_symbols = pp.GROUP_SYMBOLS
-    if args.group_name not in group_symbols.keys():
-        raise ValueError('unknown group_name: {}'.format(args.group_name))
-
+    
     if args.parallel:
         print("generating scenario in parallel mode")
         hemm_dispatch_scenario_names()
@@ -553,6 +548,11 @@ if __name__ == "__main__":
         merge_scenario()
     else:
         print("generating scenario in single mode")
+
+        group_symbols = pp.GROUP_SYMBOLS
+        if args.group_name not in group_symbols.keys():
+            raise ValueError('unknown group_name: {}'.format(args.group_name))
+
         hemm_generating_scenarios_xarr(
             args.group_name,
             len(group_symbols[args.group_name]),
