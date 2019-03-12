@@ -16,6 +16,8 @@ import portfolio_programming as pp
 from portfolio_programming.statistics.risk_adjusted import (
     Sharpe, Sortino_full, Sortino_partial)
 
+from portfolio_programming.simulation.spsp_base import SPSP_Base
+
 
 def spsp_log_return(candidate_symbols,
                     setting,
@@ -157,3 +159,127 @@ def spsp_log_return(candidate_symbols,
     opt = SolverFactory(solver)
     results = opt.solve(instance)
     instance.solutions.load_from(results)
+
+    # buy and sell amounts
+    actions = ['buy', 'sell', 'chosen']
+    amounts = xr.DataArray(
+        [(instance.buy_amounts[mdx].value,
+          instance.sell_amounts[mdx].value,
+          -1)
+         for mdx in range(n_symbol)],
+        dims=('symbol', "action"),
+        coords=(candidate_symbols, actions),
+    )
+
+    if setting == "general":
+        chosens = [instance.chosen[mdx].value for mdx in range(n_symbol)]
+    elif setting in ("compact", "compact_mu0"):
+        chosens = [1 for _ in range(n_symbol)]
+
+    amounts.loc[candidate_symbols, 'chosen'] = chosens
+
+    return {
+        "amounts": amounts,
+    }
+
+
+class SPSP_LogRet(SPSP_Base):
+    def __init__(self,
+                 setting,
+                 group_name,
+                 candidate_symbols,
+                 max_portfolio_size,
+                 risk_rois,
+                 risk_free_rois,
+                 initial_risk_wealth,
+                 initial_risk_free_wealth,
+                 buy_trans_fee=pp.BUY_TRANS_FEE,
+                 sell_trans_fee=pp.SELL_TRANS_FEE,
+                 start_date=pp.EXP_START_DATE,
+                 end_date=pp.EXP_END_DATE,
+                 rolling_window_size=200,
+                 n_scenario=1000,
+                 scenario_set_idx=1,
+                 print_interval=10):
+        """
+        stage-wise portfolio stochastic programming max log return model
+
+        Parameters:
+        -------------
+        setting : string,
+            {"compact", "general"}
+
+        group_name: string,
+            Name of the portfolio
+
+        candidate_symbols : [str],
+            The size of the candidate set is n_stock.
+
+        max_portfolio_size : positive integer
+            The max number of stock we can invest in the portfolio.
+            The model is the mixed integer linear programming, however,
+            if the max_portfolio_size == n_stock, it degenerates to the
+            linear programming.
+
+        risk_rois : xarray.DataArray,
+            dim:(trans_date, symbol),
+            shape: (n_period, n_stock)
+            The return of all stocks in the given intervals.
+            The n_exp_period should be subset of the n_period.
+
+        risk_free_rois : xarray.DataArray,
+            dim: (trans_date),
+            shape: (n_exp_period, )
+            The return of risk-free asset, usually all zeros.
+
+        initial_risk_wealth : xarray.DataArray, shape: (n_stock,)
+            The invested wealth of the stocks in the candidate set.
+
+        initial_risk_free_wealth : float
+            The initial wealth in the bank or the risky-free asset.
+
+        buy_trans_fee : float
+            The fee usually not change in the simulation.
+
+        sell_trans_fee : float,
+             The fee usually not change in the simulation.
+
+        start_date : datetime.date
+            The first trading date (not the calendar day) of simulation.
+
+        end_date : datetime.date
+             The last trading date (not the calendar day) of simulation.
+
+        rolling_window_size : positive integer
+            The historical trading days for estimating statistics.
+
+        n_scenario : positive integer
+            The number of scenarios to generate.
+
+        scenario_set_idx :  positive integer
+            The index number of scenario set.
+
+        print_interval : positive integer
+
+        Data
+        --------------
+        decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
+        """
+        super(SPSP_LogRet, self).__init__(
+            setting,
+            group_name,
+            candidate_symbols,
+            max_portfolio_size,
+            risk_rois,
+            risk_free_rois,
+            initial_risk_wealth,
+            initial_risk_free_wealth,
+            buy_trans_fee,
+            sell_trans_fee,
+            start_date,
+            end_date,
+            rolling_window_size,
+            n_scenario,
+            scenario_set_idx,
+            print_interval
+        )

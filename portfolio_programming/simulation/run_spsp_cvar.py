@@ -30,7 +30,7 @@ def run_SPSP_CVaR(exp_name, setting, group_name, max_portfolio_size,
         risky_roi_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
 
     symbols = pp.GROUP_SYMBOLS[group_name]
-    if setting in ('compact', ):
+    if setting in ('compact',):
         candidate_symbols = symbols[:max_portfolio_size]
     else:
         candidate_symbols = symbols
@@ -81,7 +81,7 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     start_date, end_date = dt.date(2005, 1, 3), dt.date(2014, 12, 31)
     name = "report_SPSP_CVaR_whole_{}_{}_{}.nc".format(
         setting, start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d"))
-   
+
     # read report file
     xarr = xr.open_dataarray(open(os.path.join(pp.DATA_DIR, name), 'rb'))
 
@@ -167,11 +167,11 @@ def plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
 
     plt.show()
 
+
 def plot_yearly_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     # verify setting
     if setting not in ("compact", "general"):
         raise ValueError("unknown setting: {}".format(setting))
-
 
     start_date, end_date = dt.date(2005, 1, 3), dt.date(2017, 12, 29)
     name = "report_SPSP_CVaR_yearly_{}_{}_{}.nc".format(
@@ -208,10 +208,10 @@ def plot_yearly_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     for start, end in years:
         # figure size in inches
         fig = plt.figure(figsize=(64, 48), facecolor='white')
-        fig.suptitle('TAIEX_20050103_50largest_listed_market_cap {} {}-{}'.format(
-            setting, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")),
+        fig.suptitle(
+            'TAIEX_20050103_50largest_listed_market_cap {} {}-{}'.format(
+                setting, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")),
             fontsize=20)
-
 
         xlim = (5, 50)
         ylim = (60, 240)
@@ -303,19 +303,35 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        "-e",
+        "--exp_name",
+        type=str,
+        default="dissertation",
+        choices=["dissertation", "stocksp_cor15"],
+        help="name of the experiment",
+    )
+
     parser.add_argument("--setting", type=str,
-                        choices=("compact", "general", "compact_mu0"),
+                        choices=("compact", "general"),
                         help="SPSP setting")
 
-    parser.add_argument("--year", type=int,
-                        choices=range(2005, 2017 + 1),
+    parser.add_argument(
+        "-g",
+        "--group_name",
+        type=str,
+        help="name of the portfolio",
+    )
+
+    parser.add_argument("--yearly", type=int,
+                        choices=range(2005, 2018 + 1),
                         help="yearly experiments")
 
     parser.add_argument("--symbol", type=str,
-                       help="target symbol")
+                        help="target symbol")
 
     parser.add_argument("-M", "--max_portfolio_size", type=int,
-                        choices=list(range(5, 55, 5)) + [1,],
+                        choices=list(range(5, 55, 5)) + [1, ],
                         help="max_portfolio_size")
 
     parser.add_argument("-w", "--rolling_window_size", type=int,
@@ -327,14 +343,14 @@ if __name__ == '__main__':
                                  for v in range(50, 100, 5)],
                         help="confidence level of CVaR")
 
-    parser.add_argument("--scenario_set_idx", type=int,
+    parser.add_argument("--sdx", type=int,
                         choices=range(1, 4),
                         default=1,
                         help="pre-generated scenario set index.")
 
     parser.add_argument("-s", "--n_scenario", type=int,
                         choices=[200, 1000],
-                        default=200,
+                        default=1000,
                         help="number of scenario")
 
     args = parser.parse_args()
@@ -345,17 +361,20 @@ if __name__ == '__main__':
         candidate_symbols = [args.symbol, ]
     else:
         candidate_symbols = json.load(
-           open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
+            open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
 
-    if not args.year:
-        run_SPSP_CVaR(args.setting,
-                      args.scenario_set_idx,
-                      '20050103', '20141231',
-                      candidate_symbols,
-                      args.max_portfolio_size,
-                      args.rolling_window_size,
-                      float(args.alpha),
-                      args.n_scenario)
+    if not args.yearly:
+        run_SPSP_CVaR(
+            args.exp_name,
+            args.setting,
+            args.group_name,
+            args.max_portfolio_size,
+            args.rolling_window_size,
+            args.n_scenario,
+            float(args.alpha),
+            args.sdx,
+            '20050103', '20181228',
+            )
     else:
         years = {
             2005: (dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
@@ -373,12 +392,15 @@ if __name__ == '__main__':
             2017: (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
         }
 
-        run_SPSP_CVaR(args.setting,
-                      args.scenario_set_idx,
-                      years[args.year][0],
-                      years[args.year][1],
-                      candidate_symbols,
-                      args.max_portfolio_size,
-                      args.rolling_window_size,
-                      float(args.alpha),
-                      args.n_scenario)
+        run_SPSP_CVaR(
+            args.exp_name,
+            args.setting,
+            args.group_name,
+            args.max_portfolio_size,
+            args.rolling_window_size,
+            args.n_scenario,
+            float(args.alpha),
+            args.sdx,
+            years[args.year][0],
+            years[args.year][1]
+        )

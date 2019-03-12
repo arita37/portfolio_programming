@@ -24,6 +24,8 @@ import portfolio_programming as pp
 from portfolio_programming.statistics.risk_adjusted import (
     Sharpe, Sortino_full, Sortino_partial)
 
+from portfolio_programming.simulation.spsp_base import (ValidMixin, SPSP_Base)
+
 def spsp_cvar(candidate_symbols,
               str setting,
               int max_portfolio_size,
@@ -308,89 +310,7 @@ def spsp_cvar(candidate_symbols,
     }
 
 
-class ValidMixin(object):
-    @staticmethod
-    def valid_range_value(name, value, lower_bound, upper_bound):
-        """
-        Parameter:
-        -------------
-        name: string
-            name of the value
-        value : float or integer
-        upper bound : float or integer
-        lower_bound : float or integer
-        """
-        if not lower_bound <= value <= upper_bound:
-            raise ValueError("The {}' value {} not in the given bound ({}, "
-                             "{}).".format(name, value, upper_bound,
-                                           lower_bound))
-
-    @staticmethod
-    def valid_nonnegative_value(name, value):
-        """
-        Parameter:
-        -------------
-        name: string
-            name of the value
-        value : integer or float
-        """
-        if value < 0:
-            raise ValueError("The {}'s value {} should be nonnegative.".format(
-                name, value))
-
-    @staticmethod
-    def valid_positive_value(name, value):
-        """
-        Parameter:
-        -------------
-        name: string
-            name of the value
-
-        value : integer or float
-        """
-        if value <= 0:
-            raise ValueError("The {}'s value {} should be positive.".format(
-                name, value))
-
-    @staticmethod
-    def valid_nonnegative_list(name, values):
-        """
-        Parameter:
-        -------------
-        name: string
-            name of the value
-        value : list[int] or list[float]
-        """
-        arr = np.asarray(values)
-        if np.any(arr < 0):
-            raise ValueError("The {} contain negative values.".format(
-                name, arr))
-
-    @staticmethod
-    def valid_dimension(dim1_name, dim1, dim2):
-        """
-        Parameters:
-        -------------
-        dim1, dim2: positive integer
-        dim1_name, str
-        """
-        if dim1 != dim2:
-            raise ValueError("mismatch {} dimension: {}, {}".format(
-                dim1_name, dim1, dim2))
-
-    @staticmethod
-    def valid_trans_date(start_date, end_date):
-        """
-        Parameters:
-        --------------
-        start_date, end_date: datetime.date
-        """
-        if start_date >= end_date:
-            raise ValueError("wrong transaction interval, start:{}, "
-                             "end:{})".format(start_date, end_date))
-
-
-class SPSP_CVaR(ValidMixin):
+class SPSP_CVaR(SPSP_Base):
     def __init__(self,
                  str setting,
                  str group_name,
@@ -410,7 +330,338 @@ class SPSP_CVaR(ValidMixin):
                  int scenario_set_idx=1,
                  int print_interval=10):
         """
-        stagewise portfolio stochastic programming  model
+        stage-wise portfolio stochastic programming  model
+
+        Parameters:
+        -------------
+        setting : string,
+            {"compact", "general"}
+
+        group_name: string,
+            Name of the portfolio
+
+        candidate_symbols : [str],
+            The size of the candidate set is n_stock.
+
+        max_portfolio_size : positive integer
+            The max number of stock we can invest in the portfolio.
+            The model is the mixed integer linear programming, however,
+            if the max_portfolio_size == n_stock, it degenerates to the
+            linear programming.
+
+        risk_rois : xarray.DataArray,
+            dim:(trans_date, symbol),
+            shape: (n_period, n_stock)
+            The return of all stocks in the given intervals.
+            The n_exp_period should be subset of the n_period.
+
+        risk_free_rois : xarray.DataArray,
+            dim: (trans_date),
+            shape: (n_exp_period, )
+            The return of risk-free asset, usually all zeros.
+
+        initial_risk_wealth : xarray.DataArray, shape: (n_stock,)
+            The invested wealth of the stocks in the candidate set.
+
+        initial_risk_free_wealth : float
+            The initial wealth in the bank or the risky-free asset.
+
+        buy_trans_fee : float
+            The fee usually not change in the simulation.
+
+        sell_trans_fee : float,
+             The fee usually not change in the simulation.
+
+        start_date : datetime.date
+            The first trading date (not the calendar day) of simulation.
+
+        end_date : datetime.date
+             The last trading date (not the calendar day) of simulation.
+
+        rolling_window_size : positive integer
+            The historical trading days for estimating statistics.
+
+        n_scenario : positive integer
+            The number of scenarios to generate.
+
+        alpha : float
+            The risk-averse level.
+
+        scenario_set_idx :  positive integer
+            The index number of scenario set.
+
+        print_interval : positive integer
+
+
+        Data
+        --------------
+        decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
+        estimated risk_xarr, xarray.DataArray, shape(n_exp_period, 6)
+
+        """
+        super(SPSP_CVaR, self).__init__(
+            setting,
+            group_name,
+            candidate_symbols,
+            max_portfolio_size,
+            risk_rois,
+            risk_free_rois,
+            initial_risk_wealth,
+            initial_risk_free_wealth,
+            buy_trans_fee,
+            sell_trans_fee,
+            start_date,
+            end_date,
+            rolling_window_size,
+            n_scenario,
+            scenario_set_idx,
+            print_interval
+        )
+
+        # verify alpha
+        self.valid_range_value("alpha", alpha, 0, 1)
+        self.alpha = float(alpha)
+
+        # estimated risks, shape(n_exp_period, 6)
+        risks = ['CVaR', 'VaR', 'EV_CVaR', 'EV_VaR', 'EEV_CVaR', 'VSS']
+        self.estimated_risk_xarr = xr.DataArray(
+            np.zeros((self.n_exp_period, len(risks))),
+            dims=('trans_date', 'risk'),
+            coords=(
+                self.exp_trans_dates,
+                risks
+            )
+        )
+
+    def get_current_buy_sell_amounts(self, *args, **kwargs):
+        """
+        the buy amounts and sell amounts of current trans_date are determined
+        by the historical data.
+
+        Returns:
+        --------------
+        results: dict
+            "amounts": xarray.DataArray, shape:(n_symbol, 3),
+                coords: (symbol, ('buy', 'sell','chosen'))
+            "estimated_var": float
+            "estimated_cvar": float
+            "estimated_ev_var": float
+            "estimated_ev_cvar": float
+            "estimated_eev_cvar": float
+            "vss": vss, float
+        """
+        # current exp_period index
+        trans_date = kwargs['trans_date']
+        results = spsp_cvar(
+            self.candidate_symbols,
+            self.setting,
+            self.max_portfolio_size,
+            self.exp_risk_rois.loc[trans_date, :].values,
+            self.risk_free_rois.loc[trans_date],
+            kwargs['allocated_risk_wealth'].values,
+            kwargs['allocated_risk_free_wealth'],
+            self.buy_trans_fee,
+            self.sell_trans_fee,
+            self.alpha,
+            kwargs['estimated_risk_rois'].values,
+            kwargs['estimated_risk_free_roi'],
+            self.n_scenario,
+            pp.PROG_SOLVER,
+        )
+        return results
+
+    def get_simulation_name(self, *args, **kwargs):
+        """
+        Returns:
+        ------------
+        string
+           simulation name of this experiment
+        """
+
+        name = (
+            "SPSP_CVaR_{}_{}_Mc{}_M{}_h{}_s{}_a{:.2f}_sdx{}_{}_{}".format(
+                self.setting,
+                self.group_name,
+                self.n_symbol,
+                self.max_portfolio_size,
+                self.rolling_window_size,
+                self.n_scenario,
+                self.alpha,
+                self.scenario_set_idx,
+                self.exp_start_date.strftime("%Y%m%d"),
+                self.exp_end_date.strftime("%Y%m%d"),
+            )
+        )
+        return name
+
+    def run(self):
+        """
+        run the simulation
+
+        Returns:
+        ----------------
+        standard report
+        """
+        t0 = time()
+
+        # get simulation name
+        simulation_name = self.get_simulation_name()
+
+        # initial wealth of each stock in the portfolio
+        allocated_risk_wealth = self.initial_risk_wealth
+        allocated_risk_free_wealth = self.initial_risk_free_wealth
+        cum_trans_fee_loss = 0
+
+        for tdx in range(self.n_exp_period):
+            t1 = time()
+            curr_date = self.exp_trans_dates[tdx]
+
+            estimated_risk_rois = self.get_estimated_risk_rois(
+                trans_date=curr_date)
+
+            # estimating next period risk_free roi, return float
+            estimated_risk_free_roi = self.get_estimated_risk_free_roi()
+
+            # determining the buy and sell amounts
+            pg_results = self.get_current_buy_sell_amounts(
+                trans_date=curr_date,
+                estimated_risk_rois=estimated_risk_rois,
+                estimated_risk_free_roi=estimated_risk_free_roi,
+                allocated_risk_wealth=allocated_risk_wealth,
+                allocated_risk_free_wealth=allocated_risk_free_wealth
+            )
+
+            # amount_xarr, dims=('symbol', "amount"),
+            amount_xarr = pg_results["amounts"]
+            for act in ('buy', 'sell', 'chosen'):
+                # the symbol does not contain risk_free symbol
+                self.decision_xarr.loc[curr_date, self.candidate_symbols, act] \
+                    = amount_xarr.loc[self.candidate_symbols, act]
+
+            # # record the transaction loss
+            buy_sum = amount_xarr.loc[:, 'buy'].sum()
+            sell_sum = amount_xarr.loc[:, 'sell'].sum()
+            cum_trans_fee_loss += (
+                    buy_sum * self.buy_trans_fee +
+                    sell_sum * self.sell_trans_fee
+            )
+
+            # buy and sell amounts consider the transaction cost
+            total_buy = (buy_sum * (1 + self.buy_trans_fee))
+            total_sell = (sell_sum * (1 - self.sell_trans_fee))
+
+            # capital allocation
+            self.decision_xarr.loc[curr_date, self.candidate_symbols, 'wealth'] \
+                = (
+                    (1 + self.exp_risk_rois.loc[curr_date, self.candidate_symbols]) *
+                    allocated_risk_wealth +
+                    self.decision_xarr.loc[curr_date,
+                                           self.candidate_symbols, 'buy'] -
+                    self.decision_xarr.loc[curr_date,
+                                           self.candidate_symbols, 'sell']
+            )
+            self.decision_xarr.loc[curr_date, self.risk_free_symbol, 'wealth'] = (
+                    (1 + self.exp_risk_free_rois.loc[curr_date]) *
+                    allocated_risk_free_wealth -
+                    total_buy + total_sell
+            )
+
+            # update wealth
+            allocated_risk_wealth = self.decision_xarr.loc[
+                curr_date, self.candidate_symbols, 'wealth']
+            allocated_risk_free_wealth = self.decision_xarr.loc[
+                curr_date, self.risk_free_symbol, 'wealth']
+
+            # record risks
+            for col in ("VaR", "CVaR", "EV_VaR", "EV_CVaR", "EEV_CVaR", "VSS"):
+                self.estimated_risk_xarr.loc[curr_date, col] = pg_results[col]
+
+            # record chosen symbols
+            if tdx % self.print_interval == 0:
+                logging.info("{} [{}/{}] {} "
+                             "wealth:{:.2f}, {:.3f} secs".format(
+                    simulation_name,
+                    tdx + 1,
+                    self.n_exp_period,
+                    curr_date.strftime("%Y%m%d"),
+                    float(self.decision_xarr.loc[curr_date, :, 'wealth'].sum()),
+                    time() - t1)
+                )
+
+        # end of simulation, computing statistics
+        edx = self.n_exp_period - 1
+        initial_wealth = (
+                self.initial_risk_wealth.sum() + self.initial_risk_free_wealth)
+        final_wealth = self.decision_xarr.loc[self.exp_end_date, :,
+                       'wealth'].sum()
+
+        # get reports
+        reports = self.get_performance_report(
+            simulation_name,
+            self.group_name,
+            self.candidate_symbols,
+            self.risk_free_symbol,
+            self.setting,
+            self.max_portfolio_size,
+            self.exp_start_date,
+            self.exp_end_date,
+            self.n_exp_period,
+            self.buy_trans_fee,
+            self.sell_trans_fee,
+            float(initial_wealth),
+            float(final_wealth),
+            float(cum_trans_fee_loss),
+            self.rolling_window_size,
+            self.n_scenario,
+            self.alpha,
+            self.decision_xarr,
+            self.estimated_risk_xarr
+        )
+
+        # add simulation time
+        reports['simulation_time'] = time() - t0
+
+        # write report
+        if not os.path.exists(pp.REPORT_DIR):
+            os.makedirs(pp.REPORT_DIR)
+
+        report_path = os.path.join(pp.REPORT_DIR,
+                                   "report_{}.pkl".format(simulation_name))
+
+        with open(report_path, 'wb') as fout:
+            pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
+
+        print("{}-{} {} OK, {:.4f} secs".format(
+            platform.node(),
+            os.getpid(),
+            simulation_name,
+            time() - t0)
+        )
+
+        return reports
+
+
+class SPSP_CVaR_Direct(ValidMixin):
+    def __init__(self,
+                 str setting,
+                 str group_name,
+                 candidate_symbols,
+                 int max_portfolio_size,
+                 risk_rois,
+                 risk_free_rois,
+                 initial_risk_wealth,
+                 double initial_risk_free_wealth,
+                 double buy_trans_fee=pp.BUY_TRANS_FEE,
+                 double sell_trans_fee=pp.SELL_TRANS_FEE,
+                 start_date=pp.EXP_START_DATE,
+                 end_date=pp.EXP_END_DATE,
+                 int rolling_window_size=200,
+                 int n_scenario=200,
+                 double alpha=0.05,
+                 int scenario_set_idx=1,
+                 int print_interval=10):
+        """
+        stage-wise portfolio stochastic programming  model
 
         Parameters:
         -------------
@@ -499,11 +750,15 @@ class SPSP_CVaR(ValidMixin):
                 max_portfolio_size != self.n_symbol):
             raise (ValueError(
                 "The max portfolio size {} must be the same "
-                "as the number of symbols {}".format(
+                "as the number of symbols {} in compact setting".format(
                     max_portfolio_size, self.n_symbol)))
         self.setting = setting
 
+        # verify group name
+        if group_name not in pp.GROUP_SYMBOLS.keys():
+            raise ValueError('unknown group name:{}'.format(group_name))
         self.group_name = group_name
+
         # verify max_portfolio_size
         self.valid_nonnegative_value("max_portfolio_size", max_portfolio_size)
         self.max_portfolio_size = max_portfolio_size
@@ -541,7 +796,7 @@ class SPSP_CVaR(ValidMixin):
         # note that .loc() will contain the end_date element
         self.valid_trans_date(start_date, end_date)
 
-        # truncate rois
+        # truncate rois to experiment interval
         self.exp_risk_rois = risk_rois.loc[start_date:end_date]
         self.exp_risk_free_rois = risk_free_rois.loc[
                                   start_date:end_date]
@@ -942,7 +1197,7 @@ class SPSP_CVaR(ValidMixin):
 
         # write report
         if not os.path.exists(pp.REPORT_DIR):
-            os.mkdirs(pp.REPORT_DIR)
+            os.makedirs(pp.REPORT_DIR)
 
         report_path = os.path.join(pp.REPORT_DIR,
                                    "report_{}.pkl".format(simulation_name))
