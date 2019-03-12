@@ -289,13 +289,13 @@ def _hemm_all_scenario_names(exp_name):
         }
 
 
-def hemm_checking_existed_scenario_names(scenario_set_dir=None):
+def hemm_checking_existed_scenario_names(exp_name, scenario_set_dir=None):
     """
     return unfinished experiment parameters.
     """
     if scenario_set_dir is None:
         scenario_set_dir = pp.SCENARIO_SET_DIR
-    all_names = _hemm_all_scenario_names()
+    all_names = _hemm_all_scenario_names(exp_name)
 
     os.chdir(scenario_set_dir)
     existed_names = glob.glob("*.nc")
@@ -306,12 +306,13 @@ def hemm_checking_existed_scenario_names(scenario_set_dir=None):
     return all_names
 
 
-def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
+def hemm_dispatch_scenario_names(exp_name, scenario_set_dir=pp.SCENARIO_SET_DIR):
     """
     ipyparalllel load balance view parallel processing
 
     """
-    unfinished_names = hemm_checking_existed_scenario_names(scenario_set_dir)
+    unfinished_names = hemm_checking_existed_scenario_names(exp_name,
+                                                            scenario_set_dir)
     print("Unfinished scenario: {}".format(len(unfinished_names)))
     params = unfinished_names.values()
 
@@ -540,10 +541,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.exp_name not in pp.valid_exp_name():
         raise ValueError('unknown exp_name:{}'.format(args.exp_name))
-    
+
     if args.parallel:
         print("generating scenario in parallel mode")
-        hemm_dispatch_scenario_names()
+        hemm_dispatch_scenario_names(args.exp_name)
     elif args.merge:
         merge_scenario()
     else:
