@@ -8,7 +8,6 @@ https://github.com/ipython/ipyparallel/blob/master/ipyparallel/client/asyncresul
 
 import datetime as dt
 import glob
-import json
 import logging
 import os
 import platform
@@ -27,15 +26,15 @@ from portfolio_programming.sampling.moment_matching import (
 
 
 def hemm_generating_scenarios_xarr(
-    group_name,
-    n_symbol,
-    rolling_window_size,
-    n_scenario,
-    scenario_set_idx,
-    scenario_start_date,
-    scenario_end_date,
-    retry_cnt=5,
-    print_interval=10,
+        group_name,
+        n_symbol,
+        rolling_window_size,
+        n_scenario,
+        scenario_set_idx,
+        scenario_start_date,
+        scenario_end_date,
+        retry_cnt=5,
+        print_interval=10,
 ):
     """
     generating scenarios xarray using Heuristic moment matching
@@ -99,7 +98,7 @@ def hemm_generating_scenarios_xarr(
     if market == 'TW':
         asset_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
 
-    elif market =='US':
+    elif market == 'US':
         asset_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
     else:
         raise ValueError('unknown market: {}'.format(market))
@@ -110,7 +109,7 @@ def hemm_generating_scenarios_xarr(
     # experiment trans_dates
     sc_start_idx = trans_dates.get_loc(scenario_start_date)
     sc_end_idx = trans_dates.get_loc(scenario_end_date)
-    sc_trans_dates = trans_dates[sc_start_idx : sc_end_idx + 1]
+    sc_trans_dates = trans_dates[sc_start_idx: sc_end_idx + 1]
     n_sc_period = len(sc_trans_dates)
 
     # estimating moments and correlation matrix
@@ -244,7 +243,7 @@ def _hemm_all_scenario_names(exp_name):
         e_date = pp.SCENARIO_END_DATE
         n_symbols = range(5, 50, 5)
         window_sizes = range(60, 240 + 10, 10)
-        n_scenarios = [200,]
+        n_scenarios = [200, ]
 
         # dict comprehension
         # key: file_name, value: parameters
@@ -266,7 +265,7 @@ def _hemm_all_scenario_names(exp_name):
         }
 
     elif exp_name == 'dissertation':
-        set_indices = (1, )
+        set_indices = (1,)
         s_date = pp.SCENARIO_START_DATE
         e_date = pp.SCENARIO_END_DATE
         window_sizes = range(50, 240 + 10, 10)
@@ -288,7 +287,6 @@ def _hemm_all_scenario_names(exp_name):
             for h in window_sizes
             for s in n_scenarios
         }
-
 
 
 def hemm_checking_existed_scenario_names(scenario_set_dir=None):
@@ -345,7 +343,8 @@ def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     try:
         #  ipyparallel.client.asyncresult.AsyncMapResult
         ar = lbv.map_async(
-            lambda x: portfolio_programming.simulation.hemm_gen_scenarios.hemm_generating_scenarios_xarr(
+            lambda
+                x: portfolio_programming.simulation.hemm_gen_scenarios.hemm_generating_scenarios_xarr(
                 *x
             ),
             params,
@@ -382,10 +381,10 @@ def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
 
 
 def merge_scenario(
-    s_date1=dt.date(2005, 1, 3),
-    e_date1=dt.date(2014, 12, 31),
-    s_date2=dt.date(2015, 1, 5),
-    e_date2=dt.date(2017, 12, 29),
+        s_date1=dt.date(2005, 1, 3),
+        e_date1=dt.date(2014, 12, 31),
+        s_date2=dt.date(2015, 1, 5),
+        e_date2=dt.date(2017, 12, 29),
 ):
     """
     SCENARIO_NAME_FORMAT = "TAIEX_2005_largested_market_cap_" \
@@ -463,7 +462,8 @@ def merge_scenario(
                     concat_xarr = xr.concat([xarr1, xarr2], dim="trans_date")
                     concat_xarr.to_netcdf(scenario_path)
                     logging.info(
-                        "concat scenario {} and {} to {}".format(nc1, nc2, concat_nc)
+                        "concat scenario {} and {} to {}".format(nc1, nc2,
+                                                                 concat_nc)
                     )
                     merge_count += 1
 
