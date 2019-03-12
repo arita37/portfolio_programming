@@ -55,7 +55,6 @@ if EXP_NAME == "stocksp_cor15":
     # SCENARIO_SET_DIR = TMP_DIR
     SCENARIO_SET_DIR = os.path.join(DATA_DIR, "scenario")
     SCENARIO_NAME_FORMAT = (
-        "{market}_"
         "{group_name}_"
         "Mc{n_symbol}_"
         "h{rolling_window_size}_"
@@ -66,8 +65,7 @@ if EXP_NAME == "stocksp_cor15":
     )
 
     SYMBOL_SCENARIO_NAME_FORMAT = (
-        "{market}_"
-        "{group_id}_"
+        "{group_name}_"
         "sdx{sdx}_"
         "{scenario_start_date}_"
         "{scenario_end_date}_"
@@ -109,7 +107,6 @@ if EXP_NAME == "dissertation":
     # SCENARIO_SET_DIR = TMP_DIR
     SCENARIO_SET_DIR = os.path.join(DATA_DIR, "scenario")
     SCENARIO_NAME_FORMAT = (
-        "{market}_"
         "{group_name}_"
         "Mc{n_symbol}_"
         "h{rolling_window_size}_"
@@ -122,9 +119,12 @@ if EXP_NAME == "dissertation":
     tw_symbols = json.load(open(TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
     us_symbols = json.load(open(DJIA_2005_SYMBOL_JSON))
     GROUP_SYMBOLS = {
-        '{}_G{}'.format(mkt, idx+1) : symbols[sdx:sdx+5]
+        '{}G{}'.format(mkt, idx+1) : symbols[sdx:sdx+5]
         for mkt, symbols in zip(['TW', 'US'], [tw_symbols, us_symbols])
         for idx, sdx in enumerate(range(0, 30, 5))
     }
     SCENARIO_START_DATE = dt.date(2005, 1, 3)
-    SCENARIO_END_DATE = dt.date(2018, 12, 31)
+    SCENARIO_END_DATE = dt.date(2018, 12, 28)
+
+def valid_exp_name():
+    return ['dissertation', 'stocksp_cor15']

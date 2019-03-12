@@ -27,14 +27,13 @@ from portfolio_programming.sampling.moment_matching import (
 
 
 def hemm_generating_scenarios_xarr(
-    market,
     group_name,
-    symbols,
+    n_symbol,
+    rolling_window_size,
+    n_scenario,
     scenario_set_idx,
     scenario_start_date,
     scenario_end_date,
-    rolling_window_size,
-    n_scenario,
     retry_cnt=5,
     print_interval=10,
 ):
@@ -43,14 +42,13 @@ def hemm_generating_scenarios_xarr(
 
     Parameters:
     ------------------
-    market: str, market name
-    group_name: name of the symbols
-    symbols: list[str], name of symbols
+    group_name: str,  name of the symbols
+    n_symbol: positive integer
+    rolling_window_size: positive integer, number of historical periods
+    n_scenario: integer, number of scenarios to generating
     scenario_set_idx: positive integer
     scenario_start_date, scenario_end_date : datetime.date
     n_stock: positive integer, number of stocks in the candidate symbols
-    rolling_window_size: positive integer, number of historical periods
-    n_scenario: integer, number of scenarios to generating
     retry_cnt: positive integer, maximum retry of scenarios
     print_interval: positive integer
 
@@ -60,14 +58,16 @@ def hemm_generating_scenarios_xarr(
     """
 
     t0 = time()
+    if group_name not in pp.GROUP_SYMBOLS.keys():
+        raise ValueError('unknown group_name: {}'.format(group_name))
+    symbols = pp.GROUP_SYMBOLS[group_name]
+    assert n_symbol == len(symbols)
 
     # scenario dir
     if not os.path.exists(pp.SCENARIO_SET_DIR):
         os.makedirs(pp.SCENARIO_SET_DIR)
 
-    n_symbol = len(symbols)
     scenario_file = pp.SCENARIO_NAME_FORMAT.format(
-        market=market,
         group_name=group_name,
         n_symbol=n_symbol,
         rolling_window_size=rolling_window_size,
@@ -81,10 +81,9 @@ def hemm_generating_scenarios_xarr(
     if os.path.exists(scenario_path):
         return "{} exists.".format(scenario_file)
 
-    parameters = "{}_{} {}_{}_Mc{}_h{}_s{}_{}_{}".format(
+    parameters = "{}_{} {}_Mc{}_h{}_s{}_sdx{}_{}_{}".format(
         platform.node(),
         os.getpid(),
-        market,
         group_name,
         n_symbol,
         rolling_window_size,
@@ -96,6 +95,7 @@ def hemm_generating_scenarios_xarr(
 
     # read roi data and symbols
     # shape: (n_period, n_stock, attributes)
+    market = group_name[:2]
     if market == 'TW':
         asset_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
 
@@ -172,7 +172,8 @@ def hemm_generating_scenarios_xarr(
                         logging.warning(
                             "{} relaxing max err: {}_max_mom_err:{}, "
                             "max_corr_err{}".format(
-                                parameters, sc_date, max_moment_err, max_corr_err
+                                parameters, sc_date, max_moment_err,
+                                max_corr_err
                             )
                         )
                     else:
@@ -205,14 +206,16 @@ def hemm_generating_scenarios_xarr(
     # write scenario
     scenario_xarr.to_netcdf(scenario_path)
 
-    msg = "generating scenarios {} OK, {:.3f} secs".format(parameters,
-                                                           time() - t0)
+    msg = "generating scenarios {} OK, {:.3f} secs".format(
+        parameters, time() - t0)
     logging.info(msg)
     return msg
 
 
-def _hemm_all_scenario_names():
+def _hemm_all_scenario_names(exp_name):
     """
+    all combinations of the scenarios in the experiment
+
     SCENARIO_NAME_FORMAT = (
         "{market}_"
         "{group_name}_"
@@ -223,30 +226,69 @@ def _hemm_all_scenario_names():
         "{scenario_start_date}_"
         "{scenario_end_date}.nc"
     )
-    """
-    set_indices = (1, 2, 3)
-    s_date = pp.SCENARIO_START_DATE
-    e_date = pp.SCENARIO_END_DATE
-    n_symbols = range(5, 30, 5)
-    window_sizes = range(50, 240 + 10, 10)
-    n_scenarios = [1000,]
 
-    # dict comprehension
-    # key: file_name, value: parameters
-    return {
-        pp.SYMBOL_SCENARIO_NAME_FORMAT.format(
-            sdx=sdx,
-            scenario_start_date=s_date.strftime("%Y%m%d"),
-            scenario_end_date=e_date.strftime("%Y%m%d"),
-            n_symbol=m,
-            rolling_window_size=h,
-            n_scenario=s,
-        ): (sdx, s_date, e_date, m, h, s)
-        for sdx in set_indices
-        for m in n_symbols
-        for h in window_sizes
-        for s in n_scenarios
-    }
+    Parameters:
+    ------------------
+    exp_name: str, name of the experiment
+
+    Returns:
+    ------------------
+    param_dict: [str, tuple], parameter string and corresponding tuple
+    """
+    if exp_name not in pp.valid_exp_name():
+        raise ValueError("unknown exp_name:{}".format(exp_name))
+
+    if exp_name == 'stocksp_cor15':
+        set_indices = (1, 2, 3)
+        s_date = pp.SCENARIO_START_DATE
+        e_date = pp.SCENARIO_END_DATE
+        n_symbols = range(5, 50, 5)
+        window_sizes = range(60, 240 + 10, 10)
+        n_scenarios = [200,]
+
+        # dict comprehension
+        # key: file_name, value: parameters
+        return {
+            pp.SYMBOL_SCENARIO_NAME_FORMAT.format(
+                group_name=group_name,
+                n_symbol=len(symbols),
+                rolling_window_size=h,
+                n_scenario=s,
+                sdx=sdx,
+                scenario_start_date=s_date.strftime("%Y%m%d"),
+                scenario_end_date=e_date.strftime("%Y%m%d"),
+            ): (sdx, s_date, e_date, m, h, s)
+            for group_name, symbols in pp.GROUP_SYMBOLS.items()
+            for sdx in set_indices
+            for m in n_symbols
+            for h in window_sizes
+            for s in n_scenarios
+        }
+
+    elif exp_name == 'dissertation':
+        set_indices = (1, )
+        s_date = pp.SCENARIO_START_DATE
+        e_date = pp.SCENARIO_END_DATE
+        window_sizes = range(50, 240 + 10, 10)
+        n_scenarios = [1000, ]
+        # dict comprehension
+        # key: file_name, value: parameters
+        return {
+            pp.SCENARIO_NAME_FORMAT.format(
+                group_name=group_name,
+                n_symbol=len(symbols),
+                rolling_window_size=h,
+                n_scenario=s,
+                sdx=sdx,
+                scenario_start_date=s_date.strftime("%Y%m%d"),
+                scenario_end_date=e_date.strftime("%Y%m%d"),
+            ): (group_name, len(symbols), h, s, sdx, s_date, e_date)
+            for group_name, symbols in pp.GROUP_SYMBOLS.items()
+            for sdx in set_indices
+            for h in window_sizes
+            for s in n_scenarios
+        }
+
 
 
 def hemm_checking_existed_scenario_names(scenario_set_dir=None):
@@ -267,8 +309,12 @@ def hemm_checking_existed_scenario_names(scenario_set_dir=None):
 
 
 def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
+    """
+    ipyparalllel load balance view parallel processing
+
+    """
     unfinished_names = hemm_checking_existed_scenario_names(scenario_set_dir)
-    print("number of unfinished scenario: {}".format(len(unfinished_names)))
+    print("Unfinished scenario: {}".format(len(unfinished_names)))
     params = unfinished_names.values()
 
     # task interface
@@ -279,6 +325,7 @@ def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     print("Engine IDs: ", dv["engine_id"])
     n_engine = len(rc.ids)
 
+    # import packages on each node
     with dv.sync_imports():
         import sys
         import platform
@@ -288,16 +335,17 @@ def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
     def name_pid():
         return "node:{}, pid:{}".format(platform.node(), os.getpid())
 
+    # show available nodes
     infos = dv.apply_sync(name_pid)
     for info in infos:
         print(info)
 
     lbv = rc.load_balanced_view()
-    print("start map unfinished parameters to load balance view.")
+    print("starting  load-balance view.")
     try:
         #  ipyparallel.client.asyncresult.AsyncMapResult
         ar = lbv.map_async(
-            lambda x: portfolio_programming.simulation.gen_scenarios.hemm_generating_scenarios_xarr(
+            lambda x: portfolio_programming.simulation.hemm_gen_scenarios.hemm_generating_scenarios_xarr(
                 *x
             ),
             params,
@@ -307,11 +355,12 @@ def hemm_dispatch_scenario_names(scenario_set_dir=pp.SCENARIO_SET_DIR):
             print(
                 "{} n_engine:{} gen_scenarios task: {}/{} {:10.1f} "
                 "secs".format(
-                    str(dt.datetime.now()), n_engine, ar.progress, len(ar), ar.elapsed
+                    str(dt.datetime.now()), n_engine,
+                    ar.progress, len(ar), ar.elapsed
                 )
             )
             sys.stdout.flush()
-            sleep(10)
+            sleep(5)
 
             # type(ar.stdout) == list, and the length is equal to the number of
             # task.
@@ -448,10 +497,12 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--market",
+        "-e",
+        "--exp_name",
         type=str,
-        choices=["TW", "US"],
-        help="market",
+        default="dissertation",
+        choices=["dissertation", "stocksp_cor15"],
+        help="name of the experiment",
     )
 
     parser.add_argument(
@@ -487,6 +538,14 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    if args.exp_name not in pp.valid_exp_name():
+        raise ValueError('unknown exp_name:{}'.format(args.exp_name))
+
+    group_symbols = pp.GROUP_SYMBOLS
+    if args.group_name not in group_symbols.keys():
+        raise ValueError('unknown group_name: {}'.format(args.group_name))
+
     if args.parallel:
         print("generating scenario in parallel mode")
         hemm_dispatch_scenario_names()
@@ -495,10 +554,11 @@ if __name__ == "__main__":
     else:
         print("generating scenario in single mode")
         hemm_generating_scenarios_xarr(
-            args.market,
-            pp.SCENARIO_START_DATE,
-            pp.SCENARIO_END_DATE,
-            args.n_candidate_symbol,
+            args.group_name,
+            len(group_symbols[args.group_name]),
             args.rolling_window_size,
             args.n_scenario,
+            args.sdx,
+            pp.SCENARIO_START_DATE,
+            pp.SCENARIO_END_DATE,
         )
