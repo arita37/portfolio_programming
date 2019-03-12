@@ -265,7 +265,7 @@ def _hemm_all_scenario_names(exp_name):
         }
 
     elif exp_name == 'dissertation':
-        set_indices = (1,)
+        set_indices = (1, 2, 3)
         s_date = pp.SCENARIO_START_DATE
         e_date = pp.SCENARIO_END_DATE
         window_sizes = range(50, 240 + 10, 10)
