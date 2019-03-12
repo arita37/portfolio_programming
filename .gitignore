@@ -30,6 +30,10 @@ nosetests.xml
 # Translations
 *.mo
 
+# temp files
+*.swp
+*.out
+
 # Mr Developer
 .mr.developer.cfg
 .project
