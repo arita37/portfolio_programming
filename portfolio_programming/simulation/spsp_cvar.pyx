@@ -47,7 +47,7 @@ def spsp_cvar(candidate_symbols,
     --------------------------
     candidate_symbols: list of string
     setting: string
-        {"compact", "general", "compact_mu0"}
+        {"compact", "general"}
     max_portfolio_size, int
     risk_rois: numpy.array, shape: (n_stock, )
     risk_free_roi: float,
@@ -140,9 +140,6 @@ def spsp_cvar(candidate_symbols,
     instance.risk_free_wealth_constraint = Constraint(
         rule=risk_free_wealth_constraint_rule)
 
-    # def min_return_constraint_5 >=
-
-
     # common setting constraint
     def scenario_constraint_rule(model, int sdx):
         """ auxiliary variable Y depends on scenario. CVaR <= VaR """
@@ -154,17 +151,6 @@ def spsp_cvar(candidate_symbols,
     instance.scenario_constraint = Constraint(instance.scenarios,
                                               rule=scenario_constraint_rule)
 
-
-    # additional constraints for compact_mu0
-    if setting == "compact_mu0":
-        def expected_ret_constraint_rule(model):
-            exp_ret = sum(model.risk_wealth[mdx] *
-                          model.mean_predict_risk_rois[mdx]
-                          for mdx in model.symbols)
-            return exp_ret >= 0.
-
-        instance.expected_ret_constraint = Constraint(
-            rule=expected_ret_constraint_rule)
 
     # additional variables and setting in the general setting
     if setting == "general":
@@ -406,8 +392,9 @@ class ValidMixin(object):
 
 class SPSP_CVaR(ValidMixin):
     def __init__(self,
-                 candidate_symbols,
                  str setting,
+                 str group_name,
+                 candidate_symbols,
                  int max_portfolio_size,
                  risk_rois,
                  risk_free_rois,
@@ -427,11 +414,14 @@ class SPSP_CVaR(ValidMixin):
 
         Parameters:
         -------------
-        candidate_symbols : list of symbols,
-            The size of the candidate set is n_stock.
-
         setting : string,
-            {"compact", "general", "compact_mu0"}
+            {"compact", "general"}
+
+        group_name: string,
+            Name of the portfolio
+
+        candidate_symbols : [str],
+            The size of the candidate set is n_stock.
 
         max_portfolio_size : positive integer
             The max number of stock we can invest in the portfolio.
@@ -483,8 +473,8 @@ class SPSP_CVaR(ValidMixin):
 
         Data
         --------------
-       decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
-       estimated risk_xarr, xarray.DataArray, shape(n_exp_period, 6)
+        decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
+        estimated risk_xarr, xarray.DataArray, shape(n_exp_period, 6)
 
         """
 
@@ -502,10 +492,10 @@ class SPSP_CVaR(ValidMixin):
         self.n_all_period = len(self.all_trans_dates)
 
         # verify setting
-        if setting not in ("compact", "general", "compact_mu0"):
+        if setting not in ("compact", "general"):
             raise (ValueError("Incorrect setting: {}".format(setting)))
 
-        if (setting in ("compact", "compact_mu0") and
+        if (setting in ("compact", ) and
                 max_portfolio_size != self.n_symbol):
             raise (ValueError(
                 "The max portfolio size {} must be the same "
@@ -513,6 +503,7 @@ class SPSP_CVaR(ValidMixin):
                     max_portfolio_size, self.n_symbol)))
         self.setting = setting
 
+        self.group_name = group_name
         # verify max_portfolio_size
         self.valid_nonnegative_value("max_portfolio_size", max_portfolio_size)
         self.max_portfolio_size = max_portfolio_size
@@ -547,7 +538,7 @@ class SPSP_CVaR(ValidMixin):
         self.sell_trans_fee = sell_trans_fee
 
 
-        # note .loc() will contain the end_date element
+        # note that .loc() will contain the end_date element
         self.valid_trans_date(start_date, end_date)
 
         # truncate rois
@@ -621,37 +612,30 @@ class SPSP_CVaR(ValidMixin):
             dims=(trans_date, symbol, sceenario),
             shape: (n_exp_period, n_stock,  n_scenario)
         """
-        if self.n_symbol > 1:
-            scenario_file = pp.SCENARIO_NAME_FORMAT.format(
-                sdx=self.scenario_set_idx,
-                scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
-                scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
-                n_symbol=self.n_symbol,
-                rolling_window_size=self.rolling_window_size,
-                n_scenario=self.n_scenario
-            )
-        else:
-             scenario_file = pp.SYMBOL_SCENARIO_NAME_FORMAT.format(
-                sdx=self.scenario_set_idx,
-                scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
-                scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
-                symbol=self.candidate_symbols[0],
-                rolling_window_size=self.rolling_window_size,
-                n_scenario=self.n_scenario
-            )
+
+        # portfolio
+        scenario_file = pp.SCENARIO_NAME_FORMAT.format(
+            group_name=self.group_name,
+            n_symbol=self.n_symbol,
+            rolling_window_size=self.rolling_window_size,
+            n_scenario=self.n_scenario,
+            sdx=self.scenario_set_idx,
+            scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+            scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+        )
 
         scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
 
         if not os.path.exists(scenario_path):
             raise ValueError("{} not exists.".format(scenario_path))
-        else:
-            scenario_xarr = xr.open_dataarray(scenario_path)
-            # the experiment interval maybe subset of scenarios.
-            if (self.exp_start_date != pp.SCENARIO_START_DATE or
-                    self.exp_end_date != pp.SCENARIO_END_DATE):
-                # truncate xarr
-                scenario_xarr = scenario_xarr.loc[
-                                self.exp_start_date:self.exp_end_date]
+
+        # the experiment interval maybe subset of scenarios.
+        scenario_xarr = xr.open_dataarray(scenario_path)
+        if (self.exp_start_date != pp.SCENARIO_START_DATE or
+                self.exp_end_date != pp.SCENARIO_END_DATE):
+            # truncate xarr
+            scenario_xarr = scenario_xarr.loc[
+                            self.exp_start_date:self.exp_end_date]
 
         if self.n_symbol == 1:
             # the shape of original file is (n_trans_date, n_scenario)
@@ -725,41 +709,27 @@ class SPSP_CVaR(ValidMixin):
         string
            simulation name of this experiment
         """
-        if self.n_symbol > 1:
-            name = (
-                "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{}".format(
-                    self.setting,
-                    self.scenario_set_idx,
-                    self.exp_start_date.strftime("%Y%m%d"),
-                    self.exp_end_date.strftime("%Y%m%d"),
-                    self.max_portfolio_size,
-                    self.n_symbol,
-                    self.rolling_window_size,
-                    self.alpha,
-                    self.n_scenario
-                )
-            )
-        else:
-             name = (
-                "SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_symbol{}_Mc{}_h{}_a{"
-                ":.2f}_s{}".format(
-                    self.setting,
-                    self.scenario_set_idx,
-                    self.exp_start_date.strftime("%Y%m%d"),
-                    self.exp_end_date.strftime("%Y%m%d"),
-                    self.candidate_symbols[0],
-                    self.max_portfolio_size,
-                    self.rolling_window_size,
-                    self.alpha,
-                    self.n_scenario
-                )
-            )
 
+        name = (
+            "SPSP_CVaR_{}_{}_Mc{}_M{}_h{}_s{}_a{:.2f}_sdx{}_{}_{}".format(
+                self.setting,
+                self.group_name,
+                self.n_symbol,
+                self.max_portfolio_size,
+                self.rolling_window_size,
+                self.n_scenario,
+                self.alpha,
+                self.scenario_set_idx,
+                self.exp_start_date.strftime("%Y%m%d"),
+                self.exp_end_date.strftime("%Y%m%d"),
+            )
+        )
         return name
 
     @staticmethod
     def get_performance_report(
             simulation_name,
+            group_name,
             candidate_symbols,
             risk_free_symbol,
             setting,
@@ -802,6 +772,7 @@ class SPSP_CVaR(ValidMixin):
         # basic information
         reports['os_uname'] = "|".join(platform.uname())
         reports['simulation_name'] = simulation_name
+        reports['group_name'] = group_name
         reports['candidate_symbols'] = candidate_symbols
         reports['risk_free_symbol'] = risk_free_symbol
         reports['exp_start_date'] = exp_start_date
@@ -946,6 +917,7 @@ class SPSP_CVaR(ValidMixin):
         # get reports
         reports = self.get_performance_report(
             simulation_name,
+            self.group_name,
             self.candidate_symbols,
             self.risk_free_symbol,
             self.setting,

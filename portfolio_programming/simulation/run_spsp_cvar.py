@@ -20,13 +20,17 @@ import portfolio_programming as pp
 import portfolio_programming.simulation.spsp_cvar
 
 
-def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
-                  symbols, max_portfolio_size, rolling_window_size,
-                  alpha, n_scenario):
-    risky_roi_xarr = xr.open_dataarray(
-        pp.TAIEX_2005_MKT_CAP_NC)
+def run_SPSP_CVaR(exp_name, setting, group_name, max_portfolio_size,
+                  rolling_window_size, n_scenario, alpha,
+                  scenario_set_idx, exp_start_date, exp_end_date):
+    market = group_name[:2]
+    if market == "TW":
+        risky_roi_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+    elif market == "US":
+        risky_roi_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
 
-    if setting in ('compact', "compact_mu0"):
+    symbols = pp.GROUP_SYMBOLS[group_name]
+    if setting in ('compact', ):
         candidate_symbols = symbols[:max_portfolio_size]
     else:
         candidate_symbols = symbols
@@ -43,11 +47,12 @@ def run_SPSP_CVaR(setting, scenario_set_idx, exp_start_date, exp_end_date,
                                        dims=('symbol',),
                                        coords=(candidate_symbols,))
     initial_risk_free_wealth = 1e6
-    print(setting, exp_start_date, exp_end_date, max_portfolio_size,
-          rolling_window_size, alpha, n_scenario)
+    print(exp_name, setting, exp_start_date, exp_end_date,
+          max_portfolio_size, rolling_window_size, n_scenario, alpha)
     instance = portfolio_programming.simulation.spsp_cvar.SPSP_CVaR(
-        candidate_symbols,
         setting,
+        group_name,
+        candidate_symbols,
         max_portfolio_size,
         risky_rois,
         risk_free_rois,

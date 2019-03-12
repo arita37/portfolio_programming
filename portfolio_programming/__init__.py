@@ -64,13 +64,6 @@ if EXP_NAME == "stocksp_cor15":
         "{scenario_end_date}.nc"
     )
 
-    SYMBOL_SCENARIO_NAME_FORMAT = (
-        "{group_name}_"
-        "sdx{sdx}_"
-        "{scenario_start_date}_"
-        "{scenario_end_date}_"
-        "h{rolling_window_size}_s{n_scenario}.nc"
-    )
 
     SCENARIO_START_DATE = dt.date(2005, 1, 3)
     SCENARIO_END_DATE = dt.date(2017, 12, 29)
