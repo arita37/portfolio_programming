@@ -43,15 +43,7 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
         self.exp_end_date.strftime("%Y%m%d"),
     )
     """
-    REPORT_FORMAT = "report_SPSP_CVaR_"
-    "{setting}_{group_name}_"
-    "Mc{n_symbol}_"
-    "M{max_portfolio_size}_"
-    "h{rolling_window_size}_"
-    "s{n_scenario}_"
-    "a{alpha:.2f}_"
-    "sdx{scenario_set_idx}_"
-    "{exp_start_date}_{exp_end_date}.pkl"
+    REPORT_FORMAT = "report_SPSP_CVaR_{setting}_{group_name}_Mc{n_symbol}_M{max_portfolio_size}_h{rolling_window_size}_s{n_scenario}_a{alpha}_sdx{sdx}_{exp_start_date}_{exp_end_date}.pkl"
 
     if exp_name not in ('dissertation', 'stocksp_cor15'):
         raise ValueError('unknown exp_name:{}'.format(exp_name))
@@ -83,7 +75,7 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
                      (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
                      (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
                      ]
-        max_portfolio_sizes = [5,]
+        max_portfolio_sizes = [5, ]
         group_symbols = pp.GROUP_SYMBOLS
         window_sizes = range(50, 240 + 10, 10)
         n_scenarios = [1000, ]
@@ -92,18 +84,18 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
         # dict comprehension
         # key: file_name, value: parameters
         if setting in ("compact", ):
-            return {
+            params = {
                 REPORT_FORMAT.format(
                     setting=setting,
                     group_name=group_name,
                     n_symbol=len(symbols),
-                    max_portfolio=m,
+                    max_portfolio_size=m,
                     rolling_window_size=h,
                     n_scenario=s,
                     alpha=a,
                     sdx=sdx,
                     exp_start_date=s_date.strftime("%Y%m%d"),
-                    exp_end_date=e_date.strftime("%Y%m%d"),
+                    exp_end_date=e_date.strftime("%Y%m%d")
                 ): (setting, group_name, len(symbols), m, h, s, a, sdx,
                     s_date, e_date)
                 for group_name, symbols in group_symbols.items()
@@ -114,6 +106,7 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
                 for sdx in set_indices
                 for s_date, e_date in years
             }
+            return params
 
         elif setting == "general":
             return {
@@ -150,6 +143,7 @@ def checking_existed_spsp_cvar_report(exp_name, setting, yearly):
     else:
         report_dir = os.path.join(pp.REPORT_DIR,
                         "SPSP_CVaR_{}_20050103_20181228".format(setting))
+
     all_reports = _all_spsp_cvar_params(exp_name, setting, yearly)
     print("{} {} totally n_parameter: {}".format(
         exp_name, setting, len(all_reports)))
