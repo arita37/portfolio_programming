@@ -96,7 +96,7 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
                     sdx=sdx,
                     exp_start_date=s_date.strftime("%Y%m%d"),
                     exp_end_date=e_date.strftime("%Y%m%d")
-                ): (exp_name, setting, group_name, m, h, s, a, sdx,
+                ): (exp_name, setting, group_name, m, h, s, float(a), sdx,
                     s_date, e_date)
                 for group_name, symbols in group_symbols.items()
                 for m in max_portfolio_sizes
