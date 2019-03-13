@@ -150,7 +150,7 @@ def checking_existed_spsp_cvar_report(exp_name, setting, yearly):
     else:
         report_dir = os.path.join(pp.REPORT_DIR,
                         "SPSP_CVaR_{}_20050103_20181228".format(setting))
-    all_reports = _all_spsp_cvar_params(setting, yearly)
+    all_reports = _all_spsp_cvar_params(exp_name, setting, yearly)
     print("{} {} totally n_parameter: {}".format(
         exp_name, setting, len(all_reports)))
 
