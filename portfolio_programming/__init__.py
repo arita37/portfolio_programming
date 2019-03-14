@@ -95,6 +95,8 @@ if EXP_NAME == "dissertation":
     SELL_TRANS_FEE = 0.004425
     DISCOUNT_FACTOR = 0.006
     REPORT_DIR = os.path.join(DATA_DIR, "report")
+    WEIGHT_PORTFOLIO_REPORT_DIR = os.path.join(DATA_DIR,
+                                               'report_weight_portfolio')
 
     # scenario
     # SCENARIO_SET_DIR = TMP_DIR
