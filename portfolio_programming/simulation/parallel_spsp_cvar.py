@@ -79,7 +79,7 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
         group_symbols = pp.GROUP_SYMBOLS
         window_sizes = range(50, 240 + 10, 10)
         n_scenarios = [1000, ]
-        alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 10)]
+        alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
         # dict comprehension
         # key: file_name, value: parameters
