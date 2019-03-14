@@ -11,7 +11,7 @@ import os
 import pickle
 import platform
 import sys
-import json
+import pandas as pd
 from time import (time, sleep)
 
 import numpy as np
@@ -286,18 +286,21 @@ def parameter_client(server_ip="140.117.168.49", max_reconnect_count=30):
 
 
 def aggregating_reports(exp_name, setting, yearly=False):
+
+    if exp_name not in ('dissertation', 'stocksp_cor15'):
+        raise ValueError('unknown exp_name:{}'.format(exp_name))
+
     if setting not in ("compact", "general"):
         raise ValueError("Unknown SPSP_CVaR setting: {}".format(setting))
 
     if not yearly:
         # whole interval
-        years = [[dt.date(2005, 1, 3), dt.date(2014, 12, 31)]]
+        years = [[dt.date(2005, 1, 3), dt.date(2018, 12, 28)]]
         out_report_path = os.path.join(pp.DATA_DIR,
-                                       "report_SPSP_CVaR_whole_{}_{}_{"
-                                       "}.nc".format(
-                                           setting,
-                                           years[0][0].strftime("%Y%m%d"),
-                                           years[0][1].strftime("%Y%m%d")))
+            "report_SPSP_CVaR_whole_{}_{}_{}_{}.nc".format(
+                exp_name, setting,
+                years[0][0].strftime("%Y%m%d"),
+                years[0][1].strftime("%Y%m%d")))
     else:
         # yearly interval
         years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
@@ -315,8 +318,9 @@ def aggregating_reports(exp_name, setting, yearly=False):
                  [dt.date(2017, 1, 3), dt.date(2017, 12, 29)]
                  ]
         out_report_path = os.path.join(pp.DATA_DIR,
-                                       "report_SPSP_CVaR_yearly_{}_{}_{"
+                                       "report_SPSP_CVaR_yearly_{}_{}_{}_{"
                                        "}.nc".format(
+                                           exp_name,
                                            setting,
                                            years[0][0].strftime("%Y%m%d"),
                                            years[-1][1].strftime("%Y%m%d")))
@@ -324,9 +328,11 @@ def aggregating_reports(exp_name, setting, yearly=False):
     intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
                  for s, e in years]
     set_indices = [1, 2, 3]
-    max_portfolio_sizes = range(5, 50 + 5, 5)
-    window_sizes = range(60, 240 + 10, 10)
-    n_scenarios = [200, ]
+    group_names = list(pp.GROUP_SYMBOLS.keys())
+    max_portfolio_sizes = [5,]
+    # max_portfolio_sizes = range(5, 50 + 5, 5)
+    window_sizes = range(50, 240 + 10, 10)
+    n_scenarios = [1000, ]
     alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
     attributes = [
@@ -337,48 +343,61 @@ def aggregating_reports(exp_name, setting, yearly=False):
     ]
     report_xarr = xr.DataArray(
         np.zeros((len(years),
-                  len(set_indices), len(max_portfolio_sizes), len(window_sizes),
-                  len(alphas), len(attributes))),
+                  len(group_names),
+                  len(set_indices),
+                  len(max_portfolio_sizes),
+                  len(window_sizes),
+                  len(alphas),
+                  len(attributes)
+                  )),
         dims=("interval",
-              "scenario_set_idx", "max_portfolio_size", "rolling_window_size",
-              "alpha", "attribute"),
+              "group_name",
+              "scenario_set_idx",
+              "max_portfolio_size",
+              "rolling_window_size",
+              "alpha",
+              "attribute"),
         coords=(intervals,
-                set_indices, max_portfolio_sizes, window_sizes, alphas,
+                group_names,
+                set_indices,
+                max_portfolio_sizes,
+                window_sizes,
+                alphas,
                 attributes)
     )
-
     t0 = time()
     # key: report_name, value: parameters
-    report_dict = _all_spsp_cvar_params(setting, yearly)
+    report_dict = _all_spsp_cvar_params(exp_name, setting, yearly)
     report_count = 0
     no_report_count_params = []
     no_report_count = 0
     if yearly:
         parent_dir = pp.REPORT_DIR
     else:
-        parent_dir = os.path.join(pp.REPORT_DIR,
-                                  'SPSP_CVaR_{}_20050103_20141231'.format(
-                                      setting))
+        parent_dir = pp.REPORT_DIR
+        # parent_dir = os.path.join(pp.REPORT_DIR,
+        #                           'SPSP_CVaR_{}_20050103_20181228'.format(
+        #                               setting))
 
     for idx, (name, param) in enumerate(report_dict.items()):
         path = os.path.join(parent_dir, name)
-        setting, sdx, s_date, e_date, m, h, a, s = param
+        exp_name, setting, grp, m, h, s, a, sdx, s_date, e_date = param
         interval = "{}_{}".format(s_date.strftime("%Y%m%d"),
                                   e_date.strftime("%Y%m%d"))
         alpha = "{:.2f}".format(a)
         try:
-            with open(path, 'rb') as fin:
-                report = pickle.load(fin)
-                report_count += 1
-                print("[{}/{}] {} {:.2%} elapsed:{:.2f} secs".format(
-                    idx + 1, len(report_dict),
-                    report['simulation_name'],
-                    report['cum_roi'],
-                    time() - t0
-                ))
-                for attr in attributes:
-                    report_xarr.loc[interval, sdx, m, h, alpha, attr] = \
-                        report[attr]
+            report = pd.read_pickle(path)
+            report_count += 1
+            print("[{}/{}] {} {:.2%} elapsed:{:.2f} secs".format(
+                idx + 1, len(report_dict),
+                report['simulation_name'],
+                report['cum_roi'],
+                time() - t0
+            ))
+            for attr in attributes:
+                # print(report[attr]),
+                report_xarr.loc[
+                    interval, grp, sdx, m, h, alpha, attr] = report[attr]
         except FileNotFoundError:
             no_report_count_params.append(name)
             no_report_count += 1
@@ -458,10 +477,10 @@ if __name__ == '__main__':
         parameter_client()
     elif args.compact_report:
         print("SPSP CVaR compact setting report")
-        aggregating_reports("compact", args.yearly)
+        aggregating_reports(args.exp_name, "compact", args.yearly)
     elif args.general_report:
         print("SPSP CVaR general setting report")
-        aggregating_reports("general", args.yearly)
+        aggregating_reports(args.exp_name, "general", args.yearly)
     elif args.unfinished_param:
         params_dict = checking_existed_spsp_cvar_report(args.setting,
                                                        args.yearly)
