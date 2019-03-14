@@ -287,37 +287,82 @@ def parameter_client(server_ip="140.117.168.49", max_reconnect_count=30):
 
 def aggregating_reports(exp_name, setting, yearly=False):
 
+    import arch.bootstrap.multiple_comparison as arch_comp
+
     if exp_name not in ('dissertation', 'stocksp_cor15'):
         raise ValueError('unknown exp_name:{}'.format(exp_name))
 
     if setting not in ("compact", "general"):
         raise ValueError("Unknown SPSP_CVaR setting: {}".format(setting))
 
-    if not yearly:
-        # whole interval
-        years = [[dt.date(2005, 1, 3), dt.date(2018, 12, 28)]]
-        out_report_path = os.path.join(pp.DATA_DIR,
-            "report_SPSP_CVaR_whole_{}_{}_{}_{}.nc".format(
-                exp_name, setting,
-                years[0][0].strftime("%Y%m%d"),
-                years[0][1].strftime("%Y%m%d")))
-    else:
+    if exp_name == 'stocksp_cor15':
+        if not yearly:
+            # whole interval
+            years = [[dt.date(2005, 1, 3), dt.date(2014, 12, 31)]]
+            out_report_path = os.path.join(
+                pp.DATA_DIR,
+                "report_SPSP_CVaR_whole_{}_{}_{}_{}.nc".format(
+                    exp_name, setting,
+                    years[0][0].strftime("%Y%m%d"),
+                    years[0][1].strftime("%Y%m%d")))
+
+        else:
+            years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
+                     [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
+                     [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
+                     [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
+                     [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
+                     [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
+                     [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
+                     [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
+                     [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
+                     [dt.date(2014, 1, 2), dt.date(2014, 12, 31)]
+            ]
+            out_report_path = os.path.join(pp.DATA_DIR,
+                                           "report_SPSP_CVaR_yearly_{}_{}_{}_{"
+                                           "}.nc".format(
+                                               exp_name,
+                                               setting,
+                                               years[0][0].strftime("%Y%m%d"),
+                                               years[-1][1].strftime("%Y%m%d")))
+
+        intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
+                     for s, e in years]
+        set_indices = [1, 2, 3]
+        group_names = []
+        max_portfolio_sizes = range(5, 50 + 5, 5)
+        window_sizes = range(60, 240 + 10, 10)
+        n_scenarios = [200, ]
+        alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+
+    elif exp_name == 'dissertation':
+        if not yearly:
+            # whole interval
+            years = [[dt.date(2005, 1, 3), dt.date(2018, 12, 28)]]
+
+            out_report_path = os.path.join(
+                pp.DATA_DIR,
+                "report_SPSP_CVaR_whole_{}_{}_{}_{}.nc".format(
+                    exp_name, setting,
+                    years[0][0].strftime("%Y%m%d"),
+                    years[0][1].strftime("%Y%m%d")))
+        else:
         # yearly interval
-        years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
-                 [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
-                 [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
-                 [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
-                 [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
-                 [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
-                 [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
-                 [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
-                 [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
-                 [dt.date(2014, 1, 2), dt.date(2014, 12, 31)],
-                 [dt.date(2015, 1, 5), dt.date(2015, 12, 31)],
-                 [dt.date(2016, 1, 4), dt.date(2016, 12, 30)],
-                 [dt.date(2017, 1, 3), dt.date(2017, 12, 29)]
-                 ]
-        out_report_path = os.path.join(pp.DATA_DIR,
+            years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
+                     [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
+                     [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
+                     [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
+                     [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
+                     [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
+                     [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
+                     [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
+                     [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
+                     [dt.date(2014, 1, 2), dt.date(2014, 12, 31)],
+                     [dt.date(2015, 1, 5), dt.date(2015, 12, 31)],
+                     [dt.date(2016, 1, 4), dt.date(2016, 12, 30)],
+                     [dt.date(2017, 1, 3), dt.date(2017, 12, 29)]
+                     ]
+            out_report_path = os.path.join(pp.DATA_DIR,
                                        "report_SPSP_CVaR_yearly_{}_{}_{}_{"
                                        "}.nc".format(
                                            exp_name,
@@ -325,22 +370,25 @@ def aggregating_reports(exp_name, setting, yearly=False):
                                            years[0][0].strftime("%Y%m%d"),
                                            years[-1][1].strftime("%Y%m%d")))
 
-    intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
-                 for s, e in years]
-    set_indices = [1, 2, 3]
-    group_names = list(pp.GROUP_SYMBOLS.keys())
-    max_portfolio_sizes = [5,]
-    # max_portfolio_sizes = range(5, 50 + 5, 5)
-    window_sizes = range(50, 240 + 10, 10)
-    n_scenarios = [1000, ]
-    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+        intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
+                     for s, e in years]
+        set_indices = [1, 2, 3]
+        group_names = list(pp.GROUP_SYMBOLS.keys())
+        max_portfolio_sizes = [5,]
+        window_sizes = range(50, 240 + 10, 10)
+        n_scenarios = [1000, ]
+        alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
-    attributes = [
+    originals = [
         'initial_wealth', 'final_wealth',
         'cum_roi', 'daily_roi', 'daily_mean_roi',
         'daily_std_roi', 'daily_skew_roi', 'daily_ex-kurt_roi',
         'Sharpe', 'Sortino_full', 'Sortino_partial'
     ]
+    # additional attributes
+    additionals = ['annual_roi', 'daily_VSS', 'SPA_c']
+    attributes = originals + additionals
+
     report_xarr = xr.DataArray(
         np.zeros((len(years),
                   len(group_names),
@@ -371,15 +419,10 @@ def aggregating_reports(exp_name, setting, yearly=False):
     report_count = 0
     no_report_count_params = []
     no_report_count = 0
-    if yearly:
-        parent_dir = pp.REPORT_DIR
-    else:
-        parent_dir = pp.REPORT_DIR
-        # parent_dir = os.path.join(pp.REPORT_DIR,
-        #                           'SPSP_CVaR_{}_20050103_20181228'.format(
-        #                               setting))
+    parent_dir = pp.REPORT_DIR
 
     for idx, (name, param) in enumerate(report_dict.items()):
+        t1 = time()
         path = os.path.join(parent_dir, name)
         exp_name, setting, grp, m, h, s, a, sdx, s_date, e_date = param
         interval = "{}_{}".format(s_date.strftime("%Y%m%d"),
@@ -387,17 +430,49 @@ def aggregating_reports(exp_name, setting, yearly=False):
         alpha = "{:.2f}".format(a)
         try:
             report = pd.read_pickle(path)
+
+            for attr in originals:
+                report_xarr.loc[
+                    interval, grp, sdx, m, h, alpha, attr] = report[attr]
+
+            year_count = (e_date.year - s_date.year) + 1
+            for attr in additionals:
+                if attr == 'annual_roi':
+                    val = np.power(report['cum_roi'] + 1, 1. / year_count) - 1
+                elif attr == 'VSS':
+                    risks = report['estimated_risk_xarr']
+                    val = float(risks.loc[:, 'VSS'].mean()) / 1e6
+                elif attr == 'SPA_c':
+                    dec_xarr = report['decision_xarr']
+                    wealth_arr = dec_xarr.loc[:, :, 'wealth'].sum(
+                        axis=1).to_series()
+                    rois = wealth_arr.pct_change()
+                    rois[0] = 0
+                    # print(rois.values)
+                    spa_value = 0
+                    for _ in range(5):
+                        spa = arch_comp.SPA(rois.values,
+                                            np.zeros(rois.size),
+                                            reps=1000)
+                        spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                        spa.compute()
+                        # preserve the worse p_value
+                        if spa.pvalues[1] > spa_value:
+                            spa_value = spa.pvalues[1]
+                    val = spa_value
+
+                report_xarr.loc[
+                    interval, grp, sdx, m, h, alpha, attr] = val
+
             report_count += 1
-            print("[{}/{}] {} {:.2%} elapsed:{:.2f} secs".format(
+            print("[{}/{}] {} {:.2%} elapsed:{:2.f}/{:.2f} secs".format(
                 idx + 1, len(report_dict),
                 report['simulation_name'],
                 report['cum_roi'],
+                time() - t1,
                 time() - t0
             ))
-            for attr in attributes:
-                # print(report[attr]),
-                report_xarr.loc[
-                    interval, grp, sdx, m, h, alpha, attr] = report[attr]
+
         except FileNotFoundError:
             no_report_count_params.append(name)
             no_report_count += 1
@@ -416,6 +491,7 @@ def aggregating_reports(exp_name, setting, yearly=False):
 
 
 if __name__ == '__main__':
+
     logging.basicConfig(
         stream=sys.stdout,
         format='%(filename)15s %(levelname)10s %(asctime)s\n'

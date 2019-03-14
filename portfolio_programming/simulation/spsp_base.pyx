@@ -22,6 +22,16 @@ from portfolio_programming.statistics.risk_adjusted import (
 
 class ValidMixin(object):
     @staticmethod
+    def valid_exp_name(exp_name):
+        if exp_name not in ('dissertation', 'stocksp_cor15'):
+            raise ValueError('unknown exp_name:{}'.format(exp_name))
+
+    @staticmethod
+    def valid_setting(setting):
+        if setting not in ("compact", "general"):
+            raise ValueError("Unknown setting: {}".format(setting))
+
+    @staticmethod
     def valid_range_value(name, value, lower_bound, upper_bound):
         """
         Parameter:

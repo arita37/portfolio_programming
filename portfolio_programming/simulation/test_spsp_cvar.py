@@ -6,49 +6,305 @@ Author: Hung-Hsin Chen <chen1116@gmail.com>
 
 import numpy as np
 import os
+import xarray as xr
+from time import time
+import datetime as dt
 import portfolio_programming as pp
-from portfolio_programming.simulation.spsp_cvar import spsp_cvar
+# from portfolio_programming.simulation.spsp_cvar import spsp_cvar
+from pyomo.environ import *
 
-def test_spsp_cvar(alpha=0.1):
-    symbols = ['test',]
+
+def spsp_cvar(candidate_symbols: list,
+              setting: str,
+              max_portfolio_size: int,
+              risk_rois,
+              risk_free_roi: float,
+              allocated_risk_wealth,
+              allocated_risk_free_wealth: float,
+              buy_trans_fee: float,
+              sell_trans_fee: float,
+              alpha: float,
+              predict_risk_rois,
+              predict_risk_free_roi: float,
+              n_scenario: int,
+              solver="cplex"
+              ):
+    """
+    2nd-stage minimize CVaR stochastic programming.
+    The maximize_portfolio_size is equal to the n_stock.
+    It will be called in get_current_buy_sell_amounts function.
+
+    Parameters:
+    --------------------------
+    candidate_symbols: list of string
+    setting: string
+        {"compact", "general"}
+    max_portfolio_size, int
+    risk_rois: numpy.array, shape: (n_stock, )
+    risk_free_roi: float,
+    allocated_risk_wealth: numpy.array, shape: (n_stock,)
+    allocated_risk_free_wealth: float
+    buy_trans_fee: float
+    sell_trans_fee: float
+    alpha: float, 1-alpha is the significant level
+    predict_risk_ret: numpy.array, shape: (n_stock, n_scenario)
+    predict_risk_free_roi: float
+    n_scenario: integer
+    solver: str, supported by Pyomo
+
+    Returns
+    -------------------
+    results: dict
+        "amounts": xarray.DataArray, shape:(n_symbol, 3),
+            coords: (symbol, ('buy', 'sell','chosen'))
+        "estimated_var": float
+        "estimated_cvar": float
+        "estimated_ev_var": float
+        "estimated_ev_cvar": float
+        "estimated_eev_cvar": float
+        "vss": vss, float
+    """
+    t0 = time()
+
+    n_symbol = len(candidate_symbols)
+
+    # Model
+    instance = ConcreteModel()
+    instance.max_portfolio_size = max_portfolio_size
+    instance.risk_rois = risk_rois
+    instance.risk_free_roi = risk_free_roi
+    instance.allocated_risk_wealth = allocated_risk_wealth
+    instance.allocated_risk_free_wealth = allocated_risk_free_wealth
+    instance.buy_trans_fee = buy_trans_fee
+    instance.sell_trans_fee = sell_trans_fee
+    instance.alpha = alpha
+    instance.predict_risk_rois = predict_risk_rois
+    # shape: (n_stock,)
+    instance.mean_predict_risk_rois = predict_risk_rois.mean(axis=1)
+    instance.predict_risk_free_roi = predict_risk_free_roi
+
+    # Set
+    instance.symbols = np.arange(n_symbol)
+    instance.scenarios = np.arange(n_scenario)
+
+    # decision variables
+    # first stage
+    instance.buy_amounts = Var(instance.symbols, within=NonNegativeReals)
+    instance.sell_amounts = Var(instance.symbols, within=NonNegativeReals)
+    instance.risk_wealth = Var(instance.symbols, within=NonNegativeReals)
+    instance.risk_free_wealth = Var(within=NonNegativeReals)
+
+    # aux variable, variable in definition of CVaR, equals to VaR at opt. sol.
+    instance.Z = Var()
+    instance.next_portfolio_wealth = Var(instance.scenarios)
+
+    # aux variable, portfolio wealth less than than VaR (Z)
+    instance.Ys = Var(instance.scenarios, within=NonNegativeReals)
+
+    # common setting constraint
+    def risk_wealth_constraint_rule(model, mdx):
+        """
+        risk_wealth is a decision variable which depends on both buy_amount
+        and sell_amount.
+        i.e. the risk_wealth depends on scenario.
+
+        buy_amount and sell_amount are first stage variable,
+        risk_wealth is second stage variable.
+        """
+        return (model.risk_wealth[mdx] == (1. + model.risk_rois[mdx]) *
+                model.allocated_risk_wealth[mdx] +
+                model.buy_amounts[mdx] - model.sell_amounts[mdx])
+
+    instance.risk_wealth_constraint = Constraint(
+        instance.symbols, rule=risk_wealth_constraint_rule)
+
+    # common setting constraint
+    def risk_free_wealth_constraint_rule(model):
+        total_sell = sum((1. - model.sell_trans_fee) * model.sell_amounts[mdx]
+                         for mdx in model.symbols)
+        total_buy = sum((1. + model.buy_trans_fee) * model.buy_amounts[mdx]
+                        for mdx in model.symbols)
+
+        return (model.risk_free_wealth ==
+                (1. + risk_free_roi) * allocated_risk_free_wealth +
+                total_sell - total_buy)
+
+    instance.risk_free_wealth_constraint = Constraint(
+        rule=risk_free_wealth_constraint_rule)
+
+    def portfolio_wealth_constraint_rule(model, sdx):
+        return (model.next_portfolio_wealth[sdx] ==
+                sum((1. + model.predict_risk_rois[mdx, sdx]) *
+                                  model.risk_wealth[mdx]
+                    for mdx in model.symbols))
+
+    instance.portfolio_wealth_constraint_constraint = Constraint(
+        instance.scenarios,
+        rule=portfolio_wealth_constraint_rule)
+
+    # common setting constraint
+    def scenario_constraint_rule(model, sdx):
+        """ auxiliary variable Y depends on scenario. CVaR <= VaR """
+        # predict_risk_wealth = sum((1. + model.predict_risk_rois[mdx, sdx]) *
+        #                           model.risk_wealth[mdx]
+        #                           for mdx in model.symbols)
+        return model.Ys[sdx] >= (model.Z - model.next_portfolio_wealth[sdx])
+
+    instance.scenario_constraint = Constraint(instance.scenarios,
+                                              rule=scenario_constraint_rule)
+
+    # additional variables and setting in the general setting
+    if setting == "general":
+        # aux variable, switching stock variable
+        instance.chosen = Var(instance.symbols, within=Binary)
+
+        # general setting constraint
+        def chosen_constraint_rule(model, mdx):
+            portfolio_wealth = (sum(model.risk_wealth[idx] for idx in
+                                    model.symbols) + model.risk_free_wealth)
+
+            # portfolio_wealth = (sum(model.allocated_risk_wealth) +
+            #                     model.allocated_risk_free_wealth *
+            #                     (1. + model.risk_rois[mdx]))
+            return model.risk_wealth[mdx] <= model.chosen[
+                mdx] * portfolio_wealth
+
+        instance.chosen_constraint = Constraint(instance.symbols,
+                                                rule=chosen_constraint_rule)
+
+        # general setting constraint
+        def portfolio_size_constraint_rule(model):
+            return (sum(model.chosen[mdx] for mdx in model.symbols) <=
+                    model.max_portfolio_size)
+
+        instance.portfolio_size_constraint = Constraint(
+            rule=portfolio_size_constraint_rule)
+
+    # common setting objective
+    def cvar_objective_rule(model):
+        scenario_exp = (sum(model.Ys[sdx] for sdx in range(n_scenario)) /
+                        n_scenario)
+        return model.Z - 1. / (1. - model.alpha) * scenario_exp
+
+    instance.cvar_objective = Objective(rule=cvar_objective_rule,
+                                        sense=maximize)
+
+    # solve
+    opt = SolverFactory(solver)
+    results = opt.solve(instance)
+    instance.solutions.load_from(results)
+
+    # logging.DEBUG(display(instance))
+    display(instance)
+
+    # buy and sell amounts
+    actions = ['buy', 'sell', 'chosen']
+    amounts = xr.DataArray(
+        [(instance.buy_amounts[mdx].value,
+          instance.sell_amounts[mdx].value,
+          -1)
+         for mdx in range(n_symbol)],
+        dims=('symbol', "action"),
+        coords=(candidate_symbols, actions),
+    )
+
+    return {
+        "amounts": amounts,
+    }
+
+
+def reverse_spsp_cvar(candidate_symbols,
+                      setting,
+                      max_portfolio_size,
+                      risk_rois,
+                      risk_free_roi,
+                      allocated_risk_wealth,
+                      allocated_risk_free_wealth,
+                      buy_trans_fee,
+                      sell_trans_fee,
+                      predict_risk_rois,
+                      predict_risk_free_roi,
+                      n_scenario,
+                      buy_sell_amounts):
+    n_symbol = len(candidate_symbols)
+
+    # Model
+    instance = ConcreteModel()
+    instance.max_portfolio_size = max_portfolio_size
+    instance.risk_rois = risk_rois
+    instance.risk_free_roi = risk_free_roi
+    instance.allocated_risk_wealth = allocated_risk_wealth
+    instance.allocated_risk_free_wealth = allocated_risk_free_wealth
+    instance.buy_trans_fee = buy_trans_fee
+    instance.sell_trans_fee = sell_trans_fee
+    instance.buy_sell_amounts = buy_sell_amounts
+    instance.predict_risk_rois = predict_risk_rois
+    # shape: (n_stock,)
+    instance.mean_predict_risk_rois = predict_risk_rois.mean(axis=1)
+    instance.predict_risk_free_roi = predict_risk_free_roi
+
+    # Set
+    instance.symbols = np.arange(n_symbol)
+    instance.scenarios = np.arange(n_scenario)
+
+    # decision variables
+    instance.alpha = Var(within=NonNegativeReals)
+    instance.Z = Var()
+    instance.Ys = Var(instance.scenarios, within=NonNegativeReals)
+
+
+def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
+    symbols = pp.GROUP_SYMBOLS[group_name]
+    n_symbol = len(symbols)
     setting = "compact"
     max_portfolio_size = len(symbols)
-    risk_rois = np.zeros(1)
+
+    # load data arr
+    risky_roi_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+    risk_rois = risky_roi_xarr.loc[
+                pp.EXP_START_DATE: pp.EXP_END_DATE, symbols, 'simple_roi']
+    risk_rois = risk_rois.loc[trans_date, :].values
     risk_free_roi = 0
-    allocated_risk_wealth = np.array([0., ])
-    allocated_risk_free_wealth = 100.
-    buy_trans_fee = 0
-    sell_trans_fee = 0
-    n_scenario = 100
-    # predict_risk_rois = np.linspace(0., 1., n_scenario).reshape((1, n_scenario))
-    # experiment 1
-    # predict_risk_rois = (np.arange(1,101) / n_scenario).reshape(
-    #         (1, n_scenario))
 
-    # experiment 2
-    # predict_risk_rois = (np.arange(-49, 51)/n_scenario).reshape(
-    #     (1, n_scenario))
+    allocated_risk_wealth = xr.DataArray(np.array([20., 10, 0, 0, 0]),
+                                         dims=('symbol',),
+                                         coords=(symbols,))
+    allocated_risk_wealth = allocated_risk_wealth.values
+    allocated_risk_free_wealth = 70
+    buy_trans_fee = 0.001425
+    sell_trans_fee = 0.004425
+    n_scenario = 1000
 
-    # experiment 3
-    predict_risk_rois = (np.arange(-24, 76) / n_scenario).reshape(
-        (1, n_scenario))
-
+    # load scenario
+    scenario_file = pp.SCENARIO_NAME_FORMAT.format(
+        group_name=group_name,
+        n_symbol=n_symbol,
+        rolling_window_size=100,
+        n_scenario=n_scenario,
+        sdx=1,
+        scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+        scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+    )
+    scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
+    scenario_xarr = xr.open_dataarray(scenario_path)
+    predict_risk_rois = scenario_xarr.loc[trans_date, :, :].values
+    print(predict_risk_rois)
     predict_risk_free_roi = 0
 
-
     res = spsp_cvar(symbols, setting, max_portfolio_size,
-                risk_rois, risk_free_roi, allocated_risk_wealth,
-                allocated_risk_free_wealth, buy_trans_fee, sell_trans_fee,
-                alpha, predict_risk_rois, predict_risk_free_roi, n_scenario)
-    print("alpha=",alpha)
-    print(res)
+                    risk_rois, risk_free_roi, allocated_risk_wealth,
+                    allocated_risk_free_wealth, buy_trans_fee, sell_trans_fee,
+                    alpha, predict_risk_rois, predict_risk_free_roi, n_scenario)
+    print("alpha=", alpha)
+    print(res['amounts'])
     return res
+
 
 def cvar_alpha_plot():
     import matplotlib.pyplot as plt
 
-    xs =  np.arange(1, 100)
-    alphas = xs/100.
+    xs = np.arange(1, 100)
+    alphas = xs / 100.
     cvars = []
     vars = []
     buys = []
@@ -93,6 +349,7 @@ def cvar_alpha_plot():
     plt.savefig(fig_path, dpi=240, format='png')
     plt.show()
 
+
 if __name__ == '__main__':
-    # test_spsp_cvar()
-    cvar_alpha_plot()
+    test_spsp_cvar("TWG1", trans_date=dt.date(2014, 10, 2), alpha=0.8)
+    # cvar_alpha_plot()
