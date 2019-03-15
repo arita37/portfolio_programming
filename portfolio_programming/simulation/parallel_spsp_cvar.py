@@ -141,7 +141,7 @@ def checking_existed_spsp_cvar_report(exp_name, setting, yearly):
         report_dir = os.path.join(pp.REPORT_DIR,
                                   "SPSP_CVaR_{}_yearly".format(setting))
     else:
-        report = pp.REPORT_DIR
+        report_dir = pp.REPORT_DIR
         # report_dir = os.path.join(pp.REPORT_DIR,
         #                 "SPSP_CVaR_{}_20050103_20181228".format(setting))
 
