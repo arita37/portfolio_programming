@@ -113,7 +113,7 @@ def rand_func_rebalance_opt(n_symbol=5, error=1e-10):
     return balance
 
 
-def test_funfunc_rebalance_opt2(n_symbol=5, error=1e-10):
+def test_func_rebalance_opt2(n_symbol=5, error=1e-10):
     t0 = time()
     for _ in range(10000):
         rand_func_rebalance_opt(n_symbol, error)
@@ -122,4 +122,4 @@ def test_funfunc_rebalance_opt2(n_symbol=5, error=1e-10):
 
 if __name__ == '__main__':
     # test_func_rebalance_opt()
-    test_funfunc_rebalance_opt2()
+    test_func_rebalance_opt2()
