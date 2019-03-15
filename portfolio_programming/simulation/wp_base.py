@@ -15,7 +15,7 @@ import logging
 import pickle
 
 import portfolio_programming as pp
-from portfolio_programming.simulation.spsp_cvar import ValidMixin
+from portfolio_programming.simulation.spsp_base import ValidMixin
 from portfolio_programming.statistics.risk_adjusted import (
     Sharpe, Sortino_full, Sortino_partial)
 
@@ -163,15 +163,16 @@ class WeightPortfolio(ValidMixin):
             )
         )
 
+    def get_simulation_name(self, *args, **kwargs):
+        """implemented by user"""
+        raise NotImplementedError('get_simulation_name() '
+                                  'does not be implemented.')
+
     def get_today_weights(self, *args, **kwargs):
         """ implemented by user """
         raise NotImplementedError('get_current_weights() '
                                   'does not be implemented.')
 
-    def get_simulation_name(self, *args, **kwargs):
-        """implemented by user"""
-        raise NotImplementedError('get_simulation_name() '
-                                  'does not be implemented.')
 
     @staticmethod
     def add_to_reports(reports):
@@ -180,11 +181,9 @@ class WeightPortfolio(ValidMixin):
         """
         return reports
 
-    @staticmethod
-    def func_rebalance(current_portfolio_wealth,
+    def func_rebalance(self, current_portfolio_wealth,
                        prev_weights, prev_portfolio_wealth,
-                       price_relatives, today_weights,
-                       buy_trans_fee, sell_trans_fee):
+                       price_relatives, today_weights):
 
         """
         Parameters:
@@ -219,8 +218,8 @@ class WeightPortfolio(ValidMixin):
                                  prev_portfolio_wealth,
                                  price_relatives,
                                  today_weights,
-                                 buy_trans_fee,
-                                 sell_trans_fee
+                                 self.buy_trans_fee,
+                                 self.sell_trans_fee
                                  )
                            )
         return sol
@@ -349,9 +348,7 @@ class WeightPortfolio(ValidMixin):
                 self.decision_xarr.loc[yesterday, :, 'wealth'].sum(),
                 # price relatives and weights of today
                 today_price_relatives,
-                self.decision_xarr.loc[today, : 'weight'],
-                self.buy_trans_fee,
-                self.sell_trans_fee
+                self.decision_xarr.loc[today, : 'weight']
             )
 
             cum_trans_fee_loss += (today_portfolio_wealth -
