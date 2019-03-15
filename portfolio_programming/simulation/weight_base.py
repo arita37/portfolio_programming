@@ -5,11 +5,10 @@ Authors: Hung-Hsin Chen <chen1116@gmail.com>
 basic trading flow schema for online portfolio
 """
 
-import datetime as dt
 import platform
 from time import time
 import numpy as np
-import pandas as pd
+import scipy.optimize as spopt
 import xarray as xr
 import os
 import logging
@@ -19,6 +18,56 @@ import portfolio_programming as pp
 from portfolio_programming.simulation.spsp_cvar import ValidMixin
 from portfolio_programming.statistics.risk_adjusted import (
     Sharpe, Sortino_full, Sortino_partial)
+
+
+def func_rebalance_opt(today_portfolio_wealth,
+                       prev_weights, prev_portfolio_wealth,
+                       price_relatives, today_weights,
+                       buy_trans_fee, sell_trans_fee):
+    """
+    The decision variable must be located in first place.
+
+    Parameters:
+    ------------------------
+    today_portfolio_wealth: float,
+        the portfolio wealth after rebalance, and it is the decision variable
+
+    prev_weights: numpy.array like
+        the stocks' weights of yesterday
+
+    prev_portfolio_wealth, : float
+        the portfolio wealth of yesterday
+
+    price_relatives : numpy.array like,
+
+    today_weights:   numpy.array like,
+          the stocks' weights of today
+
+    buy: float,
+        buy transaction fee
+
+    c_sell: float,
+        sell transaction fee
+
+    Returns:
+    --------------------
+    balance equation
+    """
+
+    today_prev_wealths = (prev_portfolio_wealth * prev_weights *
+                          price_relatives)
+
+    today_wealths = today_portfolio_wealth * today_weights
+    buy_fee = buy_trans_fee * (
+        np.maximum(today_wealths - today_prev_wealths, 0).sum()
+    )
+    sell_fee = sell_trans_fee * (
+        np.maximum(today_prev_wealths - today_wealths, 0).sum()
+    )
+
+    balance = (today_portfolio_wealth - today_prev_wealths.sum() +
+               buy_fee + sell_fee)
+    return balance
 
 
 class WeightPortfolio(ValidMixin):
@@ -114,7 +163,7 @@ class WeightPortfolio(ValidMixin):
             )
         )
 
-    def get_current_weights(self, *args, **kwargs):
+    def get_today_weights(self, *args, **kwargs):
         """ implemented by user """
         raise NotImplementedError('get_current_weights() '
                                   'does not be implemented.')
@@ -132,41 +181,49 @@ class WeightPortfolio(ValidMixin):
         return reports
 
     @staticmethod
-    def func_rebalance(prev_total_wealth, prev_weights, prev_wealth,
-                       current_weights, buy_trans_fee, sell_trans_fee):
+    def func_rebalance(current_portfolio_wealth,
+                       prev_weights, prev_portfolio_wealth,
+                       price_relatives, today_weights,
+                       buy_trans_fee, sell_trans_fee):
+
         """
         Parameters:
         -------------
-        prev_total_wealth: float
-            the total wealth before rebalance
+        current_portfolio_wealth : float
+            initial guess of the portfolio wealth after balanced
 
         prev_weights: numpy.array like
-            weights of each stock before rebalance
+            the stocks' weights of yesterday
 
-        prev_wealth:  numpy.array like
-            wealth of each stock before rebalance
+        prev_portfolio_wealth, : float
+            the portfolio wealth of yesterday
 
-        current_weights: numpy.array like
-            wealth of each stock after rebalance
+        price_relatives : numpy.array like,
 
-        c_buy: float,
+        today_weights:  numpy.array like,
+
+        buy_trans_fee: float,
             buy transaction fee
-        c_sell:
-            float, sell transaction fee
+
+        sell_trans_fee: float,
+            sell transaction fee
 
         Returns:
         -------------
-        float, the wealth after rebalance
+        today_portfolio_wealth: float,
+            the portfolio wealth after rebalance
         """
-        buy_indicators = (prev_weights < current_weights)
-        sell_indicators = (prev_weights > current_weights)
-
-        # shape: (n_symbol,)
-        cost_sum = (buy_trans_fee * buy_indicators -
-                    sell_trans_fee * sell_indicators)
-        numerator = (prev_total_wealth + np.dot(prev_wealth, cost_sum))
-        denominator = (1 + np.dot(current_weights, cost_sum))
-        return numerator / denominator
+        sol = spopt.newton(func_rebalance_opt,
+                           current_portfolio_wealth,
+                           args=(prev_weights,
+                                 prev_portfolio_wealth,
+                                 price_relatives,
+                                 today_weights,
+                                 buy_trans_fee,
+                                 sell_trans_fee
+                                 )
+                           )
+        return sol
 
     @staticmethod
     def get_performance_report(
@@ -184,7 +241,7 @@ class WeightPortfolio(ValidMixin):
             cum_trans_fee_loss,
             decision_xarr
     ):
-        reports = {}
+        reports = dict()
         # basic information
         reports['os_uname'] = "|".join(platform.uname())
         reports['simulation_name'] = simulation_name
@@ -231,7 +288,12 @@ class WeightPortfolio(ValidMixin):
     def run(self):
         """
         run simulation
-        the portfolio wealth[t] = (wealth[t-1] * relative price[t]).sum()
+
+        prev_weights: array like, w_{t-1}
+        prev_portfolio_wealth: float, w_{(p), t-1}
+        today price relaitves: array like, x_t
+        today_prev_wealth: array like, w_{(p), t-1} * w_{t-1} * x_t
+        today_weights (rebalanced): w_t
         """
         t0 = time()
         simulation_name = self.get_simulation_name()
@@ -239,10 +301,11 @@ class WeightPortfolio(ValidMixin):
 
         # first allocation should also consider the transaction fee
         rebalanced_total_wealth = self.func_rebalance(
-            self.initial_wealth,
-            np.zeros(self.n_symbol),
-            np.zeros(self.n_symbol),
-            self.initial_weights,
+            self.initial_wealth,  # initial guess
+            np.zeros(self.n_symbol),  # prev weights
+            self.initial_wealth,  # prev portfolio wealth
+            np.ones(self.n_symbol),  # price relatives
+            self.initial_weights,  # today weights(after rebalance)
             self.buy_trans_fee,
             self.sell_trans_fee)
 
@@ -250,46 +313,54 @@ class WeightPortfolio(ValidMixin):
             self.initial_weights
         self.decision_xarr.loc[self.exp_start_date, :, 'wealth'] = (
                 rebalanced_total_wealth * self.initial_weights)
+
         cum_trans_fee_loss += (self.initial_wealth - rebalanced_total_wealth)
 
+        # start trading
         for tdx in range(1, self.n_exp_period):
             t1 = time()
             yesterday = self.exp_trans_dates[tdx - 1]
             today = self.exp_trans_dates[tdx]
 
             # the cumulative wealth before rebalance
-            # Note that we have already known today's ROI.
-            current_wealth = ((self.exp_rois.loc[today, :] + 1) *
-                              self.decision_xarr.loc[yesterday, :, 'wealth'])
-            current_total_wealth = current_wealth.sum()
-            current_weights = current_wealth / current_total_wealth
+            # Note that we have already known today's ROIs
+            today_price_relatives = (self.exp_rois.loc[today, :] + 1)
+            today_prev_wealth = (today_price_relatives *
+                                 self.decision_xarr.loc[yesterday, :, 'wealth'])
+            today_prev_portfolio_wealth = today_prev_wealth.sum()
+            # current_weights = current_wealth / current_total_wealth
 
-            # get current weights
+            # get today weights
             self.decision_xarr.loc[today, : 'weight'] = (
-                self.get_current_weights(
-                    prev_weights=self.decision_xarr.loc[yesterday, :, 'weight'],
-                    current_wealth=current_wealth,
-                    current_weights=current_weights,
-                    today=today)
+                self.get_today_weights(
+                    prev_trans_date=yesterday,
+                    trans_date=today,
+                    today_prev_wealth=today_prev_wealth,
+                    today_prev_portfolio_wealth=today_prev_portfolio_wealth,
+                )
             )
 
             # the cumulative wealth after rebalance
-            rebalanced_total_wealth = self.func_rebalance(
-                current_total_wealth,
-                current_weights,
-                current_wealth,
+            today_portfolio_wealth = self.func_rebalance(
+                # initial guess
+                today_prev_portfolio_wealth,
+                # prev weights and portfolio wealth
+                self.decision_xarr.loc[yesterday, :, 'weight'],
+                self.decision_xarr.loc[yesterday, :, 'wealth'].sum(),
+                # price relatives and weights of today
+                today_price_relatives,
                 self.decision_xarr.loc[today, : 'weight'],
                 self.buy_trans_fee,
                 self.sell_trans_fee
             )
 
-            cum_trans_fee_loss += (current_total_wealth -
-                                   rebalanced_total_wealth)
+            cum_trans_fee_loss += (today_portfolio_wealth -
+                                   today_prev_portfolio_wealth)
 
             # rebalance the wealth by CRP weights
             self.decision_xarr.loc[today, :, 'wealth'] = (
                     rebalanced_total_wealth *
-                    self.decision_xarr.loc[yesterday, :, 'wealth']
+                    self.decision_xarr.loc[today, :, 'weight']
             )
 
             if tdx % self.print_interval == 0:
