@@ -120,6 +120,43 @@ def test_func_rebalance_opt2(n_symbol=5, error=1e-10):
     print("elapsed: {:.4f} sec".format(time() - t0))
 
 
+def no_buy_and_sell(n_symbol=5, error=1e-10):
+    prev_weights = np.random.dirichlet(np.random.rand(n_symbol))
+    prev_portfolio_wealth = 100
+    price_relatives = np.random.randn(n_symbol) + 1
+    today_prev_wealths = prev_portfolio_wealth * prev_weights * price_relatives
+    today_prev_portfolio_wealth = today_prev_wealths.sum()
+    today_weights = today_prev_wealths/today_prev_portfolio_wealth
+    c_buy = 0
+    c_sell = 0
+    today_portfolio_wealth = 100
+    sol = spopt.newton(func_rebalance_opt, today_portfolio_wealth,
+                       args=(prev_weights,
+                             prev_portfolio_wealth,
+                             price_relatives,
+                             today_weights,
+                             c_buy,
+                             c_sell)
+                       )
+    today_prev_wealths = (
+            prev_portfolio_wealth * prev_weights * price_relatives)
+    buy_acts = np.maximum(sol * today_weights - today_prev_wealths, 0)
+    sell_acts = np.maximum(today_prev_wealths - sol * today_weights, 0)
+    buy_fee = c_buy * buy_acts.sum()
+    sell_fee = c_sell * sell_acts.sum()
+    balance = (sol - today_prev_wealths.sum() + buy_fee + sell_fee) < error
+    sol_eq = abs(sol - today_prev_portfolio_wealth) < error
+    return balance and sol_eq
+
+
+def test_no_buy_and_sell(n_symbol=5, error=1e-10):
+    t0 = time()
+    for _ in range(10000):
+        no_buy_and_sell(n_symbol, error)
+    print("elapsed: {:.4f} sec".format(time() - t0))
+
+
 if __name__ == '__main__':
     # test_func_rebalance_opt()
-    test_func_rebalance_opt2()
+    # test_func_rebalance_opt2()
+    test_no_buy_and_sell()
