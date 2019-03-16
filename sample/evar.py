@@ -50,9 +50,10 @@ def primal_CVaR(alpha, rois, solver='cplex'):
     results = opt.solve(instance)
     instance.solutions.load_from(results)
 
+
     # display(instance)
     print("primal_VaR:", instance.Z.value)
-    print("primal_CVaR objective:", instance.cvar_objective())
+    print("primal_CVaR:", instance.cvar_objective())
 
 
 def dual_CVaR(alpha, rois, solver='cplex'):
@@ -138,7 +139,7 @@ def EVaR_original(alpha, rois, solver="ipopt"):
 
 
 
-def EVaR(alpha, rois, solver='ipopt'):
+def EVaR_right_tail(alpha, rois, solver='ipopt'):
     n_symbol, n_scenario = rois.shape
 
     # Model
@@ -182,19 +183,59 @@ def EVaR(alpha, rois, solver='ipopt'):
     instance.solutions.load_from(results)
 
     # display(instance)
-    print("eVaR objective:", instance.evar_objective())
+    print("right eVaR", instance.evar_objective())
 
 
-def HMCR_original(alpha, rois, p=1, solver='cplex'):
+
+def EVaR_left_tail(alpha, rois, solver='ipopt'):
     n_symbol, n_scenario = rois.shape
 
     # Model
-    instance = ConcreteModel("HMCR_original")
+    instance = ConcreteModel()
+    instance.rois = rois
+    instance.alpha = alpha
+
+    # Set
+    instance.symbols = np.arange(n_symbol)
+    instance.scenarios = np.arange(n_scenario)
+
+    # decision variables
+    instance.weights = Var(instance.symbols, within=NonNegativeReals)
+    instance.Z = Var(within=PositiveReals)
+    instance.Ys = Var(instance.scenarios)
+
+    def weight_constraint_rule(model):
+        return sum(model.weights[mdx] for mdx in instance.symbols) == 100.
+
+    instance.weight_constraint = Constraint(rule=weight_constraint_rule)
+
+    def scenario_constraint_rule(model, sdx):
+        return model.Ys[sdx] == sum(model.weights[mdx] * model.rois[mdx, sdx]
+                                    for mdx in model.symbols)
+
+    instance.scenario_constraint = Constraint(instance.scenarios,
+                                              rule=scenario_constraint_rule)
+
+    def evar_objective_rule(model):
+        mgf = (1-model.alpha)/(sum(exp(model.Z * model.Ys[sdx]) for sdx in
+                   model.scenarios)/n_scenario)
+        return 1./model.Z * log(mgf)
+
+    instance.evar_objective = Objective(rule=evar_objective_rule,
+                                        sense=maximize)
+
+    # solve
+    opt = SolverFactory(solver)
+    # opt.options['max_iter'] = 3000
+    results = opt.solve(instance)
+    instance.solutions.load_from(results)
+
+    weights = [instance.weights[mdx].value for mdx in range(n_symbol)]
+
+    # display(instance)
+    print("left eVaR", instance.evar_objective())
 
 def HMCR(alpha, rois, p=1, solver='cplex'):
-    """
-
-    """
     n_symbol, n_scenario = rois.shape
     # Model
     instance = ConcreteModel()
@@ -225,13 +266,19 @@ def HMCR(alpha, rois, p=1, solver='cplex'):
         instance.scenarios, rule=scenario_constraint_rule)
 
     def hmcr_objective_rule(model):
-        scenario_exp = (sum(model.Ys[sdx] for sdx in model.scenarios) /
-                        n_scenario)
-        if p == 2:
-            scenario_exp = sqrt(scenario_exp * scenario_exp)
-        elif p > 2:
+        if p == 1:
+            scenario_exp = (sum(model.Ys[sdx] for sdx in model.scenarios) /
+                            n_scenario)
+        elif p == 2:
+            scenario_exp = (sum(model.Ys[sdx]* model.Ys[sdx]
+                                for sdx in model.scenarios) / n_scenario)
             # add 1e-20 to prevent sqrt(0)
-            scenario_exp = pow((scenario_exp+1e-20)**model.p, 1./model.p)
+            scenario_exp = sqrt(scenario_exp+1e-20)
+        elif p == 3:
+            # add 1e-20 to prevent sqrt(0)
+            scenario_exp = (sum(model.Ys[sdx] * model.Ys[sdx] * model.Ys[sdx]
+                                for sdx in model.scenarios) / n_scenario)
+            scenario_exp = pow(scenario_exp+1e-20, 1./model.p)
 
         return model.Z - 1. / (1 - model.alpha) *scenario_exp
 
@@ -244,21 +291,26 @@ def HMCR(alpha, rois, p=1, solver='cplex'):
     instance.solutions.load_from(results)
 
     # display(instance)
-    print("hmcr objective:", instance.hmcr_objective())
+    print("HMCR P={}:{}".format(p, instance.hmcr_objective()))
 
 
 def run_VaRs():
-    n_symbol, n_scenario = 1, 10000
-    rois = np.random.randn(n_symbol, n_scenario)*2
-    for alpha in (0.1, 0.3, 0.7, 0.9):
+    n_symbol, n_scenario = 1, 200
+    # rois = np.random.randn(n_symbol, n_scenario)*2
+    rois = np.random.lognormal(0, 3, (n_symbol, n_scenario))
+    # rois = np.random.gamma(1, 10, (n_symbol, n_scenario))
+    # rois = np.random.exponential(0.3, (n_symbol, n_scenario))
+
+    for alpha in (0.1, 0.3, 0.5, 0.7, 0.9):
         print("alpha = {:.2f}".format(alpha))
         # primal_CVaR(alpha, rois, solver='ipopt')
-        # primal_CVaR(alpha, rois, solver='cplex')
+        primal_CVaR(alpha, rois, solver='cplex')
         # EVaR_original(alpha, rois)
-        # EVaR(alpha, rois)
+        # EVaR_right_tail(alpha, rois)
+        EVaR_left_tail(alpha, rois)
         # HMCR(alpha, rois, p=1, solver='ipopt')
-        HMCR(alpha, rois, p=2, solver='cplex')
-        # HMCR(alpha, rois, p=3, solver='ipopt')
+        HMCR(alpha, rois, p=2, solver='ipopt')
+        HMCR(alpha, rois, p=3, solver='ipopt')
         # dual_CVaR(alpha, rois)
 
 
