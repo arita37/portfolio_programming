@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
+Authors: Hung-Hsin Chen <chen1116@gmail.com>
 """
 
 import datetime as dt
@@ -12,7 +11,7 @@ import os
 import pickle
 import platform
 import sys
-import json
+import pandas as pd
 from time import (time, sleep)
 
 import numpy as np
@@ -29,116 +28,127 @@ def get_zmq_version():
     print("Node:{} pyzmq version is {}".format(node, zmq.__version__))
 
 
-def _all_spsp_cvar_params(setting, yearly=False):
+def _all_spsp_cvar_params(exp_name, setting, yearly=False):
     """
-    "report_SPSP_CVaR_{}_scenario-set-idx{}_{}_{}_M{}_Mc{}_h{}_a{:.2f}_s{
-    }.pkl".format(
-                self.setting,
-                self.scenario_set_idx,
-                self.exp_start_date.strftime("%Y%m%d"),
-                self.exp_end_date.strftime("%Y%m%d"),
-                self.max_portfolio_size,
-                self.n_symbol,
-                self.rolling_window_size,
-                self.alpha,
-                self.n_scenario
-            )
+    "report_SPSP_CVaR_{}_{}_Mc{}_M{}_h{}_s{}_a{:.2f}_sdx{}_{}_{}.pkl".format(
+        self.setting,
+        self.group_name,
+        self.n_symbol,
+        self.max_portfolio_size,
+        self.rolling_window_size,
+        self.n_scenario,
+        self.alpha,
+        self.scenario_set_idx,
+        self.exp_start_date.strftime("%Y%m%d"),
+        self.exp_end_date.strftime("%Y%m%d"),
+    )
     """
-    REPORT_FORMAT = "report_SPSP_CVaR_{setting}_scenario-set-idx{sdx}_{" \
-                    "exp_start_date}_{exp_end_date}_M{max_portfolio}_Mc{" \
-                    "n_candidate_symbol}_h{rolling_window_size" \
-                    "}_a{alpha}_s{n_scenario}.pkl"
-    if setting not in ('compact', 'general', "compact_mu0"):
+    REPORT_FORMAT = "report_SPSP_CVaR_{setting}_{group_name}_Mc{n_symbol}_M{max_portfolio_size}_h{rolling_window_size}_s{n_scenario}_a{alpha}_sdx{sdx}_{exp_start_date}_{exp_end_date}.pkl"
+
+    if exp_name not in ('dissertation', 'stocksp_cor15'):
+        raise ValueError('unknown exp_name:{}'.format(exp_name))
+
+    if setting not in ('compact', 'general'):
         raise ValueError('Wrong setting: {}'.format(setting))
 
-    set_indices = (1, 2, 3)
-    # set_indices = (1, )
-    candidate_symbols = json.load(
-        open(pp.TAIEX_2005_LARGEST4ED_MARKET_CAP_SYMBOL_JSON))
+    #set_indices = (1, 2, 3)
 
-    if not yearly:
-        # whole interval
-        years = [(dt.date(2005, 1, 3), dt.date(2014, 12, 31))]
-    else:
-        # yearly interval
-        years = [(dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
-                 (dt.date(2006, 1, 2), dt.date(2006, 12, 29)),
-                 (dt.date(2007, 1, 2), dt.date(2007, 12, 31)),
-                 (dt.date(2008, 1, 2), dt.date(2008, 12, 31)),
-                 (dt.date(2009, 1, 5), dt.date(2009, 12, 31)),
-                 (dt.date(2010, 1, 4), dt.date(2010, 12, 31)),
-                 (dt.date(2011, 1, 3), dt.date(2011, 12, 30)),
-                 (dt.date(2012, 1, 2), dt.date(2012, 12, 28)),
-                 (dt.date(2013, 1, 2), dt.date(2013, 12, 31)),
-                 (dt.date(2014, 1, 2), dt.date(2014, 12, 31)),
-                 (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
-                 (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
-                 (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
-                 ]
-    max_portfolio_sizes = range(5, 50 + 5, 5)
-    window_sizes = range(60, 240 + 10, 10)
-    n_scenarios = [200, ]
-    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+    set_indices = (1,2)
 
-    # dict comprehension
-    # key: file_name, value: parameters
-    if setting in ("compact", "compact_mu0"):
-        return {
-            REPORT_FORMAT.format(
-                setting=setting,
-                sdx=sdx,
-                exp_start_date=s_date.strftime("%Y%m%d"),
-                exp_end_date=e_date.strftime("%Y%m%d"),
-                max_portfolio=m,
-                n_candidate_symbol=m,
-                rolling_window_size=h,
-                alpha=a,
-                n_scenario=s
-            ): (setting, sdx, s_date, e_date,
-                candidate_symbols, m, h, float(a), s)
-            for sdx in set_indices
-            for s_date, e_date in years
-            for m in max_portfolio_sizes
-            for h in window_sizes
-            for a in alphas
-            for s in n_scenarios
-        }
+    if exp_name == "dissertation":
+        if not yearly:
+            # whole interval
+            years = [(dt.date(2005, 1, 3), dt.date(2018, 12, 28))]
+        else:
+            # yearly interval
+            years = [(dt.date(2005, 1, 3), dt.date(2005, 12, 30)),
+                     (dt.date(2006, 1, 2), dt.date(2006, 12, 29)),
+                     (dt.date(2007, 1, 2), dt.date(2007, 12, 31)),
+                     (dt.date(2008, 1, 2), dt.date(2008, 12, 31)),
+                     (dt.date(2009, 1, 5), dt.date(2009, 12, 31)),
+                     (dt.date(2010, 1, 4), dt.date(2010, 12, 31)),
+                     (dt.date(2011, 1, 3), dt.date(2011, 12, 30)),
+                     (dt.date(2012, 1, 2), dt.date(2012, 12, 28)),
+                     (dt.date(2013, 1, 2), dt.date(2013, 12, 31)),
+                     (dt.date(2014, 1, 2), dt.date(2014, 12, 31)),
+                     (dt.date(2015, 1, 5), dt.date(2015, 12, 31)),
+                     (dt.date(2016, 1, 4), dt.date(2016, 12, 30)),
+                     (dt.date(2017, 1, 3), dt.date(2017, 12, 29))
+                     ]
+        max_portfolio_sizes = [5, ]
+        group_symbols = pp.GROUP_SYMBOLS
+        window_sizes = range(50, 240 + 10, 10)
+        n_scenarios = [1000, ]
+        alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
-    elif setting == "general":
-        return {
-            REPORT_FORMAT.format(
-                setting=setting,
-                sdx=sdx,
-                exp_start_date=s_date.strftime("%Y%m%d"),
-                exp_end_date=e_date.strftime("%Y%m%d"),
-                max_portfolio=m,
-                n_candidate_symbol=50,
-                rolling_window_size=h,
-                alpha=a,
-                n_scenario=s
-            ): (setting, sdx, s_date, e_date, candidate_symbols,
-                m, h, float(a), s)
-            for sdx in set_indices
-            for s_date, e_date in years
-            for m in max_portfolio_sizes
-            for h in window_sizes
-            for a in alphas
-            for s in n_scenarios
-        }
+        # dict comprehension
+        # key: file_name, value: parameters
+        if setting in ("compact", ):
+            params = {
+                REPORT_FORMAT.format(
+                    setting=setting,
+                    group_name=group_name,
+                    n_symbol=len(symbols),
+                    max_portfolio_size=m,
+                    rolling_window_size=h,
+                    n_scenario=s,
+                    alpha=a,
+                    sdx=sdx,
+                    exp_start_date=s_date.strftime("%Y%m%d"),
+                    exp_end_date=e_date.strftime("%Y%m%d")
+                ): (exp_name, setting, group_name, m, h, s, float(a), sdx,
+                    s_date, e_date)
+                for group_name, symbols in group_symbols.items()
+                for m in max_portfolio_sizes
+                for h in window_sizes
+                for s in n_scenarios
+                for a in alphas
+                for sdx in set_indices
+                for s_date, e_date in years
+            }
+            return params
+
+        elif setting == "general":
+            return {
+                REPORT_FORMAT.format(
+                    setting=setting,
+                    group_name=group_name,
+                    n_symbol=len(symbols),
+                    max_portfolio=m,
+                    rolling_window_size=h,
+                    n_scenario=s,
+                    alpha=a,
+                    sdx=sdx,
+                    exp_start_date=s_date.strftime("%Y%m%d"),
+                    exp_end_date=e_date.strftime("%Y%m%d"),
+                ): (setting, group_name, len(symbols), m, h, s, a, sdx,
+                    s_date, e_date)
+                for group_name, symbols in group_symbols.items()
+                for m in max_portfolio_sizes
+                for h in window_sizes
+                for s in n_scenarios
+                for a in alphas
+                for sdx in set_indices
+                for s_date, e_date in years
+            }
 
 
-def checking_existed_spsp_cvar_report(setting, yearly):
+def checking_existed_spsp_cvar_report(exp_name, setting, yearly):
     """
     return unfinished experiment parameters.
     """
     if yearly:
-        report_dir = pp.REPORT_DIR
-    else:
         report_dir = os.path.join(pp.REPORT_DIR,
-                              "SPSP_CVaR_{}_20050103_20141231".format(setting))
-    all_reports = _all_spsp_cvar_params(setting, yearly)
+                                  "SPSP_CVaR_{}_yearly".format(setting))
+    else:
+        report_dir = pp.REPORT_DIR
+        # report_dir = os.path.join(pp.REPORT_DIR,
+        #                 "SPSP_CVaR_{}_20050103_20181228".format(setting))
 
-    print("totally n_parameter: {}".format(len(all_reports)))
+    all_reports = _all_spsp_cvar_params(exp_name, setting, yearly)
+    print("{} {} totally n_parameter: {}".format(
+        exp_name, setting, len(all_reports)))
+
     os.chdir(report_dir)
     existed_reports = glob.glob("*.pkl")
     for report in existed_reports:
@@ -148,7 +158,7 @@ def checking_existed_spsp_cvar_report(setting, yearly):
     return all_reports
 
 
-def parameter_server(setting, yearly):
+def parameter_server(exp_name, setting, yearly):
     node = platform.node()
     pid = os.getpid()
     server_node_pid = "{}[pid:{}]".format(node, pid)
@@ -163,11 +173,12 @@ def parameter_server(setting, yearly):
     # multiprocessing queue is thread-safe.
     params = mp.Queue()
     [params.put(v) for v in
-     checking_existed_spsp_cvar_report(setting, yearly).values()]
+     checking_existed_spsp_cvar_report(exp_name, setting, yearly).values()]
     progress_node_pid = set()
     progress_node_count = {}
     finished = {}
-    print("Ready to serving, remaining {} n_parameter.".format(params.qsize()))
+    print("Ready to serving, {} {} remaining {} n_parameter.".format(
+        exp_name, setting, params.qsize()))
 
     svr_start_time = dt.datetime.now()
     t0 = time()
@@ -275,100 +286,194 @@ def parameter_client(server_ip="140.117.168.49", max_reconnect_count=30):
     context.term()
 
 
-def aggregating_reports(setting, yearly=False):
+def aggregating_reports(exp_name, setting, yearly=False):
+
+    import arch.bootstrap.multiple_comparison as arch_comp
+
+    if exp_name not in ('dissertation', 'stocksp_cor15'):
+        raise ValueError('unknown exp_name:{}'.format(exp_name))
+
     if setting not in ("compact", "general"):
         raise ValueError("Unknown SPSP_CVaR setting: {}".format(setting))
 
-    if not yearly:
-        # whole interval
-        years = [[dt.date(2005, 1, 3), dt.date(2014, 12, 31)]]
-        out_report_path = os.path.join(pp.DATA_DIR,
-                                       "report_SPSP_CVaR_whole_{}_{}_{"
-                                       "}.nc".format(
-                                           setting,
-                                           years[0][0].strftime("%Y%m%d"),
-                                           years[0][1].strftime("%Y%m%d")))
-    else:
+    if exp_name == 'stocksp_cor15':
+        if not yearly:
+            # whole interval
+            years = [[dt.date(2005, 1, 3), dt.date(2014, 12, 31)]]
+            out_report_path = os.path.join(
+                pp.DATA_DIR,
+                "report_SPSP_CVaR_whole_{}_{}_{}_{}.nc".format(
+                    exp_name, setting,
+                    years[0][0].strftime("%Y%m%d"),
+                    years[0][1].strftime("%Y%m%d")))
+
+        else:
+            years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
+                     [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
+                     [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
+                     [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
+                     [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
+                     [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
+                     [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
+                     [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
+                     [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
+                     [dt.date(2014, 1, 2), dt.date(2014, 12, 31)]
+            ]
+            out_report_path = os.path.join(pp.DATA_DIR,
+                                           "report_SPSP_CVaR_yearly_{}_{}_{}_{"
+                                           "}.nc".format(
+                                               exp_name,
+                                               setting,
+                                               years[0][0].strftime("%Y%m%d"),
+                                               years[-1][1].strftime("%Y%m%d")))
+
+        intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
+                     for s, e in years]
+        set_indices = [1, 2, 3]
+        group_names = []
+        max_portfolio_sizes = range(5, 50 + 5, 5)
+        window_sizes = range(60, 240 + 10, 10)
+        n_scenarios = [200, ]
+        alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+
+    elif exp_name == 'dissertation':
+        if not yearly:
+            # whole interval
+            years = [[dt.date(2005, 1, 3), dt.date(2018, 12, 28)]]
+
+            out_report_path = os.path.join(
+                pp.DATA_DIR,
+                "report_SPSP_CVaR_whole_{}_{}_{}_{}.nc".format(
+                    exp_name, setting,
+                    years[0][0].strftime("%Y%m%d"),
+                    years[0][1].strftime("%Y%m%d")))
+        else:
         # yearly interval
-        years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
-                 [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
-                 [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
-                 [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
-                 [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
-                 [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
-                 [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
-                 [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
-                 [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
-                 [dt.date(2014, 1, 2), dt.date(2014, 12, 31)],
-                 [dt.date(2015, 1, 5), dt.date(2015, 12, 31)],
-                 [dt.date(2016, 1, 4), dt.date(2016, 12, 30)],
-                 [dt.date(2017, 1, 3), dt.date(2017, 12, 29)]
-                 ]
-        out_report_path = os.path.join(pp.DATA_DIR,
-                                       "report_SPSP_CVaR_yearly_{}_{}_{"
+            years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
+                     [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
+                     [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],
+                     [dt.date(2008, 1, 2), dt.date(2008, 12, 31)],
+                     [dt.date(2009, 1, 5), dt.date(2009, 12, 31)],
+                     [dt.date(2010, 1, 4), dt.date(2010, 12, 31)],
+                     [dt.date(2011, 1, 3), dt.date(2011, 12, 30)],
+                     [dt.date(2012, 1, 2), dt.date(2012, 12, 28)],
+                     [dt.date(2013, 1, 2), dt.date(2013, 12, 31)],
+                     [dt.date(2014, 1, 2), dt.date(2014, 12, 31)],
+                     [dt.date(2015, 1, 5), dt.date(2015, 12, 31)],
+                     [dt.date(2016, 1, 4), dt.date(2016, 12, 30)],
+                     [dt.date(2017, 1, 3), dt.date(2017, 12, 29)]
+                     ]
+            out_report_path = os.path.join(pp.DATA_DIR,
+                                       "report_SPSP_CVaR_yearly_{}_{}_{}_{"
                                        "}.nc".format(
+                                           exp_name,
                                            setting,
                                            years[0][0].strftime("%Y%m%d"),
                                            years[-1][1].strftime("%Y%m%d")))
 
-    intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
-                 for s, e in years]
-    set_indices = [1, 2, 3]
-    max_portfolio_sizes = range(5, 50 + 5, 5)
-    window_sizes = range(60, 240 + 10, 10)
-    n_scenarios = [200, ]
-    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+        intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
+                     for s, e in years]
+        set_indices = [1, 2, 3]
+        group_names = list(pp.GROUP_SYMBOLS.keys())
+        max_portfolio_sizes = [5,]
+        window_sizes = range(50, 240 + 10, 10)
+        n_scenarios = [1000, ]
+        alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
 
-    attributes = [
+    originals = [
         'initial_wealth', 'final_wealth',
         'cum_roi', 'daily_roi', 'daily_mean_roi',
         'daily_std_roi', 'daily_skew_roi', 'daily_ex-kurt_roi',
         'Sharpe', 'Sortino_full', 'Sortino_partial'
     ]
+    # additional attributes
+    additionals = ['annual_roi', 'daily_VSS', 'SPA_c']
+    attributes = originals + additionals
+
     report_xarr = xr.DataArray(
         np.zeros((len(years),
-                  len(set_indices), len(max_portfolio_sizes), len(window_sizes),
-                  len(alphas), len(attributes))),
+                  len(group_names),
+                  len(set_indices),
+                  len(max_portfolio_sizes),
+                  len(window_sizes),
+                  len(alphas),
+                  len(attributes)
+                  )),
         dims=("interval",
-              "scenario_set_idx", "max_portfolio_size", "rolling_window_size",
-              "alpha", "attribute"),
+              "group_name",
+              "scenario_set_idx",
+              "max_portfolio_size",
+              "rolling_window_size",
+              "alpha",
+              "attribute"),
         coords=(intervals,
-                set_indices, max_portfolio_sizes, window_sizes, alphas,
+                group_names,
+                set_indices,
+                max_portfolio_sizes,
+                window_sizes,
+                alphas,
                 attributes)
     )
-
     t0 = time()
     # key: report_name, value: parameters
-    report_dict = _all_spsp_cvar_params(setting, yearly)
+    report_dict = _all_spsp_cvar_params(exp_name, setting, yearly)
     report_count = 0
     no_report_count_params = []
     no_report_count = 0
-    if yearly:
-        parent_dir = pp.REPORT_DIR
-    else:
-        parent_dir = os.path.join(pp.REPORT_DIR,
-                                  'SPSP_CVaR_{}_20050103_20141231'.format(
-                                      setting))
+    parent_dir = pp.REPORT_DIR
 
     for idx, (name, param) in enumerate(report_dict.items()):
+        t1 = time()
         path = os.path.join(parent_dir, name)
-        setting, sdx, s_date, e_date, m, h, a, s = param
+        exp_name, setting, grp, m, h, s, a, sdx, s_date, e_date = param
         interval = "{}_{}".format(s_date.strftime("%Y%m%d"),
                                   e_date.strftime("%Y%m%d"))
         alpha = "{:.2f}".format(a)
         try:
-            with open(path, 'rb') as fin:
-                report = pickle.load(fin)
-                report_count += 1
-                print("[{}/{}] {} {:.2%} elapsed:{:.2f} secs".format(
-                    idx + 1, len(report_dict),
-                    report['simulation_name'],
-                    report['cum_roi'],
-                    time() - t0
-                ))
-                for attr in attributes:
-                    report_xarr.loc[interval, sdx, m, h, alpha, attr] = \
-                        report[attr]
+            report = pd.read_pickle(path)
+
+            for attr in originals:
+                report_xarr.loc[
+                    interval, grp, sdx, m, h, alpha, attr] = report[attr]
+
+            year_count = (e_date.year - s_date.year) + 1
+            for attr in additionals:
+                if attr == 'annual_roi':
+                    val = np.power(report['cum_roi'] + 1, 1. / year_count) - 1
+                elif attr == 'VSS':
+                    risks = report['estimated_risk_xarr']
+                    val = float(risks.loc[:, 'VSS'].mean()) / 1e6
+                elif attr == 'SPA_c':
+                    dec_xarr = report['decision_xarr']
+                    wealth_arr = dec_xarr.loc[:, :, 'wealth'].sum(
+                        axis=1).to_series()
+                    rois = wealth_arr.pct_change()
+                    rois[0] = 0
+                    # print(rois.values)
+                    spa_value = 0
+                    for _ in range(5):
+                        spa = arch_comp.SPA(rois.values,
+                                            np.zeros(rois.size),
+                                            reps=1000)
+                        spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                        spa.compute()
+                        # preserve the worse p_value
+                        if spa.pvalues[1] > spa_value:
+                            spa_value = spa.pvalues[1]
+                    val = spa_value
+
+                report_xarr.loc[
+                    interval, grp, sdx, m, h, alpha, attr] = val
+
+            report_count += 1
+            print("[{}/{}] {} {:.2%} elapsed:{:2.f}/{:.2f} secs".format(
+                idx + 1, len(report_dict),
+                report['simulation_name'],
+                report['cum_roi'],
+                time() - t1,
+                time() - t0
+            ))
+
         except FileNotFoundError:
             no_report_count_params.append(name)
             no_report_count += 1
@@ -387,6 +492,7 @@ def aggregating_reports(setting, yearly=False):
 
 
 if __name__ == '__main__':
+
     logging.basicConfig(
         stream=sys.stdout,
         format='%(filename)15s %(levelname)10s %(asctime)s\n'
@@ -404,6 +510,15 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--server", default=False,
                         action='store_true',
                         help="parameter server mode")
+
+    parser.add_argument(
+        "-e",
+        "--exp_name",
+        type=str,
+        default="dissertation",
+        choices=["dissertation", "stocksp_cor15"],
+        help="name of the experiment",
+    )
 
     parser.add_argument("--setting", type=str,
                         choices=("compact", "general", "compact_mu0"),
@@ -431,17 +546,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.server:
         print("run SPSP_CVaR parameter server mode")
-        print("setting:{}, yearly:{}".format(args.setting, args.yearly))
-        parameter_server(args.setting, args.yearly)
+        print("exp_name: {}, setting:{}, yearly:{}".format(
+            args.exp_name, args.setting, args.yearly))
+        parameter_server(args.exp_name, args.setting, args.yearly)
     elif args.client:
         print("run SPSP_CVaR client mode")
         parameter_client()
     elif args.compact_report:
         print("SPSP CVaR compact setting report")
-        aggregating_reports("compact", args.yearly)
+        aggregating_reports(args.exp_name, "compact", args.yearly)
     elif args.general_report:
         print("SPSP CVaR general setting report")
-        aggregating_reports("general", args.yearly)
+        aggregating_reports(args.exp_name, "general", args.yearly)
     elif args.unfinished_param:
         params_dict = checking_existed_spsp_cvar_report(args.setting,
                                                        args.yearly)

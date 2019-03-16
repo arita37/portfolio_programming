@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
+Author: Hung-Hsin Chen <chen1116@gmail.com>
 
 https://github.com/SherlockLiao/pytorch-beginner/blob/master/08-AutoEncoder/simple_autoencoder.py
 """

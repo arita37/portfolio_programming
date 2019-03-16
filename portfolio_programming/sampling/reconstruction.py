@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 
-Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
+Authors: Hung-Hsin Chen <chen1116@gmail.com>
+
 
 chaos series phase space reconstruction
 """

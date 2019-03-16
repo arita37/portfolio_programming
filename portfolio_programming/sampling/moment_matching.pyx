@@ -6,8 +6,8 @@
 #cython: nonecheck=False
 
 """
-Authors: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
-License: GPL v3
+Authors: Hung-Hsin Chen <chen1116@gmail.com>
+
 
 Høyland, K.; Kaut, M. & Wallace, S. W., "A heuristic for
 moment-matching scenario generation," Computational optimization

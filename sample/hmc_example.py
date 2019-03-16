@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
+Author: Hung-Hsin Chen <chen1116@gmail.com>
 http://www.datalearner.com/blog/1051484459699809
-https://github.com/matt-graham/hamiltonian-monte-carlo/blob/master/hmc/base.py
+https://github.com/matt-graham/hamiltonian-monte-carlo/blob/master/hmc/wp_base.py
 https://github.com/rmcgibbo/pyhmc/blob/master/pyhmc/hmc.py
 """
 
