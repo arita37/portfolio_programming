@@ -27,13 +27,23 @@ import numpy as np
 
 extensions = [
     Extension(
-              "spsp_cvar",
-              ["spsp_cvar.pyx",],
-              include_dirs = [np.get_include()],
+        "spsp_cvar",
+        ["spsp_cvar.pyx",],
+        include_dirs = [np.get_include()],
     ),
     Extension(
         "spsp_base",
         ["spsp_base.pyx", ],
+        include_dirs=[np.get_include()],
+    ),
+    Extension(
+        "wp_base",
+        ["wp_base.pyx", ],
+        include_dirs=[np.get_include()],
+    ),
+Extension(
+        "wp_bah",
+        ["wp_bah.pyx", ],
         include_dirs=[np.get_include()],
     ),
 ]

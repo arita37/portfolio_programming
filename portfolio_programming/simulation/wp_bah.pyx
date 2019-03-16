@@ -13,16 +13,16 @@ class BAHPortfolio(WeightPortfolio):
     """
 
     def __init__(self,
-                 group_name,
+                 str group_name,
                  symbols,
                  risk_rois,
                  initial_weights,
-                 initial_wealth=1e6,
-                 buy_trans_fee=pp.BUY_TRANS_FEE,
-                 sell_trans_fee=pp.SELL_TRANS_FEE,
+                 double initial_wealth=1e6,
+                 double buy_trans_fee=pp.BUY_TRANS_FEE,
+                 double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 print_interval=10):
+                 int print_interval=10):
         super(BAHPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
@@ -50,13 +50,4 @@ class BAHPortfolio(WeightPortfolio):
         # normalized weights
         return kwargs['today_prev_wealth'] / kwargs[
             'today_prev_portfolio_wealth']
-    #
-    # def func_rebalance(self, current_portfolio_wealth,
-    #                    prev_weights, prev_portfolio_wealth,
-    #                    price_relatives, today_weights):
-    #     """
-    #     overwrite the balancing function because the BAH does not trading
-    #     in the experimental interval
-    #     """
-    #     return current_portfolio_wealth
 

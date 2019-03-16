@@ -90,7 +90,7 @@ if EXP_NAME == "dissertation":
 
     # simulation
     EXP_START_DATE = dt.date(2005, 1, 3)
-    EXP_END_DATE = dt.date(2018, 12, 31)
+    EXP_END_DATE = dt.date(2018, 12, 28)
     BUY_TRANS_FEE = 0.001425
     SELL_TRANS_FEE = 0.004425
     DISCOUNT_FACTOR = 0.006

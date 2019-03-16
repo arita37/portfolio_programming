@@ -9,6 +9,7 @@ import numpy as np
 import scipy.optimize as spopt
 from time import time
 
+
 def func_rebalance_opt(
         today_portfolio_wealth,
         prev_weights,
@@ -47,7 +48,7 @@ def func_rebalance_opt(
     balance equation
     """
     today_prev_wealths = (
-                prev_portfolio_wealth * prev_weights * price_relatives)
+            prev_portfolio_wealth * prev_weights * price_relatives)
 
     buy_acts = np.maximum(today_portfolio_wealth * today_weights -
                           today_prev_wealths, 0)
@@ -62,7 +63,7 @@ def func_rebalance_opt(
 
 
 def test_func_rebalance_opt(error=1e-6):
-    prev_weights = np.array([0.5 ,0.5])
+    prev_weights = np.array([0.5, 0.5])
     prev_portfolio_wealth = 100
     price_relatives = np.array([1.02, 0.96])
     today_weights = np.array([0.4, 0.6])
@@ -90,7 +91,7 @@ def test_func_rebalance_opt(error=1e-6):
 def rand_func_rebalance_opt(n_symbol=5, error=1e-10):
     prev_weights = np.random.dirichlet(np.random.rand(n_symbol))
     prev_portfolio_wealth = 100
-    price_relatives = np.random.randn(n_symbol)+1
+    price_relatives = np.random.randn(n_symbol) + 1
     today_weights = np.random.dirichlet(np.random.rand(n_symbol))
     c_buy = 0.001425
     c_sell = 0.004425
@@ -126,7 +127,7 @@ def no_buy_and_sell(n_symbol=5, error=1e-10):
     price_relatives = np.random.randn(n_symbol) + 1
     today_prev_wealths = prev_portfolio_wealth * prev_weights * price_relatives
     today_prev_portfolio_wealth = today_prev_wealths.sum()
-    today_weights = today_prev_wealths/today_prev_portfolio_wealth
+    today_weights = today_prev_wealths / today_prev_portfolio_wealth
     c_buy = 0
     c_sell = 0
     today_portfolio_wealth = 100
