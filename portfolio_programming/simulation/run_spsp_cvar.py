@@ -525,8 +525,6 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
 
 if __name__ == '__main__':
 
-    dissertation_plot_2d_contour_by_group("compact", z_dim="daily_VSS")
-
     logging.basicConfig(
         stream=sys.stdout,
         format='%(filename)15s %(levelname)10s %(asctime)s\n'
