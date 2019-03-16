@@ -70,5 +70,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.simulation:
         for group_name in pp.GROUP_SYMBOLS.keys():
-            run_eg(args.eta, 'TWG1',
+            run_eg(args.eta, group_name,
                    dt.date(2005, 1, 1), dt.date(2018, 12, 28))

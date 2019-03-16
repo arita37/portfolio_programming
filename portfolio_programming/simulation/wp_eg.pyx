@@ -21,17 +21,17 @@ class EGPortfolio(WeightPortfolio):
     """
 
     def __init__(self,
-                 eta,
-                 group_name,
-                 symbols,
+                 double eta,
+                 str group_name,
+                 list symbols,
                  risk_rois,
                  initial_weights,
                  initial_wealth=1e6,
-                 buy_trans_fee=pp.BUY_TRANS_FEE,
-                 sell_trans_fee=pp.SELL_TRANS_FEE,
+                 double buy_trans_fee=pp.BUY_TRANS_FEE,
+                 double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 print_interval=10):
+                 int print_interval=10):
         super(EGPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,

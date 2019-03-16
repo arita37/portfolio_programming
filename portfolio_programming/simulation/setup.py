@@ -46,6 +46,12 @@ extensions = [
         ["wp_bah.pyx", ],
         include_dirs=[np.get_include()],
     ),
+
+    Extension(
+        "wp_eg",
+        ["wp_eg.pyx", ],
+        include_dirs=[np.get_include()],
+    ),
 ]
 
 setup(
