@@ -19,6 +19,7 @@ import os
 import logging
 import pickle
 
+cimport numpy as cnp
 import portfolio_programming as pp
 from portfolio_programming.simulation.spsp_base import ValidMixin
 from portfolio_programming.statistics.risk_adjusted import (
@@ -27,10 +28,10 @@ from portfolio_programming.statistics.risk_adjusted import (
 
 def func_rebalance_opt(
         double today_portfolio_wealth,
-        prev_weights,
+        cnp.ndarray[cnp.float64_t, ndim=1] prev_weights,
         double prev_portfolio_wealth,
-        price_relatives,
-        today_weights,
+        cnp.ndarray[cnp.float64_t, ndim=1] price_relatives,
+        cnp.ndarray[cnp.float64_t, ndim=1] today_weights,
         double buy_trans_fee,
         double sell_trans_fee):
     """
@@ -82,7 +83,7 @@ def func_rebalance_opt(
 class WeightPortfolio(ValidMixin):
     def __init__(self,
                  str group_name,
-                 symbols,
+                 list symbols,
                  risk_rois,
                  initial_weights,
                  double initial_wealth=1e6,
@@ -354,11 +355,11 @@ class WeightPortfolio(ValidMixin):
                 # initial guess
                 today_prev_portfolio_wealth,
                 # prev weights and portfolio wealth
-                self.decision_xarr.loc[yesterday, :, 'weight'],
+                self.decision_xarr.loc[yesterday, :, 'weight'].values,
                 self.decision_xarr.loc[yesterday, :, 'wealth'].sum(),
                 # price relatives and weights of today
-                today_price_relatives,
-                self.decision_xarr.loc[today, :, 'weight']
+                today_price_relatives.values,
+                self.decision_xarr.loc[today, :, 'weight'].values
             )
 
             cum_trans_fee_loss += (today_portfolio_wealth -

@@ -112,7 +112,7 @@ if __name__ == '__main__':
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
 
-    # for group_name in pp.GROUP_SYMBOLS.keys():
-    #     run_bah('dissertation', group_name,
-    #             dt.date(2005, 1, 1), dt.date(2018, 12, 31))
-    get_bah_report()
+    for group_name in pp.GROUP_SYMBOLS.keys():
+        run_bah('dissertation', group_name,
+                dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+    # get_bah_report()

@@ -14,7 +14,7 @@ class BAHPortfolio(WeightPortfolio):
 
     def __init__(self,
                  str group_name,
-                 symbols,
+                 list symbols,
                  risk_rois,
                  initial_weights,
                  double initial_wealth=1e6,
