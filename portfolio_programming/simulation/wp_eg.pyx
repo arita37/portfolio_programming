@@ -69,9 +69,9 @@ class EGPortfolio(WeightPortfolio):
         prev_weights = self.decision_xarr.loc[
             yesterday, self.symbols, 'weight']
         price_relatives = self.exp_rois.loc[today, self.symbols] + 1
-        today_prev_weights = (kwargs['today_prev_wealth'] /
-                              kwargs['today_prev_portfolio_wealth'])
-        new_weights = (prev_weights *
-                       np.exp(self.eta * price_relatives / today_prev_weights))
-        return new_weights / new_weights.sum()
+        today_prev_weights_sum =  (prev_weights *  price_relatives).sum()
+        new_weights = (prev_weights * np.exp(self.eta * price_relatives /
+                                             today_prev_weights_sum))
+        normalized_new_weights = new_weights / new_weights.sum()
+        return normalized_new_weights
 
