@@ -191,8 +191,7 @@ class WeightPortfolio(ValidMixin):
                                   'does not be implemented.')
 
 
-    @staticmethod
-    def add_to_reports(reports):
+    def add_to_reports(self, reports):
         """
         add specific results to reports after simulation
         """
@@ -316,9 +315,9 @@ class WeightPortfolio(ValidMixin):
         cum_trans_fee_loss = 0
 
         # first allocation should also consider the transaction fee
-        self.decision_xarr.loc[self.exp_start_date, :, 'weight'] = \
+        self.decision_xarr.loc[self.exp_start_date, self.symbols, 'weight'] = \
             self.initial_weights
-        self.decision_xarr.loc[self.exp_start_date, :, 'wealth'] = (
+        self.decision_xarr.loc[self.exp_start_date, self.symbols, 'wealth'] = (
                 self.initial_wealth * self.initial_weights *
                 (1-self.buy_trans_fee))
 
@@ -332,16 +331,16 @@ class WeightPortfolio(ValidMixin):
 
             # the cumulative wealth before rebalance
             # Note that we have already known today's ROIs
-            today_price_relatives = (self.exp_rois.loc[today, :] + 1)
+            today_price_relatives = (self.exp_rois.loc[today, self.symbols] + 1)
             today_prev_wealth = (today_price_relatives *
-                         self.decision_xarr.loc[yesterday, :, 'wealth'])
+                     self.decision_xarr.loc[yesterday, self.symbols, 'wealth'])
             today_prev_portfolio_wealth = today_prev_wealth.sum()
             # current_weights = current_wealth / current_total_wealth
             # print(today, self.exp_rois.loc[today, :]*100)
             # print(today, today_prev_wealth)
 
             # get today weights
-            self.decision_xarr.loc[today, :, 'weight'] = (
+            self.decision_xarr.loc[today, self.symbols, 'weight'] = (
                 self.get_today_weights(
                     prev_trans_date=yesterday,
                     trans_date=today,
@@ -355,18 +354,18 @@ class WeightPortfolio(ValidMixin):
                 # initial guess
                 today_prev_portfolio_wealth,
                 # prev weights and portfolio wealth
-                self.decision_xarr.loc[yesterday, :, 'weight'].values,
-                self.decision_xarr.loc[yesterday, :, 'wealth'].sum(),
+                self.decision_xarr.loc[yesterday, self.symbols, 'weight'].values,
+                self.decision_xarr.loc[yesterday, self.symbols, 'wealth'].sum(),
                 # price relatives and weights of today
                 today_price_relatives.values,
-                self.decision_xarr.loc[today, :, 'weight'].values
+                self.decision_xarr.loc[today, self.symbols, 'weight'].values
             )
 
             cum_trans_fee_loss += (today_portfolio_wealth -
                                    today_prev_portfolio_wealth)
 
             # rebalance the wealth by CRP weights
-            self.decision_xarr.loc[today, :, 'wealth'] = (
+            self.decision_xarr.loc[today, self.symbols, 'wealth'] = (
                     today_portfolio_wealth *
                     self.decision_xarr.loc[today, :, 'weight']
             )
@@ -378,14 +377,15 @@ class WeightPortfolio(ValidMixin):
                     tdx + 1,
                     self.n_exp_period,
                     today.strftime("%Y%m%d"),
-                    float(self.decision_xarr.loc[today, :, 'wealth'].sum()),
+                    float(self.decision_xarr.loc[today, self.symbols,
+                                                 'wealth'].sum()),
                     time() - t1
                 )
                 )
         # end of loop
 
         final_wealth = self.decision_xarr.loc[
-                       self.exp_end_date, :, 'wealth'].sum()
+                       self.exp_end_date, self.symbols, 'wealth'].sum()
 
         reports = self.get_performance_report(
             simulation_name,
