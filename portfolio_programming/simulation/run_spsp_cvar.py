@@ -477,6 +477,10 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
         fields = [
             "simulation_name",
             "group_name",
+            'rolling_window_size',
+            'n_scenario',
+            'alpha',
+            'sdx',
             "start_date",
             "end_date",
             "n_data",
@@ -496,11 +500,15 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
 
         for gdx, report_file in enumerate(report_files):
             rp = pd.read_pickle(os.path.join(pp.REPORT_DIR, report_file))
-
+            params = rp["simulation_name"].split('_')
             writer.writerow(
                 {
                     "simulation_name": rp["simulation_name"],
                     "group_name": rp['group_name'],
+                    'rolling_window_size': rp['rolling_window_size'],
+                    'n_scenario': params[7][1:],
+                    'alpha': params[8][1:],
+                    'sdx': params[9][-1],
                     "start_date": rp['exp_start_date'].strftime("%Y-%m-%d"),
                     "end_date": rp['exp_end_date'].strftime("%Y-%m-%d"),
                     "n_data": rp['n_exp_period'],
