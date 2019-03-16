@@ -299,21 +299,21 @@ class WeightPortfolio(ValidMixin):
         cum_trans_fee_loss = 0
 
         # first allocation should also consider the transaction fee
-        rebalanced_total_wealth = self.func_rebalance(
+        rebalanced_portfolio_wealth = self.func_rebalance(
             self.initial_wealth,  # initial guess
             np.zeros(self.n_symbol),  # prev weights
             self.initial_wealth,  # prev portfolio wealth
             np.ones(self.n_symbol),  # price relatives
-            self.initial_weights,  # today weights(after rebalance)
-            self.buy_trans_fee,
-            self.sell_trans_fee)
+            self.initial_weights  # today weights(after rebalance)
+        )
 
-        self.decision_xarr.loc[self.exp_start_date, : 'weight'] = \
+        self.decision_xarr.loc[self.exp_start_date, :, 'weight'] = \
             self.initial_weights
         self.decision_xarr.loc[self.exp_start_date, :, 'wealth'] = (
-                rebalanced_total_wealth * self.initial_weights)
+                rebalanced_portfolio_wealth * self.initial_weights)
 
-        cum_trans_fee_loss += (self.initial_wealth - rebalanced_total_wealth)
+        cum_trans_fee_loss += (self.initial_wealth -
+                               rebalanced_portfolio_wealth)
 
         # start trading
         for tdx in range(1, self.n_exp_period):
@@ -330,7 +330,7 @@ class WeightPortfolio(ValidMixin):
             # current_weights = current_wealth / current_total_wealth
 
             # get today weights
-            self.decision_xarr.loc[today, : 'weight'] = (
+            self.decision_xarr.loc[today, :, 'weight'] = (
                 self.get_today_weights(
                     prev_trans_date=yesterday,
                     trans_date=today,
@@ -348,7 +348,7 @@ class WeightPortfolio(ValidMixin):
                 self.decision_xarr.loc[yesterday, :, 'wealth'].sum(),
                 # price relatives and weights of today
                 today_price_relatives,
-                self.decision_xarr.loc[today, : 'weight']
+                self.decision_xarr.loc[today, :, 'weight']
             )
 
             cum_trans_fee_loss += (today_portfolio_wealth -
@@ -356,7 +356,7 @@ class WeightPortfolio(ValidMixin):
 
             # rebalance the wealth by CRP weights
             self.decision_xarr.loc[today, :, 'wealth'] = (
-                    rebalanced_total_wealth *
+                    rebalanced_portfolio_wealth *
                     self.decision_xarr.loc[today, :, 'weight']
             )
 
@@ -386,6 +386,7 @@ class WeightPortfolio(ValidMixin):
             self.sell_trans_fee,
             self.exp_start_date,
             self.exp_end_date,
+            self.n_exp_period,
             final_wealth,
             cum_trans_fee_loss,
             self.decision_xarr
@@ -395,6 +396,7 @@ class WeightPortfolio(ValidMixin):
         reports['simulation_time'] = time() - t0
         reports = self.add_to_reports(reports)
 
+        print(reports)
         # write report
         if not os.path.exists(pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             os.makedirs(pp.WEIGHT_PORTFOLIO_REPORT_DIR)
@@ -402,8 +404,8 @@ class WeightPortfolio(ValidMixin):
         report_path = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
                                    "report_{}.pkl".format(simulation_name))
 
-        with open(report_path, 'wb') as fout:
-            pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
+        # with open(report_path, 'wb') as fout:
+        #     pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
 
         print("{}-{} {} OK, {:.4f} secs".format(
             platform.node(),

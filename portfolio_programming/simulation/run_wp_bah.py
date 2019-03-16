@@ -26,7 +26,7 @@ def run_bah(exp_name, group_name, exp_start_date, exp_end_date):
 
     rois = roi_xarr.loc[exp_start_date:exp_end_date, symbols, 'simple_roi']
 
-    initial_wealth = 1e6
+    initial_wealth = 100
     initial_weights = xr.DataArray(
         np.ones(n_symbol) / n_symbol,
         dims=('symbol',),
