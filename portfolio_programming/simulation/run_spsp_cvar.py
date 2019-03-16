@@ -505,7 +505,7 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
                     "end_date": rp['exp_end_date'].strftime("%Y-%m-%d"),
                     "n_data": rp['n_exp_period'],
                     "cum_roi": rp['cum_roi'],
-                    "annual_roi": rp['annual_roi'],
+                    #"annual_roi": rp['annual_roi'],
                     "roi_mu": rp['daily_mean_roi'],
                     "std": rp['daily_std_roi'],
                     "skew": rp['daily_skew_roi'],
@@ -517,7 +517,7 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
             )
             print(
                 "[{}/{}] {}, cum_roi:{:.2%}".format(
-                    gdx + 1, len(group_names), rp["simulation_name"],
+                    gdx + 1, len(report_files), rp["simulation_name"],
                     rp['cum_roi']
                 )
             )
