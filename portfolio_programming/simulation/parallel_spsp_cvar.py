@@ -53,7 +53,7 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
 
     #set_indices = (1, 2, 3)
 
-    set_indices = (1, )
+    set_indices = (1,2)
 
     if exp_name == "dissertation":
         if not yearly:
