@@ -41,7 +41,7 @@ extensions = [
         ["wp_base.pyx", ],
         include_dirs=[np.get_include()],
     ),
-Extension(
+    Extension(
         "wp_bah",
         ["wp_bah.pyx", ],
         include_dirs=[np.get_include()],

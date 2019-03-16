@@ -3,14 +3,15 @@
 Author: Hung-Hsin Chen <chen1116@gmail.com>
 """
 
-import logging
-import sys
-import os
 import csv
+import datetime as dt
+import logging
+import os
+import sys
+
+import numpy as np
 import pandas as pd
 import xarray as xr
-import numpy as np
-import datetime as dt
 
 import portfolio_programming as pp
 from portfolio_programming.simulation.wp_bah import BAHPortfolio
@@ -50,9 +51,8 @@ def run_bah(exp_name, group_name, exp_start_date, exp_end_date):
 
 
 def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
-
     group_names = pp.GROUP_SYMBOLS.keys()
-    with open(os.path.join(pp.TMP_DIR,"BAH_stat.csv"), "w",) as csv_file:
+    with open(os.path.join(pp.TMP_DIR, "BAH_stat.csv"), "w", newline='') as csv_file:
         fields = [
             "simulation_name",
             "group_name",
@@ -78,7 +78,7 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 group_name)
 
             rp = pd.read_pickle(os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
-                report_name))
+                                             report_name))
             writer.writerow(
                 {
                     "simulation_name": rp["simulation_name"],
@@ -99,7 +99,7 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             )
             print(
                 "[{}/{}] {}, cum_roi:{:.2%}".format(
-                    gdx + 1, len(group_names), group_name,  rp['cum_roi']
+                    gdx + 1, len(group_names), group_name, rp['cum_roi']
                 )
             )
 
@@ -112,7 +112,29 @@ if __name__ == '__main__':
         datefmt='%Y%m%d-%H:%M:%S',
         level=logging.INFO)
 
-    for group_name in pp.GROUP_SYMBOLS.keys():
-        run_bah('dissertation', group_name,
-                dt.date(2005, 1, 1), dt.date(2018, 12, 28))
-    # get_bah_report()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--simulation", default=False,
+                        action='store_true',
+                        help="BAH experiment")
+
+    parser.add_argument("-g", "--group_name", type=str,
+                        help="target group")
+
+    parser.add_argument("--stat", default=False,
+                        action='store_true',
+                        help="BAH experiment statistics")
+
+    args = parser.parse_args()
+    if args.simulation:
+        if args.group_name:
+            run_bah('dissertation', args.group_name,
+                    dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+        else:
+            for group_name in pp.GROUP_SYMBOLS.keys():
+                run_bah('dissertation', group_name,
+                        dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+    elif args.stat:
+        get_bah_report()

@@ -14,6 +14,7 @@ import os
 import sys
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 import portfolio_programming as pp
@@ -435,6 +436,93 @@ def plot_yearly_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     plt.show()
 
 
+def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
+    import csv
+
+    REPORT_FORMAT = "report_SPSP_CVaR_{setting}_{group_name}_Mc{n_symbol}_M{max_portfolio_size}_h{rolling_window_size}_s{n_scenario}_a{alpha}_sdx{sdx}_{exp_start_date}_{exp_end_date}.pkl"
+
+
+    max_portfolio_sizes = [5, ]
+    group_symbols = pp.GROUP_SYMBOLS
+    window_sizes = range(50, 240 + 10, 10)
+    n_scenarios = [1000, ]
+    alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+    years = [(dt.date(2005, 1, 3), dt.date(2018, 12, 28))]
+    set_indices = [1,]
+    report_files = [
+        REPORT_FORMAT.format(
+            setting="compact",
+            group_name=group_name,
+            n_symbol=len(symbols),
+            max_portfolio_size=m,
+            rolling_window_size=h,
+            n_scenario=s,
+            alpha=a,
+            sdx=sdx,
+            exp_start_date=s_date.strftime("%Y%m%d"),
+            exp_end_date=e_date.strftime("%Y%m%d")
+        )
+        for group_name, symbols in group_symbols.items()
+        for m in max_portfolio_sizes
+        for h in window_sizes
+        for s in n_scenarios
+        for a in alphas
+        for sdx in set_indices
+        for s_date, e_date in years
+    ]
+
+    group_names = pp.GROUP_SYMBOLS.keys()
+    stat_file = os.path.join(pp.TMP_DIR, "spsp_cvar_stat.csv")
+    with open(stat_file, "w", newline='') as csv_file:
+        fields = [
+            "simulation_name",
+            "group_name",
+            "start_date",
+            "end_date",
+            "n_data",
+            "cum_roi",
+            "annual_roi",
+            "roi_mu",
+            "std",
+            "skew",
+            "ex_kurt",
+            "Sharpe",
+            "Sortino_full",
+            "Sortino_partial",
+        ]
+
+        writer = csv.DictWriter(csv_file, fieldnames=fields)
+        writer.writeheader()
+
+        for gdx, report_file in enumerate(report_files):
+            rp = pd.read_pickle(os.path.join(pp.REPORT_DIR, report_file))
+
+            writer.writerow(
+                {
+                    "simulation_name": rp["simulation_name"],
+                    "group_name": rp['group_name'],
+                    "start_date": rp['exp_start_date'].strftime("%Y-%m-%d"),
+                    "end_date": rp['exp_end_date'].strftime("%Y-%m-%d"),
+                    "n_data": rp['n_exp_period'],
+                    "cum_roi": rp['cum_roi'],
+                    "annual_roi": rp['annual_roi'],
+                    "roi_mu": rp['daily_mean_roi'],
+                    "std": rp['daily_std_roi'],
+                    "skew": rp['daily_skew_roi'],
+                    "ex_kurt": rp['daily_ex-kurt_roi'],
+                    "Sharpe": rp['Sharpe'],
+                    "Sortino_full": rp['Sortino_full'],
+                    "Sortino_partial": rp['Sortino_partial']
+                }
+            )
+            print(
+                "[{}/{}] {}, cum_roi:{:.2%}".format(
+                    gdx + 1, len(group_names), rp["simulation_name"],
+                    rp['cum_roi']
+                )
+            )
+
+
 if __name__ == '__main__':
 
     dissertation_plot_2d_contour_by_group("compact", z_dim="daily_VSS")
@@ -500,6 +588,10 @@ if __name__ == '__main__':
                         default=1000,
                         help="number of scenario")
 
+    parser.add_argument("--stat", default=False,
+                        action='store_true',
+                        help="SPSP_cVaR experiment statistics")
+
     args = parser.parse_args()
 
     print("run_SPSP_CVaR in single mode")
@@ -509,6 +601,10 @@ if __name__ == '__main__':
     else:
         candidate_symbols = json.load(
             open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
+
+    if args.stat:
+        get_spsp_cvar_report()
+        sys.exit()
 
     if not args.yearly:
         run_SPSP_CVaR(
