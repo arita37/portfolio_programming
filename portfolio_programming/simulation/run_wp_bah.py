@@ -156,5 +156,5 @@ if __name__ == '__main__':
             for group_name in pp.GROUP_SYMBOLS.keys():
                 run_bah('dissertation', group_name,
                         dt.date(2005, 1, 1), dt.date(2018, 12, 28))
-    elif args.stat:
+    if args.stat:
         get_bah_report()

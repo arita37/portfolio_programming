@@ -5,6 +5,7 @@ Author: Hung-Hsin Chen <chen1116@gmail.com>
 
 import datetime as dt
 import logging
+import os
 import sys
 
 import numpy as np
@@ -84,6 +85,99 @@ def run_eg_adaptive(group_name, exp_start_date, exp_end_date):
     obj.run()
 
 
+def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
+    import pandas as pd
+    import csv
+    import arch.bootstrap.multiple_comparison as arch_comp
+
+    group_names = pp.GROUP_SYMBOLS.keys()
+    output_file = os.path.join(pp.TMP_DIR, "eg_stat.csv")
+    with open(output_file, "w", newline='') as csv_file:
+        fields = [
+            "simulation_name",
+            "eta",
+            "group_name",
+            "start_date",
+            "end_date",
+            "n_data",
+            "cum_roi",
+            "annual_roi",
+            "roi_mu",
+            "std",
+            "skew",
+            "ex_kurt",
+            "Sharpe",
+            "Sortino_full",
+            "Sortino_partial",
+            "SPA_c"
+        ]
+
+        writer = csv.DictWriter(csv_file, fieldnames=fields)
+        writer.writeheader()
+
+        report_pkls = [
+            (group_name,
+             "report_EG_{:.1f}_{}_20050103_20181228.pkl".format(
+                 eta / 10, group_name)
+             )
+            for eta in range(1, 10 + 1)
+            for gdx, group_name in enumerate(group_names)
+        ]
+        report_pkls.extend([
+            (group_name,
+             "report_EG_Adaptive_{}_20050103_20181228.pkl".format(group_name)
+             )
+            for group_name in group_names
+        ])
+
+        for group_name, report_name in report_pkls:
+
+            rp = pd.read_pickle(os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+                                             report_name))
+
+            rois = rp['decision_xarr'].loc[:, :, 'wealth'].sum(
+                axis=1).to_series().pct_change()
+            rois[0] = 0
+
+            spa_value = 0
+            for _ in range(10):
+                spa = arch_comp.SPA(rois.values, np.zeros(rois.size),
+                                    reps=1000)
+                spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                spa.compute()
+                # preserve the worse p_value
+                if spa.pvalues[1] > spa_value:
+                    spa_value = spa.pvalues[1]
+
+            eta_value = rp.get('eta', 'adaptive')
+
+            writer.writerow(
+                {
+                    "simulation_name": rp["simulation_name"],
+                    "group_name": group_name,
+                    "eta": eta_value,
+                    "start_date": rp['exp_start_date'].strftime("%Y-%m-%d"),
+                    "end_date": rp['exp_end_date'].strftime("%Y-%m-%d"),
+                    "n_data": rp['n_exp_period'],
+                    "cum_roi": rp['cum_roi'],
+                    "annual_roi": rp['annual_roi'],
+                    "roi_mu": rp['daily_mean_roi'],
+                    "std": rp['daily_std_roi'],
+                    "skew": rp['daily_skew_roi'],
+                    "ex_kurt": rp['daily_ex-kurt_roi'],
+                    "Sharpe": rp['Sharpe'],
+                    "Sortino_full": rp['Sortino_full'],
+                    "Sortino_partial": rp['Sortino_partial'],
+                    "SPA_c": spa_value
+                }
+            )
+            print(
+                "EG_{} {}, cum_roi:{:.2%}".format(
+                    eta_value, group_name, rp['cum_roi']
+                )
+            )
+
+
 if __name__ == '__main__':
     logging.basicConfig(
         stream=sys.stdout,
@@ -104,6 +198,9 @@ if __name__ == '__main__':
     parser.add_argument("--adaptive", default=False,
                         action='store_true',
                         help="EG adaptive experiment")
+    parser.add_argument("--stat", default=False,
+                        action='store_true',
+                        help="EG experiment statistics")
 
     args = parser.parse_args()
     if args.simulation:
@@ -115,3 +212,6 @@ if __name__ == '__main__':
         for group_name in pp.GROUP_SYMBOLS.keys():
             run_eg_adaptive(group_name, dt.date(2005, 1, 1),
                             dt.date(2018, 12, 28))
+
+    if args.stat:
+        get_eg_report()
