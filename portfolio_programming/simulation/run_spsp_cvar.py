@@ -185,7 +185,7 @@ def stocksp_cor15_plot_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     plt.show()
 
 
-def dissertation_plot_2d_contour_by_group(setting, z_dim="cum_roi"):
+def dissertation_plot_2d_contour_by_group(setting, z_dim="annual_roi"):
     """
     The  2 x 6 contour diagrams
     contour: x-axis: alpha, y-axis: rolling window size of a group
@@ -226,7 +226,7 @@ def dissertation_plot_2d_contour_by_group(setting, z_dim="cum_roi"):
                                   plt.rcParams['font.serif'])
 
     # figure size in inches
-    fig = plt.figure(figsize=(64, 48), facecolor='white')
+    fig = plt.figure(figsize=(16, 12), facecolor='white')
 
     # set color range
     if z_dim == 'cum_roi':
@@ -255,7 +255,8 @@ def dissertation_plot_2d_contour_by_group(setting, z_dim="cum_roi"):
 
         # labelpad - number of points between the axis and its label
         ax.set_xlabel(r'$\alpha$', fontsize=14, labelpad=-2)
-        ax.set_ylabel(r'$h$', fontsize=14, labelpad=-2)
+        if group_name  in ('TWG1', 'USG1'):
+            ax.set_ylabel(r'$h$', fontsize=14, labelpad=-2)
         ax.tick_params(labelsize=10, pad=1)
         ax.set_xticks(alpha_pcts)
         ax.set_xticklabels(alpha_pcts, fontsize=10)
@@ -284,7 +285,7 @@ def dissertation_plot_2d_contour_by_group(setting, z_dim="cum_roi"):
                 Zs[rdx, cdx] = float(mean) * 100.
 
         print(group_name, " z_range:", np.min(Zs), np.max(Zs))
-
+        print(Zs)
         # contour, projecting on z
         cset = ax.contourf(Xs, Ys, Zs,
                            cmap=plt.cm.coolwarm,
@@ -598,6 +599,10 @@ if __name__ == '__main__':
                         action='store_true',
                         help="SPSP_cVaR experiment statistics")
 
+    parser.add_argument("--plot", default=False,
+                        action='store_true',
+                        help="SPSP_cVaR experiment plot")
+
     args = parser.parse_args()
 
     print("run_SPSP_CVaR in single mode")
@@ -610,6 +615,10 @@ if __name__ == '__main__':
 
     if args.stat:
         get_spsp_cvar_report()
+        sys.exit()
+
+    if args.plot:
+        dissertation_plot_2d_contour_by_group("compact", z_dim="annual_roi")
         sys.exit()
 
     if not args.yearly:
