@@ -388,12 +388,10 @@ def symbol_statistics(exp_name):
         tw_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
         tw_stats_file = os.path.join(pp.TMP_DIR,
                                      "TAIEX_2005_market_cap_stat.csv")
-
-        tw_group_symbols = {
-            'TWG{}'.format(idx + 1): symbols[sdx:sdx + 5]
-            for symbols in tw_symbols
-            for idx, sdx in enumerate(range(0, 30, 5))
-        }
+        tw_group_symbols = zip(
+            ['TWG{}'.format(idx // 5 + 1) for idx in range(30)],
+            tw_symbols
+        )
 
         with open(pp.DJIA_2005_SYMBOL_JSON) as us_fin:
             djia_symbols = json.load(us_fin)
@@ -401,11 +399,10 @@ def symbol_statistics(exp_name):
         djia_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
         djia_stats_file = os.path.join(pp.TMP_DIR, "DJIA_2005_symbols_stat.csv")
 
-        djia_group_symbols = {
-            'USG{}'.format(idx + 1): symbols[sdx:sdx + 5]
-            for symbols in djia_symbols
-            for idx, sdx in enumerate(range(0, 30, 5))
-        }
+        djia_group_symbols = zip(
+            ['USG{}'.format(idx // 5 + 1) for idx in range(30)],
+            djia_symbols
+        )
 
         for mkt, group_symbols, data_xarr, stat_file in zip(['djia', 'tw'],
                                            [djia_group_symbols,
@@ -435,8 +432,8 @@ def symbol_statistics(exp_name):
                 ]
                 writer = csv.DictWriter(csv_file, fieldnames=fields)
                 writer.writeheader()
-
-                for sdx, group, symbol in enumerate(group_symbols.items()):
+                for sdx, (group, symbol) in enumerate(group_symbols):
+                    print(group, symbol)
                     rois = data_xarr.loc[start_date:end_date, symbol,
                            "simple_roi"]
                     trans_dates = rois.get_index("trans_date")
@@ -489,11 +486,13 @@ def symbol_statistics(exp_name):
                         }
                     )
                     print(
-                        "[{}/{}] {} {}, cum_roi:{:.2%}".format(
-                            sdx + 1, len(group_symbols),
-                            group, symbol, cumulative_roi
+                        "[{}] {} {}, cum_roi:{:.2%}".format(
+                            sdx + 1, group, symbol, cumulative_roi
                         )
                     )
+
+
+
     else:
         raise ValueError("unknown exp_name:{}".format(exp_name))
 
