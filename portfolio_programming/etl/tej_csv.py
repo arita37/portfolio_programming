@@ -344,9 +344,9 @@ def symbol_statistics(exp_name):
                 adf = max(adf_c, adf_ct, adf_ctt, adf_nc)
 
                 spa_value = 0
-                for _ in range(5):
+                for _ in range(10):
                     spa = arch_comp.SPA(rois.data, np.zeros(rois.size),
-                                        reps=5000)
+                                        reps=1000)
                     spa.seed(np.random.randint(0, 2 ** 31 - 1))
                     spa.compute()
                     # preserve the worse p_value

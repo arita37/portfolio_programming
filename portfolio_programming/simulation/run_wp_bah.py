@@ -51,6 +51,8 @@ def run_bah(exp_name, group_name, exp_start_date, exp_end_date):
 
 
 def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
+    import arch.bootstrap.multiple_comparison as arch_comp
+
     group_names = pp.GROUP_SYMBOLS.keys()
     with open(os.path.join(pp.TMP_DIR, "BAH_stat.csv"), "w", newline='') as csv_file:
         fields = [
@@ -68,6 +70,7 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             "Sharpe",
             "Sortino_full",
             "Sortino_partial",
+            "SPA_c"
         ]
 
         writer = csv.DictWriter(csv_file, fieldnames=fields)
@@ -79,6 +82,22 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
 
             rp = pd.read_pickle(os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
                                              report_name))
+
+            rois = rp['decision_xarr'].loc[:, :, 'wealth'].sum(
+                axis=1).to_series().pct_change()
+            rois[0] = 0
+
+            spa_value = 0
+            for _ in range(10):
+                spa = arch_comp.SPA(rois.values, np.zeros(rois.size),
+                                    reps=1000)
+                spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                spa.compute()
+                # preserve the worse p_value
+                if spa.pvalues[1] > spa_value:
+                    spa_value = spa.pvalues[1]
+
+
             writer.writerow(
                 {
                     "simulation_name": rp["simulation_name"],
@@ -94,7 +113,8 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                     "ex_kurt": rp['daily_ex-kurt_roi'],
                     "Sharpe": rp['Sharpe'],
                     "Sortino_full": rp['Sortino_full'],
-                    "Sortino_partial": rp['Sortino_partial']
+                    "Sortino_partial": rp['Sortino_partial'],
+                    "SPA_c": spa_value
                 }
             )
             print(
