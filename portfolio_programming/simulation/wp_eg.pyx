@@ -95,7 +95,9 @@ class EGAdaptivePortfolio(WeightPortfolio):
                  double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 int print_interval=10):
+                 double beta = None,
+                 int print_interval=10
+                ):
         super(EGAdaptivePortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
@@ -107,17 +109,29 @@ class EGAdaptivePortfolio(WeightPortfolio):
             dims=('trans_date',),
             coords=(self.exp_trans_dates,)
         )
+
+        self.beta = beta
         self.log_m = np.log(self.n_symbol)
 
 
     def get_simulation_name(self, *args, **kwargs):
-        return "EG_Adaptive_{}_{}_{}".format(
-            self.group_name,
-            self.exp_start_date.strftime("%Y%m%d"),
-            self.exp_end_date.strftime("%Y%m%d")
-        )
+        if not self.beta:
+            return "EG_Adaptive_{}_{}_{}".format(
+                self.group_name,
+                self.exp_start_date.strftime("%Y%m%d"),
+                self.exp_end_date.strftime("%Y%m%d")
+            )
+        else:
+             return "EG_Adaptive_{}_{}_{}_{}".format(
+                self.beta,
+                self.group_name,
+                self.exp_start_date.strftime("%Y%m%d"),
+                self.exp_end_date.strftime("%Y%m%d")
+            )
 
     def add_to_reports(self, reports):
+        if not self.beta:
+            reports['beta'] = self.beta
         reports['adaptive_eta'] = self.etas
         return reports
 
@@ -139,7 +153,10 @@ class EGAdaptivePortfolio(WeightPortfolio):
         prev_weights = self.decision_xarr.loc[
             yesterday, self.symbols, 'weight']
         # lower bound of historical price relative
-        beta = np.min(self.exp_rois.loc[:today, self.symbols]) + 1
+        if not self.beta:
+            beta = np.min(self.exp_rois.loc[:today, self.symbols]) + 1
+        else:
+            beta = self.beta
         self.etas.loc[today] = 2*beta*np.sqrt(2* self.log_m/tdx)
 
         price_relatives = self.exp_rois.loc[today, self.symbols] + 1
@@ -175,6 +192,25 @@ class NoIREGPortfolio(WeightPortfolio):
             end_date, print_interval)
         # learning rate
         self.eta = eta
+
+        # results data
+        # decision xarray, shape: (n_exp_period, n_symbol, 2)
+        decisions = ["wealth", "weight"]
+        virtual_symbols = ["{}-{}".format(s1, s2) for s1 in self.symbols
+                           for s2 in  self.symbols if s1!=s2]
+
+        self.virtual_decision_xarr = xr.DataArray(
+            np.zeros((self.n_exp_period,
+                      self.n_symbol * (self.n_symbol-1) ,
+                      len(decisions))
+                     ),
+            dims=('trans_date', 'virtual_symbols', 'decision'),
+            coords=(
+                self.exp_trans_dates,
+                virtual_symbols,
+                decisions
+            )
+        )
 
     def get_simulation_name(self, *args, **kwargs):
         return "IREG_{}_{}_{}_{}".format(

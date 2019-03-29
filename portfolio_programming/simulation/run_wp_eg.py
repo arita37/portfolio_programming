@@ -46,12 +46,12 @@ def run_eg(eta, group_name, exp_start_date, exp_end_date):
         initial_weights,
         initial_wealth,
         start_date=exp_start_date,
-        end_date=exp_end_date
+        end_date=exp_end_date,
     )
     obj.run()
 
 
-def run_eg_adaptive(group_name, exp_start_date, exp_end_date):
+def run_eg_adaptive(group_name, exp_start_date, exp_end_date, beta=None):
     group_symbols = pp.GROUP_SYMBOLS
     if group_name not in group_symbols.keys():
         raise ValueError('Unknown group name:{}'.format(group_name))
@@ -80,7 +80,8 @@ def run_eg_adaptive(group_name, exp_start_date, exp_end_date):
         initial_weights,
         initial_wealth,
         start_date=exp_start_date,
-        end_date=exp_end_date
+        end_date=exp_end_date,
+        beta=beta
     )
     obj.run()
 
@@ -198,6 +199,8 @@ if __name__ == '__main__':
     parser.add_argument("--adaptive", default=False,
                         action='store_true',
                         help="EG adaptive experiment")
+    parser.add_argument("--beta", type=float,
+                        help="price relative ratio")
     parser.add_argument("--stat", default=False,
                         action='store_true',
                         help="EG experiment statistics")
@@ -211,7 +214,7 @@ if __name__ == '__main__':
     if args.adaptive:
         for group_name in pp.GROUP_SYMBOLS.keys():
             run_eg_adaptive(group_name, dt.date(2005, 1, 1),
-                            dt.date(2018, 12, 28))
+                            dt.date(2018, 12, 28), args.beta)
 
     if args.stat:
         get_eg_report()
