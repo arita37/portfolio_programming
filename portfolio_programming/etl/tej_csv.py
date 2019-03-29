@@ -382,12 +382,6 @@ def symbol_statistics(exp_name):
         start_date = dt.date(2005, 1, 1)
         end_date = dt.date(2018, 12, 31)
 
-        with open(pp.DJIA_2005_SYMBOL_JSON) as us_fin:
-            djia_symbols = json.load(us_fin)
-
-        djia_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
-        djia_stats_file = os.path.join(pp.TMP_DIR, "DJIA_2005_symbols_stat.csv")
-
         with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as tw_fin:
             tw_symbols = json.load(tw_fin)
 
@@ -395,14 +389,34 @@ def symbol_statistics(exp_name):
         tw_stats_file = os.path.join(pp.TMP_DIR,
                                      "TAIEX_2005_market_cap_stat.csv")
 
-        for mkt, symbols, data_xarr, stat_file in zip(['djia', 'tw'],
-                                           [djia_symbols, tw_symbols],
+        tw_group_symbols = {
+            'TWG{}'.format(idx + 1): symbols[sdx:sdx + 5]
+            for symbols in tw_symbols
+            for idx, sdx in enumerate(range(0, 30, 5))
+        }
+
+        with open(pp.DJIA_2005_SYMBOL_JSON) as us_fin:
+            djia_symbols = json.load(us_fin)
+
+        djia_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
+        djia_stats_file = os.path.join(pp.TMP_DIR, "DJIA_2005_symbols_stat.csv")
+
+        djia_group_symbols = {
+            'USG{}'.format(idx + 1): symbols[sdx:sdx + 5]
+            for symbols in djia_symbols
+            for idx, sdx in enumerate(range(0, 30, 5))
+        }
+
+        for mkt, group_symbols, data_xarr, stat_file in zip(['djia', 'tw'],
+                                           [djia_group_symbols,
+                                            tw_group_symbols],
                                            [djia_xarr, tw_xarr],
                                            [djia_stats_file, tw_stats_file]):
 
             with open(stat_file, "w",) as csv_file:
                 fields = [
                     "rank",
+                    'group',
                     "symbol",
                     "start_date",
                     "end_date",
@@ -415,22 +429,22 @@ def symbol_statistics(exp_name):
                     "ex_kurt",
                     "Sharpe",
                     "Sortino",
-                    "JB",
-                    "worst_ADF",
                     "SPA_c",
+                    "JB",
+                    "worst_ADF"
                 ]
                 writer = csv.DictWriter(csv_file, fieldnames=fields)
                 writer.writeheader()
 
-                for sdx, symbol in enumerate(symbols):
+                for sdx, group, symbol in enumerate(group_symbols.items()):
                     rois = data_xarr.loc[start_date:end_date, symbol,
                            "simple_roi"]
                     trans_dates = rois.get_index("trans_date")
                     n_roi = int(rois.count())
                     rois[0] = 0
                     cumulative_roi = float((1 + rois).prod() - 1)
-                    annual_roi = float(np.power(cumulative_roi + 1, 1.0 / 14)
-                                       - 1)
+                    annual_roi = float(np.power(cumulative_roi + 1, 1.0 / (
+                        end_date.year - start_date.year + 1)) - 1)
 
                     sharpe = risk_adj.Sharpe(rois)
                     sortino = risk_adj.Sortino_full(rois)[0]
@@ -443,10 +457,11 @@ def symbol_statistics(exp_name):
                     adf_nc = tsa_tools.adfuller(rois, regression="nc")[1]
                     adf = max(adf_c, adf_ct, adf_ctt, adf_nc)
 
+                    # worse case of SPA
                     spa_value = 0
-                    for _ in range(5):
+                    for _ in range(10):
                         spa = arch_comp.SPA(rois.data, np.zeros(rois.size),
-                                            reps=5000)
+                                            reps=1000)
                         spa.seed(np.random.randint(0, 2 ** 31 - 1))
                         spa.compute()
                         # preserve the worse p_value
@@ -468,17 +483,17 @@ def symbol_statistics(exp_name):
                             "ex_kurt": spstats.kurtosis(rois, bias=False),
                             "Sharpe": sharpe,
                             "Sortino": sortino,
+                            "SPA_c": spa_value,
                             "JB": jb,
                             "worst_ADF": adf,
-                            "SPA_c": spa_value,
                         }
                     )
                     print(
-                        "[{}/{}] {}, cum_roi:{:.2%}".format(
-                            sdx + 1, len(symbols), symbol, cumulative_roi
+                        "[{}/{}] {} {}, cum_roi:{:.2%}".format(
+                            sdx + 1, len(group_symbols),
+                            group, symbol, cumulative_roi
                         )
                     )
-
     else:
         raise ValueError("unknown exp_name:{}".format(exp_name))
 
