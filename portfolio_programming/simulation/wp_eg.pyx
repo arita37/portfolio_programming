@@ -95,7 +95,7 @@ class EGAdaptivePortfolio(WeightPortfolio):
                  double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 double beta = None,
+                 beta = None,
                  int print_interval=10
                 ):
         super(EGAdaptivePortfolio, self).__init__(
