@@ -782,6 +782,7 @@ def run_plot_group_line_chart():
                      ncol=2, fancybox=True, shadow=True, fontsize=13)
 
     rois_df = mkt_df.loc[:, ['simple_roi_TAIEX', 'simple_roi_DJIA']]
+    # monthly return
     interval_grouper = (rois_df + 1).groupby(pd.Grouper(freq="M"))
     mon_df = (interval_grouper.prod() - 1) * 100
 
@@ -819,7 +820,7 @@ def run_plot_group_line_chart():
                 mon_df.plot.line(ax=axes[gdx], grid=True,
                                  style=['-', '--', '-.', ':', '-'],
                                  fontsize=14)
-                axes[gdx].set_title('{}_G{}'.format(mkt, fdx*3+gdx + 1),
+                axes[gdx].set_title('{}G{}'.format(mkt, fdx*3+gdx + 1),
                                     fontsize=20)
                 axes[gdx].set_xlabel('', fontsize=14)
                 axes[gdx].set_ylabel("Monthly return(%)", fontsize=16)
