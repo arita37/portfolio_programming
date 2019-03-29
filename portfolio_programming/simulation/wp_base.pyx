@@ -342,6 +342,7 @@ class WeightPortfolio(ValidMixin):
             # get today weights
             self.decision_xarr.loc[today, self.symbols, 'weight'] = (
                 self.get_today_weights(
+                    tdx=tdx,
                     prev_trans_date=yesterday,
                     trans_date=today,
                     today_prev_wealth=today_prev_wealth,

@@ -11,7 +11,8 @@ import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
-from portfolio_programming.simulation.wp_eg import EGPortfolio
+from portfolio_programming.simulation.wp_eg import (EGPortfolio,
+                                                    EGAdaptivePortfolio)
 
 
 def run_eg(eta, group_name, exp_start_date, exp_end_date):
@@ -49,6 +50,40 @@ def run_eg(eta, group_name, exp_start_date, exp_end_date):
     obj.run()
 
 
+def run_eg_adaptive(group_name, exp_start_date, exp_end_date):
+    group_symbols = pp.GROUP_SYMBOLS
+    if group_name not in group_symbols.keys():
+        raise ValueError('Unknown group name:{}'.format(group_name))
+    symbols = group_symbols[group_name]
+    n_symbol = len(symbols)
+
+    market = group_name[:2]
+    if market == "TW":
+        roi_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+    elif market == "US":
+        roi_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
+
+    rois = roi_xarr.loc[exp_start_date:exp_end_date, symbols, 'simple_roi']
+
+    initial_wealth = 100
+    initial_weights = xr.DataArray(
+        np.ones(n_symbol) / n_symbol,
+        dims=('symbol',),
+        coords=(symbols,)
+    )
+
+    obj = EGAdaptivePortfolio(
+        group_name,
+        symbols,
+        rois,
+        initial_weights,
+        initial_wealth,
+        start_date=exp_start_date,
+        end_date=exp_end_date
+    )
+    obj.run()
+
+
 if __name__ == '__main__':
     logging.basicConfig(
         stream=sys.stdout,
@@ -66,9 +101,17 @@ if __name__ == '__main__':
                         help="EG experiment")
     parser.add_argument("--eta", type=float,
                         help="learning rate")
+    parser.add_argument("--adaptive", default=False,
+                        action='store_true',
+                        help="EG adaptive experiment")
 
     args = parser.parse_args()
     if args.simulation:
         for group_name in pp.GROUP_SYMBOLS.keys():
             run_eg(args.eta, group_name,
                    dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+
+    if args.adaptive:
+        for group_name in pp.GROUP_SYMBOLS.keys():
+            run_eg_adaptive(group_name, dt.date(2005, 1, 1),
+                            dt.date(2018, 12, 28))
