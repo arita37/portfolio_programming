@@ -436,7 +436,7 @@ def symbol_statistics(exp_name):
                 writer = csv.DictWriter(csv_file, fieldnames=fields)
                 writer.writeheader()
 
-                for sdx, group, symbol in enumerate(group_symbols.items()):
+                for sdx, (group, symbol) in enumerate(group_symbols.items()):
                     rois = data_xarr.loc[start_date:end_date, symbol,
                            "simple_roi"]
                     trans_dates = rois.get_index("trans_date")
