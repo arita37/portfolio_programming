@@ -469,6 +469,7 @@ def symbol_statistics(exp_name):
                     writer.writerow(
                         {
                             "rank": sdx + 1,
+                            "group": group,
                             "symbol": symbol,
                             "start_date": trans_dates[0].strftime("%Y-%m-%d"),
                             "end_date": trans_dates[-1].strftime("%Y-%m-%d"),
