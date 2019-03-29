@@ -434,6 +434,7 @@ def symbol_statistics(exp_name):
                 writer.writeheader()
 
                 for sdx, (group, symbol) in enumerate(group_symbols):
+                    t0 = time()
                     print(group, symbol)
                     rois = data_xarr.loc[start_date:end_date, symbol,
                            "simple_roi"]
@@ -488,13 +489,11 @@ def symbol_statistics(exp_name):
                         }
                     )
                     print(
-                        "[{}] {} {}, cum_roi:{:.2%}".format(
-                            sdx + 1, group, symbol, cumulative_roi
+                        "[{}] {} {}, cum_roi:{:.2%} {:.4f}".format(
+                            sdx + 1, group, symbol, cumulative_roi,
+                            time()-t0
                         )
                     )
-
-
-
     else:
         raise ValueError("unknown exp_name:{}".format(exp_name))
 
