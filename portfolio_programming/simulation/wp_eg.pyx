@@ -310,3 +310,91 @@ class ExpAdaptivePortfolio(WeightPortfolio):
         normalized_new_weights = new_weights / new_weights.sum()
 
         return normalized_new_weights
+
+
+class NIRExpPortfolio(WeightPortfolio):
+    """
+    no internal regret exponential forecaster
+    """
+
+    def __init__(self,
+                 double eta,
+                 str group_name,
+                 list symbols,
+                 risk_rois,
+                 initial_weights,
+                 initial_wealth=1e6,
+                 double buy_trans_fee=pp.BUY_TRANS_FEE,
+                 double sell_trans_fee=pp.SELL_TRANS_FEE,
+                 start_date=pp.EXP_START_DATE,
+                 end_date=pp.EXP_END_DATE,
+                 int print_interval=10):
+        super(NIRExpPortfolio, self).__init__(
+            group_name, symbols, risk_rois, initial_weights,
+            initial_wealth, buy_trans_fee,
+            sell_trans_fee, start_date,
+            end_date, print_interval)
+        # learning rate
+        self.eta = eta
+
+        # fictitious experts,
+        self.experts = ["{}-{}".format(s1, s2)
+                                for s1 in self.symbols
+                                for s2 in self.symbols
+                                if s1 != s2]
+        # shape: n_exp_period * (n_symbol * (n_symbol - 1)) * n_symbol
+        self.expert_weights = xr.DataArray(
+            np.zeros((self.n_exp_period,
+                      len(self.experts),
+                      self.n_symbol
+                      )),
+            dims=('trans_date', 'experts', 'symbol'),
+            coords=(
+                self.exp_trans_dates,
+                self.self.experts,
+                self.symbols
+            )
+        )
+
+
+    def get_simulation_name(self, *args, **kwargs):
+        return "NIRExp_{:.2f}_{}_{}_{}".format(
+            self.eta,
+            self.group_name,
+            self.exp_start_date.strftime("%Y%m%d"),
+            self.exp_end_date.strftime("%Y%m%d")
+        )
+
+    def add_to_reports(self, reports):
+        reports['eta'] = self.eta
+        return reports
+
+    def pre_trading_operation(self, *args, **kargs):
+        """
+        operations after initialization and before trading
+        """
+        today = self.exp_start_date
+        self.virtual_weights.loc[today, ]
+
+
+    def get_today_weights(self, *args, **kwargs):
+        """
+        remaining the same weight as the today_prev_weights
+
+        Parameters: kwargs
+        -------------------------
+        prev_trans_date=yesterday,
+        trans_date=today,
+        today_prev_wealth=today_prev_wealth,
+        today_prev_portfolio_wealth=today_prev_portfolio_wealth
+        """
+        yesterday = kwargs['prev_trans_date']
+        today = kwargs['trans_date']
+        # shape:  n_symbol
+        # does not need take log operation because
+        # log(price relative) = simple roi
+        # stock_payoffs = (self.exp_rois.loc[:today, self.symbols]).sum(axis=0)
+        # new_weights = np.exp(self.eta * stock_payoffs)
+        # normalized_new_weights = new_weights / new_weights.sum()
+        #
+        # return normalized_new_weights

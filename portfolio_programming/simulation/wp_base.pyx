@@ -197,6 +197,11 @@ class WeightPortfolio(ValidMixin):
         """
         return reports
 
+    def pre_trading_operation(self, *args, **kargs):
+        """
+        operations after initialization and before trading
+        """
+
     def func_rebalance(self, current_portfolio_wealth,
                        prev_weights, prev_portfolio_wealth,
                        price_relatives, today_weights):
@@ -325,6 +330,8 @@ class WeightPortfolio(ValidMixin):
                                'portfolio_payoff'] = self.initial_weights
 
         cum_trans_fee_loss += (self.initial_wealth * self.buy_trans_fee)
+
+        self.pre_trading_operation()
 
         # start trading
         for tdx in range(1, self.n_exp_period):
