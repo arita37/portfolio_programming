@@ -13,10 +13,11 @@ import xarray as xr
 
 import portfolio_programming as pp
 from portfolio_programming.simulation.wp_eg import (EGPortfolio,
-                                                    EGAdaptivePortfolio)
+                                                    EGAdaptivePortfolio,
+                                                    ExpPortfolio)
 
 
-def run_eg(eta, group_name, exp_start_date, exp_end_date):
+def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
     group_symbols = pp.GROUP_SYMBOLS
     if group_name not in group_symbols.keys():
         raise ValueError('Unknown group name:{}'.format(group_name))
@@ -37,8 +38,14 @@ def run_eg(eta, group_name, exp_start_date, exp_end_date):
         dims=('symbol',),
         coords=(symbols,)
     )
+    if exp_type == 'eg':
+        exp_class = EGPortfolio
+    elif exp_type == 'exp':
+        exp_class = ExpPortfolio
+    else:
+        raise ValueError('unknown exp_type:', exp_type)
 
-    obj = EGPortfolio(
+    obj = exp_class(
         eta,
         group_name,
         symbols,
@@ -204,6 +211,8 @@ if __name__ == '__main__':
     parser.add_argument("--simulation", default=False,
                         action='store_true',
                         help="EG experiment")
+    parser.add_argument("--exp_type", type=str,
+                        help="experiment type: eg or exp")
     parser.add_argument("--eta", type=float,
                         help="learning rate")
     parser.add_argument("--adaptive", default=False,
@@ -220,7 +229,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.simulation:
         if args.group_name:
-            run_eg(args.eta, args.group_name,
+            print(args.eta, args.exp_type, args.group_name)
+            run_eg(args.eta, args.exp_type, args.group_name,
                      dt.date(2005, 1, 1), dt.date(2018, 12, 28))
         else:
             import multiprocess as mp
@@ -228,7 +238,7 @@ if __name__ == '__main__':
             n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
             pool = mp.Pool(processes=n_cpu)
             results = [pool.apply_async(run_eg,
-                                        (args.eta, group_name,
+                                        (args.eta, args.exp_type, group_name,
                                          dt.date(2005, 1, 1), dt.date(2018, 12, 28))
                                         )
                        for group_name in pp.GROUP_SYMBOLS.keys()
