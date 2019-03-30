@@ -274,7 +274,6 @@ if __name__ == '__main__':
 
     if args.adaptive:
         import multiprocess as mp
-
         n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
         pool = mp.Pool(processes=n_cpu)
 
