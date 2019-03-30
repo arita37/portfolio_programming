@@ -45,7 +45,7 @@ def run_poly(poly_power, group_name, exp_start_date, exp_end_date):
         initial_wealth,
         start_date=exp_start_date,
         end_date=exp_end_date,
-        print_interval=1
+        print_interval=10
     )
     obj.run()
 
