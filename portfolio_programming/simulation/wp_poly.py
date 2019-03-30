@@ -66,7 +66,7 @@ class PolynomialPortfolio(WeightPortfolio):
 
         # shape: tdx
         portfolio_payoffs = np.log(self.decision_xarr.loc[:today, self.symbols,
-                                 'portfolio_payoff']).sum(axis=1)
+                                 'portfolio_payoff'].sum(axis=1))
         # shape: tdx * n_symbol, does not need take log operation
         # because log(price relative) = simple roi
         stock_payoffs = self.exp_rois.loc[:today, self.symbols]
