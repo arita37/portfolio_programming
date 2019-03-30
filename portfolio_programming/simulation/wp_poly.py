@@ -2,7 +2,7 @@
 """
 Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 """
-
+import numpy as np
 import portfolio_programming as pp
 from portfolio_programming.simulation.wp_base import WeightPortfolio
 
@@ -63,13 +63,17 @@ class PolynomialPortfolio(WeightPortfolio):
         """
         yesterday = kwargs['prev_trans_date']
         today = kwargs['trans_date']
+        today_prev_wealth = kwargs['today_prev_wealth']
 
-        prev_weights = self.decision_xarr.loc[
-            yesterday, self.symbols, 'weight']
-        price_relatives = self.exp_rois.loc[today, self.symbols] + 1
-        today_prev_weights_sum = (prev_weights * price_relatives).sum()
+        # shape: 1: tdx
+        portfolio_cum_payoff = (self.decision_xarr.loc[
+                               :today, self.symbols, 'wealth'].sum(axis=1) +
+                                today_prev_wealth
+                                )
+        portfolio_cum_payoff /= self.initial_wealth
+        action_cum_payoff = (self.exp_rois.loc[:today, self.symbols] + 1)
 
-        new_weights = ()
+        new_weights = np.maximum()
 
 
         new_weights = (prev_weights * np.exp(self.eta * price_relatives /
