@@ -88,7 +88,7 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             rois[0] = 0
 
             spa_value = 0
-            for _ in range(10):
+            for _ in range(3):
                 spa = arch_comp.SPA(rois.values, np.zeros(rois.size),
                                     reps=1000)
                 spa.seed(np.random.randint(0, 2 ** 31 - 1))

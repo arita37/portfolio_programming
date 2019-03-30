@@ -87,6 +87,7 @@ def run_eg_adaptive(group_name, exp_start_date, exp_end_date, beta=None):
 
 
 def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
+    import pickle
     import pandas as pd
     import csv
     import arch.bootstrap.multiple_comparison as arch_comp
@@ -136,23 +137,28 @@ def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         ])
 
         for group_name, report_name in report_pkls:
+            report_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+                                             report_name)
+            rp = pd.read_pickle(report_file)
+            # SPA value
+            if "SPA_c" not in rp.keys():
+                rois = rp['decision_xarr'].loc[:, :, 'wealth'].sum(
+                    axis=1).to_series().pct_change()
+                rois[0] = 0
 
-            rp = pd.read_pickle(os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
-                                             report_name))
-
-            rois = rp['decision_xarr'].loc[:, :, 'wealth'].sum(
-                axis=1).to_series().pct_change()
-            rois[0] = 0
-
-            spa_value = 0
-            for _ in range(3):
-                spa = arch_comp.SPA(rois.values, np.zeros(rois.size),
-                                    reps=1000)
-                spa.seed(np.random.randint(0, 2 ** 31 - 1))
-                spa.compute()
-                # preserve the worse p_value
-                if spa.pvalues[1] > spa_value:
-                    spa_value = spa.pvalues[1]
+                spa_value = 0
+                for _ in range(3):
+                    spa = arch_comp.SPA(rois.values, np.zeros(rois.size),
+                                        reps=1000)
+                    spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                    spa.compute()
+                    # preserve the worse p_value
+                    if spa.pvalues[1] > spa_value:
+                        spa_value = spa.pvalues[1]
+                rp['SPA_c'] = spa_value
+                # write back to file
+                with open(report_file, 'wb') as fout:
+                    pickle.dump(rp, fout, pickle.HIGHEST_PROTOCOL)
 
             eta_value = rp.get('eta', 'adaptive')
 
@@ -173,7 +179,7 @@ def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                     "Sharpe": rp['Sharpe'],
                     "Sortino_full": rp['Sortino_full'],
                     "Sortino_partial": rp['Sortino_partial'],
-                    "SPA_c": spa_value
+                    "SPA_c":  rp['SPA_c']
                 }
             )
             print(

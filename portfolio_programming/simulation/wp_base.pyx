@@ -165,8 +165,8 @@ class WeightPortfolio(ValidMixin):
         self.print_interval = print_interval
 
         # results data
-        # decision xarray, shape: (n_exp_period, n_symbol, 2)
-        decisions = ["wealth", "weight"]
+        # decision xarray, shape: (n_exp_period, n_symbol, decisions)
+        decisions = ["wealth", "weight", 'portfolio_payoff']
         self.decision_xarr = xr.DataArray(
             np.zeros((self.n_exp_period,
                       self.n_symbol,
@@ -334,6 +334,13 @@ class WeightPortfolio(ValidMixin):
             today_price_relatives = (self.exp_rois.loc[today, self.symbols] + 1)
             today_prev_wealth = (today_price_relatives *
                      self.decision_xarr.loc[yesterday, self.symbols, 'wealth'])
+
+            # record portfolio payoff
+            self.decision_xarr.loc[today, self.symbols, 'portfolio_payoff'] = (
+                 self.decision_xarr.loc[yesterday, self.symbols, 'weight'] *
+                 today_price_relatives
+            )
+
             today_prev_portfolio_wealth = today_prev_wealth.sum()
             # current_weights = current_wealth / current_total_wealth
             # print(today, self.exp_rois.loc[today, :]*100)
@@ -368,7 +375,7 @@ class WeightPortfolio(ValidMixin):
             # rebalance the wealth by CRP weights
             self.decision_xarr.loc[today, self.symbols, 'wealth'] = (
                     today_portfolio_wealth *
-                    self.decision_xarr.loc[today, :, 'weight']
+                    self.decision_xarr.loc[today,  self.symbols, 'weight']
             )
 
             if tdx % self.print_interval == 0:
