@@ -234,7 +234,6 @@ class ExpAdaptivePortfolio(WeightPortfolio):
     """
 
     def __init__(self,
-                 double eta,
                  str group_name,
                  list symbols,
                  risk_rois,
@@ -251,7 +250,7 @@ class ExpAdaptivePortfolio(WeightPortfolio):
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
             end_date, print_interval)
-        
+
         # learning rates
         self.etas = xr.DataArray(
             np.zeros(self.n_exp_period),
