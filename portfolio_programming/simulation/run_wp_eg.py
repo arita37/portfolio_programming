@@ -93,14 +93,17 @@ def run_eg_adaptive(group_name, exp_start_date, exp_end_date, beta=None):
     obj.run()
 
 
-def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
+def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
     import pickle
     import pandas as pd
     import csv
     import arch.bootstrap.multiple_comparison as arch_comp
 
+    if exp_type not in ('eg', 'exp'):
+        raise ValueError('unknown exp_type:', exp_type)
+
     group_names = pp.GROUP_SYMBOLS.keys()
-    output_file = os.path.join(pp.TMP_DIR, "eg_stat.csv")
+    output_file = os.path.join(pp.TMP_DIR, "{}_stat.csv".format(exp_type))
     with open(output_file, "w", newline='') as csv_file:
         fields = [
             "simulation_name",
@@ -123,25 +126,35 @@ def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
 
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         writer.writeheader()
+        if exp_type == 'eg':
+            etas = ["{:.1f}".format(eta / 10) for eta in range(1, 10 + 1)]
+            etas.extend(["{:.2f}".format(eta) for eta in (0.01, 0.02, 0.03, 0.05)])
+            etas.extend(["{:.1f}".format(eta) for eta in (2, 3, 4)])
 
-        etas = ["{:.1f}".format(eta / 10) for eta in range(1, 10 + 1)]
-        etas.extend(["{:.2f}".format(eta) for eta in (0.01, 0.02, 0.03, 0.05)])
-        etas.extend(["{:.1f}".format(eta) for eta in (2, 3, 4)])
-
-        report_pkls = [
-            (group_name,
-             "report_EG_{}_{}_20050103_20181228.pkl".format(
-                 eta, group_name)
-             )
-            for eta in etas
-            for gdx, group_name in enumerate(group_names)
-        ]
-        report_pkls.extend([
-            (group_name,
-             "report_EG_Adaptive_{}_20050103_20181228.pkl".format(group_name)
-             )
-            for group_name in group_names
-        ])
+            report_pkls = [
+                (group_name,
+                 "report_EG_{}_{}_20050103_20181228.pkl".format(
+                     eta, group_name)
+                 )
+                for eta in etas
+                for gdx, group_name in enumerate(group_names)
+            ]
+            report_pkls.extend([
+                (group_name,
+                 "report_EG_Adaptive_{}_20050103_20181228.pkl".format(group_name)
+                 )
+                for group_name in group_names
+            ])
+        elif exp_type =='exp':
+            etas = [0.01, 0.02 ,0.03, 0.05, 0.1, 0.15, 0.2]
+            report_pkls = [
+                (group_name,
+                 "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
+                     eta, group_name)
+                 )
+                for eta in etas
+                for gdx, group_name in enumerate(group_names)
+            ]
 
         for group_name, report_name in report_pkls:
             report_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
@@ -190,8 +203,8 @@ def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 }
             )
             print(
-                "EG_{} {}, cum_roi:{:.2%}".format(
-                    eta_value, group_name, rp['cum_roi']
+                "{}_{} {}, cum_roi:{:.2%}".format(
+                   exp_type, eta_value, group_name, rp['cum_roi']
                 )
             )
 
@@ -256,4 +269,4 @@ if __name__ == '__main__':
                             dt.date(2018, 12, 28), args.beta)
 
     if args.stat:
-        get_eg_report()
+        get_eg_report(args.exp_type)
