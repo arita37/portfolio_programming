@@ -14,7 +14,8 @@ import xarray as xr
 import portfolio_programming as pp
 from portfolio_programming.simulation.wp_eg import (EGPortfolio,
                                                     EGAdaptivePortfolio,
-                                                    ExpPortfolio)
+                                                    ExpPortfolio,
+                                                    ExpAdaptivePortfolio)
 
 
 def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
@@ -58,7 +59,8 @@ def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
     obj.run()
 
 
-def run_eg_adaptive(group_name, exp_start_date, exp_end_date, beta=None):
+def run_eg_adaptive(group_name, exp_type, exp_start_date, exp_end_date,
+                    beta=None):
     group_symbols = pp.GROUP_SYMBOLS
     if group_name not in group_symbols.keys():
         raise ValueError('Unknown group name:{}'.format(group_name))
@@ -80,7 +82,14 @@ def run_eg_adaptive(group_name, exp_start_date, exp_end_date, beta=None):
         coords=(symbols,)
     )
 
-    obj = EGAdaptivePortfolio(
+    if exp_type == 'eg':
+        exp_class = EGAdaptivePortfolio
+    elif exp_type == 'exp':
+        exp_class = ExpAdaptivePortfolio
+    else:
+        raise ValueError('unknown exp_type:', exp_type)
+
+    obj = exp_class(
         group_name,
         symbols,
         rois,
@@ -128,7 +137,8 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         writer.writeheader()
         if exp_type == 'eg':
             etas = ["{:.1f}".format(eta / 10) for eta in range(1, 10 + 1)]
-            etas.extend(["{:.2f}".format(eta) for eta in (0.01, 0.02, 0.03, 0.05)])
+            etas.extend(
+                ["{:.2f}".format(eta) for eta in (0.01, 0.02, 0.03, 0.05)])
             etas.extend(["{:.1f}".format(eta) for eta in (2, 3, 4)])
 
             report_pkls = [
@@ -141,12 +151,13 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             ]
             report_pkls.extend([
                 (group_name,
-                 "report_EG_Adaptive_{}_20050103_20181228.pkl".format(group_name)
+                 "report_EG_Adaptive_{}_20050103_20181228.pkl".format(
+                     group_name)
                  )
                 for group_name in group_names
             ])
-        elif exp_type =='exp':
-            etas = [0.01, 0.02 ,0.03, 0.05, 0.1, 0.15, 0.2]
+        elif exp_type == 'exp':
+            etas = [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
             report_pkls = [
                 (group_name,
                  "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
@@ -158,7 +169,7 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
 
         for group_name, report_name in report_pkls:
             report_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
-                                             report_name)
+                                       report_name)
             rp = pd.read_pickle(report_file)
             # SPA value
             if "SPA_c" not in rp.keys():
@@ -199,12 +210,12 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                     "Sharpe": rp['Sharpe'],
                     "Sortino_full": rp['Sortino_full'],
                     "Sortino_partial": rp['Sortino_partial'],
-                    "SPA_c":  rp['SPA_c']
+                    "SPA_c": rp['SPA_c']
                 }
             )
             print(
                 "{}_{} {}, cum_roi:{:.2%}".format(
-                   exp_type, eta_value, group_name, rp['cum_roi']
+                    exp_type, eta_value, group_name, rp['cum_roi']
                 )
             )
 
@@ -244,7 +255,7 @@ if __name__ == '__main__':
         if args.group_name:
             print(args.eta, args.exp_type, args.group_name)
             run_eg(args.eta, args.exp_type, args.group_name,
-                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                   dt.date(2005, 1, 1), dt.date(2018, 12, 28))
         else:
             import multiprocess as mp
 
@@ -252,7 +263,8 @@ if __name__ == '__main__':
             pool = mp.Pool(processes=n_cpu)
             results = [pool.apply_async(run_eg,
                                         (args.eta, args.exp_type, group_name,
-                                         dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                                         dt.date(2005, 1, 1),
+                                         dt.date(2018, 12, 28))
                                         )
                        for group_name in pp.GROUP_SYMBOLS.keys()
                        ]
