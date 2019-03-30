@@ -116,12 +116,15 @@ def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         writer.writeheader()
 
+        etas = ["{:.1f}".format(eta / 10) for eta in range(1, 10 + 1)]
+        etas.extend([0.01, 0.02, 0.03, 0.05, 2, 3, 4])
+
         report_pkls = [
             (group_name,
-             "report_EG_{:.1f}_{}_20050103_20181228.pkl".format(
-                 eta / 10, group_name)
+             "report_EG_{}_{}_20050103_20181228.pkl".format(
+                 eta, group_name)
              )
-            for eta in range(1, 10 + 1)
+            for eta in etas
             for gdx, group_name in enumerate(group_names)
         ]
         report_pkls.extend([
@@ -208,14 +211,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.simulation:
         import multiprocess as mp
-        n_cpu = mp.cpu_count()//2 if mp.cpu_count() >= 2 else 1
-        pool=mp.Pool(processes=n_cpu)
+
+        n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
+        pool = mp.Pool(processes=n_cpu)
         results = [pool.apply_async(run_eg,
                                     (args.eta, group_name,
-                                    dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
                                     )
-                for group_name in pp.GROUP_SYMBOLS.keys()
-        ]
+                   for group_name in pp.GROUP_SYMBOLS.keys()
+                   ]
         [result.wait() for result in results]
         pool.close()
         pool.join()
