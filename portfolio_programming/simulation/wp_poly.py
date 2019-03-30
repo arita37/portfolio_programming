@@ -65,11 +65,11 @@ class PolynomialPortfolio(WeightPortfolio):
         today_prev_wealth = kwargs['today_prev_wealth']
 
         # shape: tdx
-        portfolio_payoffs = (self.decision_xarr.loc[:today, self.symbols,
+        portfolio_payoffs = np.log(self.decision_xarr.loc[:today, self.symbols,
                                  'portfolio_payoff']).sum(axis=1)
-        # shape: tdx * n_symbol
-        stock_payoffs = (self.exp_rois.loc[:today, self.symbols] +
-                            1)
+        # shape: tdx * n_symbol, does not need take log operation
+        # because log(price relative) = simple roi
+        stock_payoffs = self.exp_rois.loc[:today, self.symbols]
         # shape: n_symbol
         diff = (stock_payoffs - portfolio_payoffs).sum(axis=0)
         new_weights = np.power(np.maximum(diff, np.zeros_like(diff)),
