@@ -288,6 +288,6 @@ if __name__ == '__main__':
         [result.wait() for result in results]
         pool.close()
         pool.join()
-        
+
     if args.stat:
         get_eg_report(args.exp_type)

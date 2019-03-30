@@ -246,11 +246,12 @@ class ExpAdaptivePortfolio(WeightPortfolio):
                  end_date=pp.EXP_END_DATE,
                  beta = None,
                  int print_interval=10):
-        super(ExpPortfolio, self).__init__(
+        super(ExpAdaptivePortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
             end_date, print_interval)
+        
         # learning rates
         self.etas = xr.DataArray(
             np.zeros(self.n_exp_period),
