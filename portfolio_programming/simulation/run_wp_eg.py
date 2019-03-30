@@ -117,7 +117,8 @@ def get_eg_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         writer.writeheader()
 
         etas = ["{:.1f}".format(eta / 10) for eta in range(1, 10 + 1)]
-        etas.extend([0.01, 0.02, 0.03, 0.05, 2, 3, 4])
+        etas.extend(["{:.2f}".format(eta) for eta in (0.01, 0.02, 0.03, 0.05)])
+        etas.extend(["{:.1f}".format(eta) for eta in (2, 3, 4)])
 
         report_pkls = [
             (group_name,
