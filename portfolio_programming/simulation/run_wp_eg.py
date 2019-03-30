@@ -207,9 +207,21 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.simulation:
-        for group_name in pp.GROUP_SYMBOLS.keys():
-            run_eg(args.eta, group_name,
-                   dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+        import multiprocess as mp
+        n_cpu = mp.cpu_count()//2 if mp.cpu_count() >= 2 else 1
+        pool=mp.Pool(processes=n_cpu)
+        results = [pool.apply_async(run_eg,
+                                    (args.eta, group_name,
+                                    dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                                    )
+                for group_name in pp.GROUP_SYMBOLS.keys()
+        ]
+        [result.wait() for result in results]
+        pool.close()
+        pool.join()
+        # for group_name in pp.GROUP_SYMBOLS.keys():
+        #     run_eg(args.eta, group_name,
+        #            dt.date(2005, 1, 1), dt.date(2018, 12, 28))
 
     if args.adaptive:
         for group_name in pp.GROUP_SYMBOLS.keys():
