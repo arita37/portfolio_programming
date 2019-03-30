@@ -45,6 +45,7 @@ def run_poly(poly_power, group_name, exp_start_date, exp_end_date):
         initial_wealth,
         start_date=exp_start_date,
         end_date=exp_end_date,
+        print_interval=1
     )
     obj.run()
 
@@ -66,18 +67,25 @@ if __name__ == '__main__':
                         help="polynomial forecaster experiment")
     parser.add_argument("--poly", type=float,
                         help="polynomial power")
+    parser.add_argument("-g", "--group_name", type=str,
+                        help="target group")
 
     args = parser.parse_args()
     if args.simulation:
-        import multiprocess as mp
-        n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
-        pool = mp.Pool(processes=n_cpu)
-        results = [pool.apply_async(run_poly,
-                                    (args.poly, group_name,
-                                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
-                                    )
-                   for group_name in pp.GROUP_SYMBOLS.keys()
-                   ]
-        [result.wait() for result in results]
-        pool.close()
-        pool.join()
+        if args.group_name:
+            run_poly(args.poly, args.group_name,
+                    dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+
+        else:
+            import multiprocess as mp
+            n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
+            pool = mp.Pool(processes=n_cpu)
+            results = [pool.apply_async(run_poly,
+                                        (args.poly, group_name,
+                                         dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                                        )
+                       for group_name in pp.GROUP_SYMBOLS.keys()
+                       ]
+            [result.wait() for result in results]
+            pool.close()
+            pool.join()

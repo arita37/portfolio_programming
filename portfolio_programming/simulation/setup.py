@@ -52,6 +52,11 @@ extensions = [
         ["wp_eg.pyx", ],
         include_dirs=[np.get_include()],
     ),
+#     Extension(
+#         "wp_poly",
+#         ["wp_poly.pyx", ],
+#         include_dirs=[np.get_include()],
+#     ),
 ]
 
 setup(
