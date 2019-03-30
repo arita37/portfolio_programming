@@ -41,7 +41,7 @@ class EGPortfolio(WeightPortfolio):
         self.eta = eta
 
     def get_simulation_name(self, *args, **kwargs):
-        return "EG_{}_{}_{}_{}".format(
+        return "EG_{:.2f}_{}_{}_{}".format(
             self.eta,
             self.group_name,
             self.exp_start_date.strftime("%Y%m%d"),
@@ -219,9 +219,10 @@ class ExpPortfolio(WeightPortfolio):
         yesterday = kwargs['prev_trans_date']
         today = kwargs['trans_date']
         # shape:  n_symbol
-        stock_payoffs = (self.exp_rois.loc[:today, self.symbols] + 1).sum(
-            axis=0)
+        # does not need take log operation because
+        # log(price relative) = simple roi
+        stock_payoffs = (self.exp_rois.loc[:today, self.symbols]).sum(axis=0)
         new_weights = np.exp(self.eta * stock_payoffs)
         normalized_new_weights = new_weights / new_weights.sum()
-     
+
         return normalized_new_weights
