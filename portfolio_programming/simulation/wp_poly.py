@@ -36,9 +36,8 @@ class PolynomialPortfolio(WeightPortfolio):
 
         self.poly_power = poly_power
 
-
     def get_simulation_name(self, *args, **kwargs):
-        return "Pply_{:.2f}_{}_{}_{}".format(
+        return "Poly_{:.2f}_{}_{}_{}".format(
             self.poly_power,
             self.group_name,
             self.exp_start_date.strftime("%Y%m%d"),
@@ -65,16 +64,19 @@ class PolynomialPortfolio(WeightPortfolio):
         today = kwargs['trans_date']
         today_prev_wealth = kwargs['today_prev_wealth']
 
-        # shape: 1: tdx
-        portfolio_cum_payoffs = (self.decision_xarr.loc[:today, self.symbols,
+        # shape: tdx
+        portfolio_payoffs = (self.decision_xarr.loc[:today, self.symbols,
                                  'portfolio_payoff']).sum(axis=1)
+        # shape: tdx * n_symbol
+        stock_payoffs = (self.exp_rois.loc[:today, self.symbols] +
+                            1)
         # shape: n_symbol
-        stock_cum_payoffs = (self.exp_rois.loc[:today, self.symbols] +
-                            1).prod(axis=0)
-
-        diff = stock_cum_payoffs - portfolio_cum_payoffs
-        new_weights = np.power(np.maximum(diff, np.zeros(diff)),
+        diff = (stock_payoffs - portfolio_payoffs).sum(axis=0)
+        new_weights = np.power(np.maximum(diff, np.zeros_like(diff)),
                                self.poly_power - 1)
         normalized_new_weights = new_weights / new_weights.sum()
-
+        # print(today,  portfolio_cum_payoffs)
+        # print(today, stock_cum_payoffs)
+        # print(today, diff)
+        # print(today, normalized_new_weights)
         return normalized_new_weights

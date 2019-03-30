@@ -214,25 +214,31 @@ if __name__ == '__main__':
     parser.add_argument("--stat", default=False,
                         action='store_true',
                         help="EG experiment statistics")
+    parser.add_argument("-g", "--group_name", type=str,
+                        help="target group")
 
     args = parser.parse_args()
     if args.simulation:
-        import multiprocess as mp
+        if args.group_name:
+            run_eg(args.eta, args.group_name,
+                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+        else:
+            import multiprocess as mp
 
-        n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
-        pool = mp.Pool(processes=n_cpu)
-        results = [pool.apply_async(run_eg,
-                                    (args.eta, group_name,
-                                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
-                                    )
-                   for group_name in pp.GROUP_SYMBOLS.keys()
-                   ]
-        [result.wait() for result in results]
-        pool.close()
-        pool.join()
-        # for group_name in pp.GROUP_SYMBOLS.keys():
-        #     run_eg(args.eta, group_name,
-        #            dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+            n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
+            pool = mp.Pool(processes=n_cpu)
+            results = [pool.apply_async(run_eg,
+                                        (args.eta, group_name,
+                                         dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                                        )
+                       for group_name in pp.GROUP_SYMBOLS.keys()
+                       ]
+            [result.wait() for result in results]
+            pool.close()
+            pool.join()
+            # for group_name in pp.GROUP_SYMBOLS.keys():
+            #     run_eg(args.eta, group_name,
+            #            dt.date(2005, 1, 1), dt.date(2018, 12, 28))
 
     if args.adaptive:
         for group_name in pp.GROUP_SYMBOLS.keys():
