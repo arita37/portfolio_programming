@@ -75,8 +75,5 @@ class PolynomialPortfolio(WeightPortfolio):
         new_weights = np.power(np.maximum(diff, np.zeros_like(diff)),
                                self.poly_power - 1)
         normalized_new_weights = new_weights / new_weights.sum()
-        # print(today,  portfolio_cum_payoffs)
-        # print(today, stock_cum_payoffs)
-        # print(today, diff)
-        # print(today, normalized_new_weights)
+
         return normalized_new_weights

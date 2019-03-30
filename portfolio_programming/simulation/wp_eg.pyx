@@ -168,9 +168,9 @@ class EGAdaptivePortfolio(WeightPortfolio):
         return normalized_new_weights
 
 
-class NoIREGPortfolio(WeightPortfolio):
+class ExpPortfolio(WeightPortfolio):
     """
-    no internal regret exponential gradient strategy
+    exponential forecaster
     """
 
     def __init__(self,
@@ -185,7 +185,7 @@ class NoIREGPortfolio(WeightPortfolio):
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
                  int print_interval=10):
-        super(EGPortfolio, self).__init__(
+        super(ExpPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
@@ -193,27 +193,8 @@ class NoIREGPortfolio(WeightPortfolio):
         # learning rate
         self.eta = eta
 
-        # results data
-        # decision xarray, shape: (n_exp_period, n_symbol, 2)
-        decisions = ["wealth", "weight"]
-        virtual_symbols = ["{}-{}".format(s1, s2) for s1 in self.symbols
-                           for s2 in  self.symbols if s1!=s2]
-
-        self.virtual_decision_xarr = xr.DataArray(
-            np.zeros((self.n_exp_period,
-                      self.n_symbol * (self.n_symbol-1) ,
-                      len(decisions))
-                     ),
-            dims=('trans_date', 'virtual_symbols', 'decision'),
-            coords=(
-                self.exp_trans_dates,
-                virtual_symbols,
-                decisions
-            )
-        )
-
     def get_simulation_name(self, *args, **kwargs):
-        return "IREG_{}_{}_{}_{}".format(
+        return "Exp_{:.2f}_{}_{}_{}".format(
             self.eta,
             self.group_name,
             self.exp_start_date.strftime("%Y%m%d"),
@@ -237,12 +218,10 @@ class NoIREGPortfolio(WeightPortfolio):
         """
         yesterday = kwargs['prev_trans_date']
         today = kwargs['trans_date']
-
-        prev_weights = self.decision_xarr.loc[
-            yesterday, self.symbols, 'weight']
-        price_relatives = self.exp_rois.loc[today, self.symbols] + 1
-        today_prev_weights_sum =  (prev_weights *  price_relatives).sum()
-        new_weights = (prev_weights * np.exp(self.eta * price_relatives /
-                                             today_prev_weights_sum))
+        # shape:  n_symbol
+        stock_payoffs = (self.exp_rois.loc[:today, self.symbols] + 1).sum(
+            axis=0)
+        new_weights = np.exp(self.eta * stock_payoffs)
         normalized_new_weights = new_weights / new_weights.sum()
+     
         return normalized_new_weights
