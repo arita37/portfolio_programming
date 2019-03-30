@@ -54,7 +54,8 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
     import arch.bootstrap.multiple_comparison as arch_comp
 
     group_names = pp.GROUP_SYMBOLS.keys()
-    with open(os.path.join(pp.TMP_DIR, "BAH_stat.csv"), "w", newline='') as csv_file:
+    with open(os.path.join(pp.TMP_DIR, "BAH_stat.csv"), "w",
+              newline='') as csv_file:
         fields = [
             "simulation_name",
             "group_name",
@@ -96,7 +97,6 @@ def get_bah_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 # preserve the worse p_value
                 if spa.pvalues[1] > spa_value:
                     spa_value = spa.pvalues[1]
-
 
             writer.writerow(
                 {
@@ -153,8 +153,22 @@ if __name__ == '__main__':
             run_bah('dissertation', args.group_name,
                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
         else:
-            for group_name in pp.GROUP_SYMBOLS.keys():
-                run_bah('dissertation', group_name,
-                        dt.date(2005, 1, 1), dt.date(2018, 12, 28))
-    if args.stat:
-        get_bah_report()
+            import multiprocess as mp
+            n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
+            pool = mp.Pool(processes=n_cpu)
+            results = [pool.apply_async(run_bah,
+                                        ('dissertation', group_name,
+                                         dt.date(2005, 1, 1),
+                                         dt.date(2018, 12, 28)
+                                         ))
+                       for group_name in pp.GROUP_SYMBOLS.keys()
+                       ]
+            [result.wait() for result in results]
+            pool.close()
+            pool.join()
+
+            # for group_name in pp.GROUP_SYMBOLS.keys():
+            #     run_bah('dissertation', group_name,
+            #             dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+            if args.stat:
+                get_bah_report()

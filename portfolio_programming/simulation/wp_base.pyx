@@ -320,6 +320,9 @@ class WeightPortfolio(ValidMixin):
         self.decision_xarr.loc[self.exp_start_date, self.symbols, 'wealth'] = (
                 self.initial_wealth * self.initial_weights *
                 (1-self.buy_trans_fee))
+        # record portfolio payoff
+        self.decision_xarr.loc[self.exp_start_date, self.symbols,
+                               'portfolio_payoff'] = self.initial_weights
 
         cum_trans_fee_loss += (self.initial_wealth * self.buy_trans_fee)
 
