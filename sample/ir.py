@@ -43,6 +43,27 @@ def ir_example():
     normalized_experts = new_weights/new_weights.sum()
     print(normalized_experts)
 
+
+    A = np.array([
+        [-normalized_experts[0]-normalized_experts[1],
+         normalized_experts[0],
+         normalized_experts[1]
+         ],
+        [normalized_experts[2],
+         -normalized_experts[2]-normalized_experts[3],
+         normalized_experts[3]
+         ],
+        [normalized_experts[4],
+         normalized_experts[5],
+         -normalized_experts[4]-normalized_experts[5]
+         ]
+    ])
+    # https://stackoverflow.com/questions/1835246/how-to-solve-homogeneous-linear-equations-with-numpy
+    print(A)
+    x = np.linalg.solve(A, np.zeros(3))
+    print(x)
+    print(np.dot(A,x))
+
 if __name__ == '__main__':
     # swap_regret()
     ir_example()
