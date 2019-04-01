@@ -7,7 +7,8 @@ import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
-from portfolio_programming.simulation.wp_base import WeightPortfolio
+from portfolio_programming.simulation.wp_base import (WeightPortfolio,
+                                                      NIRUtility)
 
 
 class EGPortfolio(WeightPortfolio):
@@ -312,7 +313,7 @@ class ExpAdaptivePortfolio(WeightPortfolio):
         return normalized_new_weights
 
 
-class NIRExpPortfolio(WeightPortfolio):
+class NIRExpPortfolio(WeightPortfolio, NIRUtility):
     """
     no internal regret exponential forecaster
     """
@@ -338,24 +339,27 @@ class NIRExpPortfolio(WeightPortfolio):
         self.eta = eta
 
         # fictitious experts,
-        self.experts = ["{}-{}".format(s1, s2)
+        self.virtual_experts = ["{}-{}".format(s1, s2)
                                 for s1 in self.symbols
                                 for s2 in self.symbols
                                 if s1 != s2]
-        # shape: n_exp_period * (n_symbol * (n_symbol - 1)) * n_symbol
-        self.expert_weights = xr.DataArray(
+        # shape: n_exp_period * (n_symbol * (n_symbol - 1)) * n_symbol *
+        # decisions
+        decisions = ["weight", 'portfolio_payoff']
+        self.virtual_expert_decision_xarr = xr.DataArray(
             np.zeros((self.n_exp_period,
-                      len(self.experts),
-                      self.n_symbol
+                      len(self.virtual_experts),
+                      self.n_symbol,
+                      len(decisions)
                       )),
-            dims=('trans_date', 'experts', 'symbol'),
+            dims=('trans_date', 'virtual_experts', 'symbol', 'decision'),
             coords=(
                 self.exp_trans_dates,
-                self.self.experts,
-                self.symbols
+                self.self.virtual_experts,
+                self.symbols,
+                decisions
             )
         )
-
 
     def get_simulation_name(self, *args, **kwargs):
         return "NIRExp_{:.2f}_{}_{}_{}".format(
@@ -374,7 +378,12 @@ class NIRExpPortfolio(WeightPortfolio):
         operations after initialization and before trading
         """
         today = self.exp_start_date
-        self.virtual_weights.loc[today, ]
+        self.virtual_expert_decision_xarr.loc[
+            today,
+            self.virtual_experts,
+            self.symbols,
+            'weight'
+        ] = self.modified_probabilities(self.initial_weights)
 
 
     def get_today_weights(self, *args, **kwargs):
@@ -390,11 +399,41 @@ class NIRExpPortfolio(WeightPortfolio):
         """
         yesterday = kwargs['prev_trans_date']
         today = kwargs['trans_date']
-        # shape:  n_symbol
-        # does not need take log operation because
-        # log(price relative) = simple roi
-        # stock_payoffs = (self.exp_rois.loc[:today, self.symbols]).sum(axis=0)
-        # new_weights = np.exp(self.eta * stock_payoffs)
-        # normalized_new_weights = new_weights / new_weights.sum()
-        #
-        # return normalized_new_weights
+        today_price_relative = kwargs['today_price_relative']
+
+        # record virtual experts' payoff
+        self.virtual_expert_decision_xarr.loc[
+            today, self.virtual_experts, self.symbols, 'portfolio_payoff'] = (
+            self.virtual_expert_decision_xarr.loc[
+                yesterday, self.virtual_experts, self.symbols, 'weight']  *
+            today_price_relative
+        )
+        # cumulative returns of all virtual experts
+        virtual_cum_payoffs = np.log(
+            self.virtual_expert_decision_xarr.loc[
+                :today,self.virtual_experts,
+            self.symbols, 'portfolio_payoff'].sum(axis=1)
+        )
+        # exponential predictors
+        new_weights = np.exp(self.eta * virtual_cum_payoffs)
+
+        # normalized weights of virtual experts
+        virtual_expert_weights = new_weights / new_weights.sum()
+
+        # build column stochastic matrix to get weights of today
+        S = self.column_stochastic_matrix(self.n_symbol,
+                                           virtual_expert_weights)
+        eigs, eigvs = np.linalg.eig(S)
+        normalized_new_weights = eigvs[:, 0] / eigvs[:, 0].sum()
+
+        # record modified strategies of today
+        self.virtual_expert_decision_xarr.loc[
+            today, self.virtual_experts, self.symbols, 'weight'
+        ] = self.modified_probabilities(normalized_new_weights)
+
+        return normalized_new_weights
+
+
+
+
+

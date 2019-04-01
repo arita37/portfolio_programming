@@ -4,12 +4,14 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 """
 
 import sys
+
 import numpy as np
+
 
 def swap_regret():
     size = 5
     weights = np.arange(6, 1, -1)
-    experts = np.tile(weights, (size * (size-1), 1))
+    experts = np.tile(weights, (size * (size - 1), 1))
     print(experts)
     row = 0
     for idx in range(size):
@@ -24,77 +26,126 @@ def swap_regret():
 
 def ir_example():
     size = 3
-    # p = np.array([0.7, 0.1, 0.2])
-    p = np.random.dirichlet([1/3, 1/3, 1/3])
-    experts = np.tile(p, (size * (size - 1), 1))
-    # print(experts)
-    row = 0
-    for idx in range(size):
-        for jdx in range(size):
-            if idx != jdx:
-                # print(idx, jdx, row)
-                experts[row, jdx] += experts[row, idx]
-                experts[row, idx] = 0
-                row += 1
-    # print(experts)
+    # p = np.array([0.2, 0.3, 0.5])
+    p = np.random.dirichlet([1 / 3, 1 / 3, 1 / 3])
+
+    virtual_experts = modified_probabilities(p)
+
     # rel = np.array([1.05, 0.9, 0.98])
-    rel = np.random.rand(3)+1
-
-    new_weights = np.exp(np.log((experts * rel).sum(axis=1)))
+    rel = np.random.rand(3) + 1
+    new_weights = np.exp(np.log((virtual_experts * rel).sum(axis=1)))
     # print(new_weights)
-    normalized_experts = new_weights/new_weights.sum()
-    # print("normal experts:", normalized_experts)
+    virtual_expert_weights = new_weights / new_weights.sum()
 
-
-    A = np.array([
-        [-normalized_experts[0]-normalized_experts[1],
-         normalized_experts[0],
-         normalized_experts[1]
-         ],
-        [normalized_experts[2],
-         -normalized_experts[2]-normalized_experts[3],
-         normalized_experts[3]
-         ],
-        [normalized_experts[4],
-         normalized_experts[5],
-         -normalized_experts[4]-normalized_experts[5]
-         ]
-    ])
-
-
-    # https://stackoverflow.com/questions/1835246/how-to-solve-homogeneous-linear-equations-with-numpy
-    # print(A)
-    # x = np.linalg.solve(A, np.zeros(3))
-    # print(x)
-    # print(np.dot(A,x))
+    # A = np.array([
+    #     [-virtual_expert_weights[0] - virtual_expert_weights[1],
+    #      virtual_expert_weights[0],
+    #      virtual_expert_weights[1]
+    #      ],
+    #     [virtual_expert_weights[2],
+    #      -virtual_expert_weights[2] - virtual_expert_weights[3],
+    #      virtual_expert_weights[3]
+    #      ],
+    #     [virtual_expert_weights[4],
+    #      virtual_expert_weights[5],
+    #      -virtual_expert_weights[4] - virtual_expert_weights[5]
+    #      ]
+    # ])
     #
-    # print('*'*10 +  'row stochastic matrix')
-    # S = A / np.max(np.abs(A)) + np.identity(3)
-    # print(S)
-    # print(S.sum(axis=0), S.sum(axis=1))
-    # eigs, eigvs = np.linalg.eig(S)
-    # print("eigen vector:", eigvs)
-    # for cdx in range(3):
-    #     print(np.dot(S, eigvs[:, cdx]), eigs[cdx] * eigvs[:, cdx])
-    #
-    # ans = eigvs[:,0]
-    # print("ans:", ans)
-
-    # print('*'*10 + 'col stochastic matrix')
-    Q = A.T / np.max(np.abs(A)) + np.identity(3)
+    # # print('*'*10 + 'col stochastic matrix')
+    # Q = A.T / np.max(np.abs(A)) + np.identity(3)
+    Q = column_stochastic_matrix(size, virtual_expert_weights)
     # print(Q)
     # print(Q.sum(axis=0))
     eigs2, eigvs2 = np.linalg.eig(Q)
     # print('eigen values:', eigs2)
     # print("eigen vector:", eigvs2)
 
-    prob = eigvs2[:,0]/eigvs2[:,0].sum()
+    prob = eigvs2[:, 0] / eigvs2[:, 0].sum()
+    print(prob, prob.sum())
+
+    experts2 = np.tile(prob, (size * (size - 1), 1))
+    row = 0
+    for idx in range(size):
+        for jdx in range(size):
+            if idx != jdx:
+                # print(idx, jdx, row)
+                experts2[row, jdx] += experts2[row, idx]
+                experts2[row, idx] = 0
+                row += 1
+    # print(experts2)
+
+    result = np.zeros(3)
+    for idx in range(6):
+        result += experts2[idx, :] * virtual_expert_weights[idx]
+    # print(result)
+
     # print("prob:", prob, prob.sum())
-    if not np.allclose(prob.sum(), 1):
+    if not np.allclose(prob.sum(), 1) and not np.allclose(prob, result):
         sys.exit(1)
+
+
+def modified_probabilities(probs):
+    """
+    Parameters:
+    ------------
+    probs: array like
+        shape: n_action
+
+    Returns:
+    -------------------
+    size * (size - 1) modified probabilities
+    """
+    n_action = len(probs)
+    virtual_experts = np.tile(probs, (n_action * (n_action - 1), 1))
+    row = 0
+    for idx in range(n_action):
+        for jdx in range(n_action):
+            if idx != jdx:
+                virtual_experts[row, jdx] += virtual_experts[row, idx]
+                virtual_experts[row, idx] = 0
+                row += 1
+    return virtual_experts
+
+
+def column_stochastic_matrix(n_action, virtual_expert_weights):
+    """
+    Parameters:
+    ------------
+    n_action: int, number of actions
+    virtual_expert_weights: array like,
+        shape: n_action * (n_action-1)
+
+    Returns:
+    -------------
+    numpy.array, shape: n_action * n_action
+    """
+    n_virtual_expert = len(virtual_expert_weights)
+    assert n_virtual_expert == n_action * (n_action - 1)
+
+    # build row-sum-zero matrix
+    A = np.insert(virtual_expert_weights,
+                  np.arange(0, n_action * n_action, n_action),
+                  np.zeros(n_action)).reshape((n_action, n_action))
+    np.fill_diagonal(A, -A.sum(axis=1))
+
+    # column stochastic matrix
+    S = A.T / np.max(np.abs(A)) + np.identity(n_action)
+    return S
+
+
+def run_column_stochastic_matrix():
+    n_action = 5
+    virtual_expert_weights = np.random.dirichlet(
+        np.random.rand(n_action * (n_action - 1)))
+    print(virtual_expert_weights)
+    print(virtual_expert_weights.sum())
+    column_stochastic_matrix(n_action, virtual_expert_weights)
 
 
 if __name__ == '__main__':
     # swap_regret()
-    for _ in range(50000):
-        ir_example()
+    ir_example()
+    # for _ in range(50000):
+    #     ir_example()
+    # run_column_stochastic_matrix()
