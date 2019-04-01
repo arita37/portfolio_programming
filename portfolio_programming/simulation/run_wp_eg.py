@@ -170,6 +170,17 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 for gdx, group_name in enumerate(group_names)
             ]
 
+        elif exp_type == 'nir':
+            etas = [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
+            report_pkls = [
+                (group_name,
+                 "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(
+                     eta, group_name)
+                 )
+                for eta in etas
+                for gdx, group_name in enumerate(group_names)
+            ]
+
         for group_name, report_name in report_pkls:
             report_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
                                        report_name)
