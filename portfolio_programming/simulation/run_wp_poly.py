@@ -11,10 +11,11 @@ import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
-from portfolio_programming.simulation.wp_poly import PolynomialPortfolio
+from portfolio_programming.simulation.wp_poly import (PolynomialPortfolio,
+                                                      NIRPolynomialPortfolio)
 
 
-def run_poly(poly_power, group_name, exp_start_date, exp_end_date):
+def run_poly(poly_power, exp_type, group_name, exp_start_date, exp_end_date):
     group_symbols = pp.GROUP_SYMBOLS
     if group_name not in group_symbols.keys():
         raise ValueError('Unknown group name:{}'.format(group_name))
@@ -36,7 +37,14 @@ def run_poly(poly_power, group_name, exp_start_date, exp_end_date):
         coords=(symbols,)
     )
 
-    obj = PolynomialPortfolio(
+    if exp_type == 'poly':
+        exp_class = PolynomialPortfolio
+    elif exp_type == 'nir':
+        exp_class = NIRPolynomialPortfolio
+    else:
+        raise ValueError('unknown exp_type:', exp_type)
+
+    obj = exp_class(
         poly_power,
         group_name,
         symbols,
@@ -50,7 +58,7 @@ def run_poly(poly_power, group_name, exp_start_date, exp_end_date):
     obj.run()
 
 
-def get_poly_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
+def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
     import pickle
     import pandas as pd
     import csv
@@ -81,23 +89,34 @@ def get_poly_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         writer.writeheader()
 
-        polys = ["{:.2f}".format(val) for val in (1.1, 1.5, 2, 3, 4)]
+        if exp_type == 'poly':
+            polys = ["{:.2f}".format(val) for val in (1.1, 1.5, 2, 3, 4)]
+            report_pkls = [
+                (group_name,
+                 "report_Poly_{}_{}_20050103_20181228.pkl".format(
+                     poly, group_name)
+                 )
+                for poly in polys
+                for gdx, group_name in enumerate(group_names)
+            ]
+        elif exp_type == 'nir':
+            polys = ["{:.2f}".format(val) for val in (1.1, 1.5, 2, 3, 4)]
+            report_pkls = [
+                (group_name,
+                 "report_NIRPoly_{}_{}_20050103_20181228.pkl".format(
+                     poly, group_name)
+                 )
+                for poly in polys
+                for gdx, group_name in enumerate(group_names)
+            ]
 
-
-        report_pkls = [
-            (group_name,
-             "report_Poly_{}_{}_20050103_20181228.pkl".format(
-                 poly, group_name)
-             )
-            for poly in polys
-            for gdx, group_name in enumerate(group_names)
-        ]
-        # report_pkls.extend([
-        #     (group_name,
-        #      "report_Poly_Adaptive_{}_20050103_20181228.pkl".format(group_name)
-        #      )
-        #     for group_name in group_names
-        # ])
+        elif exp_type == 'adaptive':
+            report_pkls = [
+                (group_name,
+                 "report_Poly_Adaptive_{}_20050103_20181228.pkl".format(group_name)
+                 )
+                for group_name in group_names
+            ]
 
         for group_name, report_name in report_pkls:
             report_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
@@ -146,8 +165,8 @@ def get_poly_report(report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 }
             )
             print(
-                "Poly_{} {}, cum_roi:{:.2%}".format(
-                    poly_power_value, group_name, rp['cum_roi']
+                "{} {}, cum_roi:{:.2%}".format(
+                    rp["simulation_name"], group_name, rp['cum_roi']
                 )
             )
 
@@ -167,6 +186,8 @@ if __name__ == '__main__':
     parser.add_argument("--simulation", default=False,
                         action='store_true',
                         help="polynomial forecaster experiment")
+    parser.add_argument("--exp_type", type=str,
+                        help="experiment type: ploy or nir")
     parser.add_argument("--poly", type=float,
                         help="polynomial power")
     parser.add_argument("-g", "--group_name", type=str,
@@ -196,5 +217,5 @@ if __name__ == '__main__':
             pool.join()
 
     if args.stat:
-        get_poly_report()
+        get_poly_report(args.exp_type)
 
