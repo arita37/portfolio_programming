@@ -355,7 +355,7 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
             dims=('trans_date', 'virtual_experts', 'symbol', 'decision'),
             coords=(
                 self.exp_trans_dates,
-                self.self.virtual_experts,
+                self.virtual_experts,
                 self.symbols,
                 decisions
             )
@@ -385,6 +385,14 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
             'weight'
         ] = self.modified_probabilities(self.initial_weights)
 
+        # the portfolio payoff of first decision
+        self.virtual_expert_decision_xarr.loc[
+            today,
+            self.virtual_experts,
+            self.symbols,
+            'portfolio_payoff'
+        ] = self.modified_probabilities(self.initial_weights)
+
 
     def get_today_weights(self, *args, **kwargs):
         """
@@ -401,19 +409,38 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
         today = kwargs['trans_date']
         today_price_relative = kwargs['today_price_relative']
 
-        # record virtual experts' payoff
+        # record virtual experts' payoff,
+        # shape: n_virtual_expert, n_symbol
         self.virtual_expert_decision_xarr.loc[
             today, self.virtual_experts, self.symbols, 'portfolio_payoff'] = (
             self.virtual_expert_decision_xarr.loc[
                 yesterday, self.virtual_experts, self.symbols, 'weight']  *
             today_price_relative
         )
+        # print(yesterday, 'yesterday weight', self.virtual_expert_decision_xarr.loc[
+        #         yesterday, self.virtual_experts, self.symbols, 'weight'])
+        #
+        # print(today, ' today_price_realitve',  today_price_relative)
+        #
+        # print(today, " virtual payoff",
+        #       self.virtual_expert_decision_xarr.loc[
+        #     today, self.virtual_experts, self.symbols, 'portfolio_payoff'])
+
+        # print(today, "cum virtual payoff",  self.virtual_expert_decision_xarr.loc[
+        #         :today,self.virtual_experts,
+        #     self.symbols, 'portfolio_payoff'].sum(axis=2) )
+
         # cumulative returns of all virtual experts
+        # first sum: shape: tdx * n_virtual_expert
+        # second sum: shape: n_virtual_expert
         virtual_cum_payoffs = np.log(
             self.virtual_expert_decision_xarr.loc[
                 :today,self.virtual_experts,
-            self.symbols, 'portfolio_payoff'].sum(axis=1)
-        )
+            self.symbols, 'portfolio_payoff'].sum(axis=2)
+        ).sum(axis=0)
+
+        # print(today, ' virtual cum_payoff', virtual_cum_payoffs)
+
         # exponential predictors
         new_weights = np.exp(self.eta * virtual_cum_payoffs)
 
@@ -422,7 +449,7 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
 
         # build column stochastic matrix to get weights of today
         S = self.column_stochastic_matrix(self.n_symbol,
-                                           virtual_expert_weights)
+                                           virtual_expert_weights.values)
         eigs, eigvs = np.linalg.eig(S)
         normalized_new_weights = eigvs[:, 0] / eigvs[:, 0].sum()
 
