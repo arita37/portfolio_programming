@@ -199,7 +199,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.simulation:
         if args.group_name:
-            run_poly(args.poly, args.group_name,
+            run_poly(args.poly, args.exp_type, args.group_name,
                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
 
         else:
@@ -207,7 +207,7 @@ if __name__ == '__main__':
             n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
             pool = mp.Pool(processes=n_cpu)
             results = [pool.apply_async(run_poly,
-                                        (args.poly, group_name,
+                                        (args.poly, args.exp_type, group_name,
                                          dt.date(2005, 1, 1), dt.date(2018, 12, 28))
                                         )
                        for group_name in pp.GROUP_SYMBOLS.keys()
