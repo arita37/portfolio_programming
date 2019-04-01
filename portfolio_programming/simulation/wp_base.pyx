@@ -197,6 +197,11 @@ class WeightPortfolio(ValidMixin):
         """
         return reports
 
+    def pre_trading_operation(self, *args, **kargs):
+        """
+        operations after initialization and before trading
+        """
+
     def func_rebalance(self, current_portfolio_wealth,
                        prev_weights, prev_portfolio_wealth,
                        price_relatives, today_weights):
@@ -326,6 +331,8 @@ class WeightPortfolio(ValidMixin):
 
         cum_trans_fee_loss += (self.initial_wealth * self.buy_trans_fee)
 
+        self.pre_trading_operation()
+
         # start trading
         for tdx in range(1, self.n_exp_period):
             t1 = time()
@@ -355,6 +362,7 @@ class WeightPortfolio(ValidMixin):
                     tdx=tdx,
                     prev_trans_date=yesterday,
                     trans_date=today,
+                    today_price_relative=today_price_relatives,
                     today_prev_wealth=today_prev_wealth,
                     today_prev_portfolio_wealth=today_prev_portfolio_wealth,
                 )
@@ -436,3 +444,57 @@ class WeightPortfolio(ValidMixin):
         )
 
         return reports
+
+class NIRUtility(object):
+    """
+    internal regret general method
+    """
+    @staticmethod
+    def modified_probabilities(probs):
+        """
+        Parameters:
+        ------------
+        probs: array like
+            shape: n_action
+
+        Returns:
+        -------------------
+        size * (size - 1) modified probabilities
+        """
+        n_action = len(probs)
+        virtual_experts = np.tile(probs, (n_action * (n_action - 1), 1))
+        row = 0
+        for idx in range(n_action):
+            for jdx in range(n_action):
+                if idx != jdx:
+                    virtual_experts[row, jdx] += virtual_experts[row, idx]
+                    virtual_experts[row, idx] = 0
+                    row += 1
+        return virtual_experts
+
+
+    @staticmethod
+    def column_stochastic_matrix(n_action, virtual_expert_weights):
+        """
+        Parameters:
+        ------------
+        n_action: int, number of actions
+        virtual_expert_weights: array like,
+            shape: n_action * (n_action-1)
+
+        Returns:
+        -------------
+        numpy.array, shape: n_action * n_action
+        """
+        n_virtual_expert = len(virtual_expert_weights)
+        assert n_virtual_expert == n_action * (n_action - 1)
+
+        # build row-sum-zero matrix
+        A = np.insert(virtual_expert_weights,
+                      np.arange(0, n_action * n_action, n_action),
+                      np.zeros(n_action)).reshape((n_action, n_action))
+        np.fill_diagonal(A, -A.sum(axis=1))
+
+        # column stochastic matrix
+        S = A.T / np.max(np.abs(A)) + np.identity(n_action)
+        return S

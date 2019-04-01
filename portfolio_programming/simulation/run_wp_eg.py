@@ -15,7 +15,8 @@ import portfolio_programming as pp
 from portfolio_programming.simulation.wp_eg import (EGPortfolio,
                                                     EGAdaptivePortfolio,
                                                     ExpPortfolio,
-                                                    ExpAdaptivePortfolio)
+                                                    ExpAdaptivePortfolio,
+                                                    NIRExpPortfolio)
 
 
 def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
@@ -43,6 +44,8 @@ def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
         exp_class = EGPortfolio
     elif exp_type == 'exp':
         exp_class = ExpPortfolio
+    elif exp_type == 'nir':
+        exp_class = NIRExpPortfolio
     else:
         raise ValueError('unknown exp_type:', exp_type)
 
@@ -108,7 +111,7 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
     import csv
     import arch.bootstrap.multiple_comparison as arch_comp
 
-    if exp_type not in ('eg', 'exp'):
+    if exp_type not in ('eg', 'exp', 'nir'):
         raise ValueError('unknown exp_type:', exp_type)
 
     group_names = pp.GROUP_SYMBOLS.keys()
@@ -236,7 +239,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help="EG experiment")
     parser.add_argument("--exp_type", type=str,
-                        help="experiment type: eg or exp")
+                        help="experiment type: eg or exp or nir")
     parser.add_argument("--eta", type=float,
                         help="learning rate")
     parser.add_argument("--adaptive", default=False,
