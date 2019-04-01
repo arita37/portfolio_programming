@@ -371,6 +371,7 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
 
     def add_to_reports(self, reports):
         reports['eta'] = self.eta
+        reports['virtual_expert_decision_xarr'] = self.virtual_expert_decision_xarr
         return reports
 
     def pre_trading_operation(self, *args, **kargs):
