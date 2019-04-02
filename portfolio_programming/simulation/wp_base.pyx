@@ -91,7 +91,8 @@ class WeightPortfolio(ValidMixin):
                  double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 int print_interval=10):
+                 int print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         """
         allocating capital according to weights
 
@@ -179,6 +180,11 @@ class WeightPortfolio(ValidMixin):
                 decisions
             )
         )
+
+        # report path
+        if not os.path.exists(report_dir):
+            os.makedirs(report_dir)
+        self.report_dir = report_dir
 
     def get_simulation_name(self, *args, **kwargs):
         """implemented by user"""
@@ -341,9 +347,11 @@ class WeightPortfolio(ValidMixin):
 
             # the cumulative wealth before rebalance
             # Note that we have already known today's ROIs
-            today_price_relatives = (self.exp_rois.loc[today, self.symbols] + 1)
+            today_price_relatives = (self.exp_rois.loc[today, self.symbols]
+                                     + 1)
             today_prev_wealth = (today_price_relatives *
-                     self.decision_xarr.loc[yesterday, self.symbols, 'wealth'])
+                     self.decision_xarr.loc[yesterday,
+                                            self.symbols, 'wealth'])
 
             # record portfolio payoff
             self.decision_xarr.loc[today, self.symbols, 'portfolio_payoff'] = (
@@ -427,11 +435,10 @@ class WeightPortfolio(ValidMixin):
         reports = self.add_to_reports(reports)
 
         # write report
-        if not os.path.exists(pp.WEIGHT_PORTFOLIO_REPORT_DIR):
-            os.makedirs(pp.WEIGHT_PORTFOLIO_REPORT_DIR)
-
-        report_path = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
-                                   "report_{}.pkl".format(simulation_name))
+        report_path =  os.path.join(
+            self.report_dir,
+            "report_{}.pkl".format(self.get_simulation_name())
+         )
 
         with open(report_path, 'wb') as fout:
             pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
@@ -442,7 +449,6 @@ class WeightPortfolio(ValidMixin):
             simulation_name,
             time() - t0)
         )
-
         return reports
 
 class NIRUtility(object):
@@ -459,7 +465,7 @@ class NIRUtility(object):
 
         Returns:
         -------------------
-        size * (size - 1) modified probabilities
+        size * (size - 1) * n_action modified probabilities
         """
         n_action = len(probs)
         virtual_experts = np.tile(probs, (n_action * (n_action - 1), 1))

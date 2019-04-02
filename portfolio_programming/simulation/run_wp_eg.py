@@ -12,14 +12,43 @@ import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
-from portfolio_programming.simulation.wp_eg import (EGPortfolio,
-                                                    EGAdaptivePortfolio,
-                                                    ExpPortfolio,
-                                                    ExpAdaptivePortfolio,
-                                                    NIRExpPortfolio)
+from portfolio_programming.simulation.wp_eg import (
+    EGPortfolio, EGAdaptivePortfolio, ExpPortfolio, ExpAdaptivePortfolio,
+    NIRExpPortfolio
+)
 
 
 def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
+    assert eta > 0
+
+    buy_trans_fee = pp.BUY_TRANS_FEE
+    sell_trans_fee = pp.SELL_TRANS_FEE
+    report_dir = pp.WEIGHT_PORTFOLIO_REPORT_DIR
+
+    if exp_type == 'eg':
+        exp_class = EGPortfolio
+    elif exp_type == 'exp':
+        exp_class = ExpPortfolio
+    elif exp_type == 'nir':
+        exp_class = NIRExpPortfolio
+    elif exp_type == 'nofee_eg':
+        exp_class = EGPortfolio
+        buy_trans_fee = 0
+        sell_trans_fee = 0
+        report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
+    elif exp_type == 'nofee_exp':
+        exp_class = ExpPortfolio
+        buy_trans_fee = 0
+        sell_trans_fee = 0
+        report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
+    elif exp_type == 'nofee_nir':
+        exp_class = NIRExpPortfolio
+        buy_trans_fee = 0
+        sell_trans_fee = 0
+        report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
+    else:
+        raise ValueError('unknown exp_type:', exp_type)
+
     group_symbols = pp.GROUP_SYMBOLS
     if group_name not in group_symbols.keys():
         raise ValueError('Unknown group name:{}'.format(group_name))
@@ -40,14 +69,6 @@ def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
         dims=('symbol',),
         coords=(symbols,)
     )
-    if exp_type == 'eg':
-        exp_class = EGPortfolio
-    elif exp_type == 'exp':
-        exp_class = ExpPortfolio
-    elif exp_type == 'nir':
-        exp_class = NIRExpPortfolio
-    else:
-        raise ValueError('unknown exp_type:', exp_type)
 
     obj = exp_class(
         eta,
@@ -58,6 +79,9 @@ def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
         initial_wealth,
         start_date=exp_start_date,
         end_date=exp_end_date,
+        buy_trans_fee=buy_trans_fee,
+        sell_trans_fee=sell_trans_fee,
+        report_dir=report_dir
     )
     obj.run()
 
@@ -105,14 +129,20 @@ def run_eg_adaptive(group_name, exp_type, exp_start_date, exp_end_date,
     obj.run()
 
 
-def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
+def get_eg_report(exp_type):
     import pickle
     import pandas as pd
     import csv
     import arch.bootstrap.multiple_comparison as arch_comp
 
-    if exp_type not in ('eg', 'exp', 'nir'):
+    if exp_type not in ('eg', 'exp', 'nir',
+                        'nofee_eg', 'nofee_exp', 'nofee_nir'):
         raise ValueError('unknown exp_type:', exp_type)
+
+    if exp_type in ('nofee_eg', 'nofee_exp', 'nofee_nir'):
+        report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
+    else:
+        report_dir = pp.WEIGHT_PORTFOLIO_REPORT_DIR
 
     group_names = pp.GROUP_SYMBOLS.keys()
     output_file = os.path.join(pp.TMP_DIR, "{}_stat.csv".format(exp_type))
@@ -133,7 +163,8 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             "Sharpe",
             "Sortino_full",
             "Sortino_partial",
-            "SPA_c"
+            "SPA_c",
+            "cum_fee"
         ]
 
         writer = csv.DictWriter(csv_file, fieldnames=fields)
@@ -182,7 +213,7 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             ]
 
         for group_name, report_name in report_pkls:
-            report_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+            report_file = os.path.join(report_dir,
                                        report_name)
             rp = pd.read_pickle(report_file)
             # SPA value
@@ -224,7 +255,8 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                     "Sharpe": rp['Sharpe'],
                     "Sortino_full": rp['Sortino_full'],
                     "Sortino_partial": rp['Sortino_partial'],
-                    "SPA_c": rp['SPA_c']
+                    "SPA_c": rp['SPA_c'],
+                    "cum_fee": rp['cum_trans_fee_loss']
                 }
             )
             print(
