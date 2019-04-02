@@ -184,10 +184,7 @@ class WeightPortfolio(ValidMixin):
         # report path
         if not os.path.exists(report_dir):
             os.makedirs(report_dir)
-
-        self.report_path =  os.path.join(
-            report_dir, "report_{}.pkl".format(self.get_simulation_name())
-         )
+        self.report_dir = report_dir
 
     def get_simulation_name(self, *args, **kwargs):
         """implemented by user"""
@@ -438,7 +435,12 @@ class WeightPortfolio(ValidMixin):
         reports = self.add_to_reports(reports)
 
         # write report
-        with open(self.report_path, 'wb') as fout:
+        report_path =  os.path.join(
+            self.report_dir,
+            "report_{}.pkl".format(self.get_simulation_name())
+         )
+
+        with open(report_path, 'wb') as fout:
             pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
 
         print("{}-{} {} OK, {:.4f} secs".format(
