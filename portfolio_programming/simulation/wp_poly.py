@@ -25,13 +25,14 @@ class PolynomialPortfolio(WeightPortfolio):
                  sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 print_interval=10):
+                 print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
 
         super(PolynomialPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
-            end_date, print_interval)
+            end_date, print_interval, report_dir)
         # power degree
         if poly_power < 1:
             raise ValueError('poly power must >= 1, but get {}'.format(poly_power))
@@ -97,12 +98,13 @@ class NIRPolynomialPortfolio(WeightPortfolio, NIRUtility):
                  sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 print_interval=10):
+                 print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         super(NIRPolynomialPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
-            end_date, print_interval)
+            end_date, print_interval, report_dir)
         # power degree
         if poly_power < 1:
             raise ValueError(

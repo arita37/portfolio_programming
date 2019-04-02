@@ -12,14 +12,24 @@ import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
-from portfolio_programming.simulation.wp_eg import (EGPortfolio,
-                                                    EGAdaptivePortfolio,
-                                                    ExpPortfolio,
-                                                    ExpAdaptivePortfolio,
-                                                    NIRExpPortfolio)
+from portfolio_programming.simulation.wp_eg import (
+    EGPortfolio, EGAdaptivePortfolio, ExpPortfolio, ExpAdaptivePortfolio,
+    NIRExpPortfolio
+)
 
 
 def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
+    assert eta > 0
+
+    if exp_type == 'eg':
+        exp_class = EGPortfolio
+    elif exp_type == 'exp':
+        exp_class = ExpPortfolio
+    elif exp_type == 'nir':
+        exp_class = NIRExpPortfolio
+    else:
+        raise ValueError('unknown exp_type:', exp_type)
+
     group_symbols = pp.GROUP_SYMBOLS
     if group_name not in group_symbols.keys():
         raise ValueError('Unknown group name:{}'.format(group_name))
@@ -40,14 +50,6 @@ def run_eg(eta, exp_type, group_name, exp_start_date, exp_end_date):
         dims=('symbol',),
         coords=(symbols,)
     )
-    if exp_type == 'eg':
-        exp_class = EGPortfolio
-    elif exp_type == 'exp':
-        exp_class = ExpPortfolio
-    elif exp_type == 'nir':
-        exp_class = NIRExpPortfolio
-    else:
-        raise ValueError('unknown exp_type:', exp_type)
 
     obj = exp_class(
         eta,
@@ -133,7 +135,8 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
             "Sharpe",
             "Sortino_full",
             "Sortino_partial",
-            "SPA_c"
+            "SPA_c",
+            "cum_fee"
         ]
 
         writer = csv.DictWriter(csv_file, fieldnames=fields)
@@ -224,7 +227,8 @@ def get_eg_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                     "Sharpe": rp['Sharpe'],
                     "Sortino_full": rp['Sortino_full'],
                     "Sortino_partial": rp['Sortino_partial'],
-                    "SPA_c": rp['SPA_c']
+                    "SPA_c": rp['SPA_c'],
+                    "cum_fee": rp['cum_trans_fee_loss']
                 }
             )
             print(

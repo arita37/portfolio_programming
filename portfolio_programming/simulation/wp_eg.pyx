@@ -31,12 +31,13 @@ class EGPortfolio(WeightPortfolio):
                  double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 int print_interval=10):
+                 int print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         super(EGPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
-            end_date, print_interval)
+            end_date, print_interval, report_dir)
         # learning rate
         self.eta = eta
 
@@ -65,12 +66,12 @@ class EGPortfolio(WeightPortfolio):
         """
         yesterday = kwargs['prev_trans_date']
         today = kwargs['trans_date']
+        today_price_relative = kwargs['today_price_relative']
 
         prev_weights = self.decision_xarr.loc[
             yesterday, self.symbols, 'weight']
-        price_relatives = self.exp_rois.loc[today, self.symbols] + 1
-        today_prev_weights_sum = (prev_weights * price_relatives).sum()
-        new_weights = (prev_weights * np.exp(self.eta * price_relatives /
+        today_prev_weights_sum = (prev_weights * today_price_relative).sum()
+        new_weights = (prev_weights * np.exp(self.eta * today_price_relative /
                                              today_prev_weights_sum))
         normalized_new_weights = new_weights / new_weights.sum()
         return normalized_new_weights
@@ -96,13 +97,14 @@ class EGAdaptivePortfolio(WeightPortfolio):
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
                  beta = None,
-                 int print_interval=10
+                 int print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR
                  ):
         super(EGAdaptivePortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
-            end_date, print_interval)
+            end_date, print_interval, report_dir)
         # learning rates
         self.etas = xr.DataArray(
             np.zeros(self.n_exp_period),
@@ -185,12 +187,13 @@ class ExpPortfolio(WeightPortfolio):
                  double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 int print_interval=10):
+                 int print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         super(ExpPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
-            end_date, print_interval)
+            end_date, print_interval, report_dir)
         # learning rate
         self.eta = eta
 
@@ -245,12 +248,13 @@ class ExpAdaptivePortfolio(WeightPortfolio):
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
                  beta = None,
-                 int print_interval=10):
+                 int print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         super(ExpAdaptivePortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
-            end_date, print_interval)
+            end_date, print_interval, report_dir)
 
         # learning rates
         self.etas = xr.DataArray(
@@ -329,12 +333,13 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
                  double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 int print_interval=10):
+                 int print_interval=10,
+                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         super(NIRExpPortfolio, self).__init__(
             group_name, symbols, risk_rois, initial_weights,
             initial_wealth, buy_trans_fee,
             sell_trans_fee, start_date,
-            end_date, print_interval)
+            end_date, print_interval, report_dir)
         # learning rate
         self.eta = eta
 
@@ -418,18 +423,6 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
                 yesterday, self.virtual_experts, self.symbols, 'weight']  *
             today_price_relative
         )
-        # print(yesterday, 'yesterday weight', self.virtual_expert_decision_xarr.loc[
-        #         yesterday, self.virtual_experts, self.symbols, 'weight'])
-        #
-        # print(today, ' today_price_realitve',  today_price_relative)
-        #
-        # print(today, " virtual payoff",
-        #       self.virtual_expert_decision_xarr.loc[
-        #     today, self.virtual_experts, self.symbols, 'portfolio_payoff'])
-
-        # print(today, "cum virtual payoff",  self.virtual_expert_decision_xarr.loc[
-        #         :today,self.virtual_experts,
-        #     self.symbols, 'portfolio_payoff'].sum(axis=2) )
 
         # cumulative returns of all virtual experts
         # first sum: shape: tdx * n_virtual_expert
@@ -439,8 +432,6 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
                 :today,self.virtual_experts,
             self.symbols, 'portfolio_payoff'].sum(axis=2)
         ).sum(axis=0)
-
-        # print(today, ' virtual cum_payoff', virtual_cum_payoffs)
 
         # exponential predictors
         new_weights = np.exp(self.eta * virtual_cum_payoffs)
