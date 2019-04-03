@@ -57,12 +57,6 @@ def spsp_cvar(candidate_symbols: list,
     results: dict
         "amounts": xarray.DataArray, shape:(n_symbol, 3),
             coords: (symbol, ('buy', 'sell','chosen'))
-        "estimated_var": float
-        "estimated_cvar": float
-        "estimated_ev_var": float
-        "estimated_ev_cvar": float
-        "estimated_eev_cvar": float
-        "vss": vss, float
     """
     t0 = time()
 
@@ -198,34 +192,50 @@ def spsp_cvar(candidate_symbols: list,
     display(instance)
 
     # buy and sell amounts
-    actions = ['buy', 'sell', 'chosen']
+    actions = ['buy', 'sell', 'chosen', 'wealth']
     amounts = xr.DataArray(
         [(instance.buy_amounts[mdx].value,
           instance.sell_amounts[mdx].value,
-          -1)
+          -1,
+          instance.risk_wealth[mdx].value)
          for mdx in range(n_symbol)],
         dims=('symbol', "action"),
         coords=(candidate_symbols, actions),
     )
 
+    all_scenarios = np.array([instance.Ys[sdx].value
+                                 for sdx in range(n_scenario)])
+
+    all_scenarios.sort()
     return {
         "amounts": amounts,
+        'scenarios': all_scenarios,
+        "risk_free_wealth": instance.risk_free_wealth.value,
+        "VaR": instance.Z.value
     }
 
 
 def reverse_spsp_cvar(candidate_symbols,
-                      setting,
-                      max_portfolio_size,
+                      setting: str,
+                      max_portfolio_size: int,
                       risk_rois,
-                      risk_free_roi,
+                      risk_free_roi: float,
                       allocated_risk_wealth,
-                      allocated_risk_free_wealth,
-                      buy_trans_fee,
-                      sell_trans_fee,
+                      allocated_risk_free_wealth: float,
+                      buy_trans_fee: float,
+                      sell_trans_fee: float,
                       predict_risk_rois,
-                      predict_risk_free_roi,
-                      n_scenario,
-                      buy_sell_amounts):
+                      predict_risk_free_roi: float,
+                      n_scenario: int,
+                      buy_sell_amounts,
+                      solver="cplex"
+                      ):
+    """
+    given the buy and sell amounts, to determine the corresponding
+    CVaR and alpha
+    """
+
+
     n_symbol = len(candidate_symbols)
 
     # Model
@@ -267,8 +277,7 @@ def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
     risk_free_roi = 0
 
     allocated_risk_wealth = xr.DataArray(np.array([20., 10, 0, 0, 0]),
-                                         dims=('symbol',),
-                                         coords=(symbols,))
+                                         dims=('symbol',), coords=(symbols,))
     allocated_risk_wealth = allocated_risk_wealth.values
     allocated_risk_free_wealth = 70
     buy_trans_fee = 0.001425
@@ -287,8 +296,8 @@ def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
     )
     scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
     scenario_xarr = xr.open_dataarray(scenario_path)
-    predict_risk_rois = scenario_xarr.loc[trans_date, :, :].values
-    print(predict_risk_rois)
+    predict_risk_rois = scenario_xarr.loc[trans_date, symbols, :].values
+    # print(predict_risk_rois)
     predict_risk_free_roi = 0
 
     res = spsp_cvar(symbols, setting, max_portfolio_size,
@@ -297,6 +306,9 @@ def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
                     alpha, predict_risk_rois, predict_risk_free_roi, n_scenario)
     print("alpha=", alpha)
     print(res['amounts'])
+    print(res['VaR'])
+    print(res['risk_free_wealth'])
+    print(res['scenarios'])
     return res
 
 
@@ -310,7 +322,7 @@ def cvar_alpha_plot():
     buys = []
     sells = []
     for alpha in alphas:
-        res = test_spsp_cvar(alpha)
+        res = test_spsp_cvar('TWG1', alpha)
         cvars.append(res['CVaR'])
         vars.append(res['VaR'])
         buys.append(float(res['amounts'].loc['test', 'buy']))
