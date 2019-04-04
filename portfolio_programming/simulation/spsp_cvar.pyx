@@ -715,8 +715,8 @@ class NR_SPSP_CVaR(ValidMixin):
         n_scenario : positive integer
             The number of scenarios to generate.
 
-        bias_estimator : boolean
-            Using biased moment estimators or not.
+        alphas : list of float
+            The risk-averse level.
 
         report_path : string
             The performance report file path of the simulation.
@@ -812,17 +812,19 @@ class NR_SPSP_CVaR(ValidMixin):
             self.exp_end_date)
 
         # # verify rolling_window_size
-        self.valid_nonnegative_value("rolling_window_size",
-                                     rolling_window_size)
-        self.rolling_window_size = int(rolling_window_size)
+        self.valid_nonnegative_list("rolling_window_sizes",
+                                     rolling_window_sizes)
+        self.rolling_window_sizes = int(rolling_window_sizes)
 
         # verify n_scenario
         self.valid_nonnegative_value("n_scenario", n_scenario)
         self.n_scenario = int(n_scenario)
 
         # verify alpha
-        self.valid_range_value("alpha", alpha, 0, 1)
-        self.alpha = float(alpha)
+        self. valid_nonnegative_list("alphas", alphas)
+        self.alphas = float(alphas)
+
+        self.n_parameters = len(rolling_window_sizes) * len(alphas)
 
         self.valid_nonnegative_value("print_interval", print_interval)
         self.print_interval = print_interval
