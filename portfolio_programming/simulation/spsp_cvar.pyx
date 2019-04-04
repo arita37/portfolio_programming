@@ -641,7 +641,7 @@ class SPSP_CVaR(SPSP_Base):
         return reports
 
 
-class SPSP_CVaR_Direct(ValidMixin):
+class NR_SPSP_CVaR(ValidMixin):
     def __init__(self,
                  str setting,
                  str group_name,
@@ -655,13 +655,13 @@ class SPSP_CVaR_Direct(ValidMixin):
                  double sell_trans_fee=pp.SELL_TRANS_FEE,
                  start_date=pp.EXP_START_DATE,
                  end_date=pp.EXP_END_DATE,
-                 int rolling_window_size=200,
-                 int n_scenario=200,
-                 double alpha=0.05,
+                 list rolling_window_sizes=[200,],
+                 int n_scenario=1000,
+                 list alphas=[0.5, 0.6, 0.7],
                  int scenario_set_idx=1,
                  int print_interval=10):
         """
-        stage-wise portfolio stochastic programming  model
+        no regret stage-wise portfolio stochastic programming  model
 
         Parameters:
         -------------
@@ -709,7 +709,7 @@ class SPSP_CVaR_Direct(ValidMixin):
         end_date : datetime.date
              The last trading date (not the calendar day) of simulation.
 
-        rolling_window_size : positive integer
+        rolling_window_sizes : list of  positive integer
             The historical trading days for estimating statistics.
 
         n_scenario : positive integer

@@ -315,7 +315,9 @@ def test_spsp_cvar(**exp_parameters):
                     alpha, predict_risk_rois, predict_risk_free_roi, n_scenario)
     print("alpha=", alpha)
     print(res['amounts'])
-    print(res['VaR'])
+    print(res['amounts'].sum(axis=0))
+    print("VaR", res['VaR'])
+    print("CVaR", res['CVaR'])
     # print(res['risk_free_wealth'])
     # print(res['scenarios'])
     return res
@@ -392,7 +394,8 @@ def valid_spsp_amount(**exp_parameters):
                (1+buy_trans_fee) * amounts.loc[symbols, 'buy'].sum() +
                (1-sell_trans_fee) * amounts.loc[symbols, 'sell'].sum())
 
-    print(wealths, deposit)
+    print("wealths:", wealths)
+    print("deposit:", float(deposit))
 
     ys =xr.DataArray(
         np.zeros(n_scenario),
@@ -403,7 +406,7 @@ def valid_spsp_amount(**exp_parameters):
                        )
         ys.loc[sdx] = val if val > 0 else 0
 
-    our_cvar = z - 1/(1-alpha)/n_scenario*ys.sum()
+    our_cvar = float(z - 1/(1-alpha)/n_scenario*ys.sum())
     print("our CVaR:{:.14}, model CVaR:{:.14}".format(our_cvar, CVaR))
 
 
@@ -542,7 +545,7 @@ def cvar_alpha_plot():
 if __name__ == '__main__':
     group_name = 'TWG1'
     trans_date = dt.date(2014, 10, 2)
-    alpha = 0.6
+    alpha = 0.5
     allocated_risk_wealth = np.array([10, 20, 30, 30, 0])
     allocated_risk_free_wealth = 100 - allocated_risk_wealth.sum()
 
@@ -550,17 +553,17 @@ if __name__ == '__main__':
                          alpha=alpha,
                          allocated_risk_wealth= allocated_risk_wealth,
                          allocated_risk_free_wealth=allocated_risk_free_wealth)
+    #
+    # res2 = test_spsp_cvar(group_name=group_name, trans_date=trans_date,
+    #                      alpha=alpha + 0.2,
+    #                      allocated_risk_wealth= allocated_risk_wealth,
+    #
+    #                      allocated_risk_free_wealth=allocated_risk_free_wealth)
 
-    res2 = test_spsp_cvar(group_name=group_name, trans_date=trans_date,
-                         alpha=alpha + 0.2,
-                         allocated_risk_wealth= allocated_risk_wealth,
-
-                         allocated_risk_free_wealth=allocated_risk_free_wealth)
-
-    weighted_spsp(group_name=group_name, trans_date=trans_date,
-                      alpha=alpha, res1=res, res2=res2,
-                      allocated_risk_wealth=allocated_risk_wealth,
-                      allocated_risk_free_wealth=allocated_risk_free_wealth)
+    # weighted_spsp(group_name=group_name, trans_date=trans_date,
+    #                   alpha=alpha, res1=res, res2=res2,
+    #                   allocated_risk_wealth=allocated_risk_wealth,
+    #                   allocated_risk_free_wealth=allocated_risk_free_wealth)
 
 
     # valid_spsp_amount(group_name=group_name, trans_date=trans_date,
