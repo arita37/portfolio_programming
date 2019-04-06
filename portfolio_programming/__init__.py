@@ -97,6 +97,8 @@ if EXP_NAME == "dissertation":
     REPORT_DIR = os.path.join(DATA_DIR, "report")
     WEIGHT_PORTFOLIO_REPORT_DIR = os.path.join(DATA_DIR,
                                                'report_weight_portfolio')
+    NRSPSPCVaR_DIR = os.path.join(DATA_DIR,
+                                  'report_nrspsp_cvar')
 
     # scenario
     # SCENARIO_SET_DIR = TMP_DIR

@@ -664,7 +664,8 @@ class NER_SPSP_CVaR(ValidMixin):
                  int n_scenario=1000,
                  int scenario_set_idx=1,
                  int print_interval=5,
-                 report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
+                 report_dir=pp.NRSPSPCVaR_DIR,
+                ):
         """
         no regret stage-wise portfolio stochastic programming  model
 
@@ -728,6 +729,9 @@ class NER_SPSP_CVaR(ValidMixin):
 
         report_path : string
             The performance report file path of the simulation.
+
+        is_parallel: bool
+            Does parallel solve the experts
 
         Data
         --------------
@@ -889,6 +893,7 @@ class NER_SPSP_CVaR(ValidMixin):
         if not os.path.exists(report_dir):
             os.makedirs(report_dir)
         self.report_dir = report_dir
+
 
     def no_regret_strategy(self, *args, **kwargs):
         """
@@ -1267,7 +1272,7 @@ class NER_SPSP_CVaR(ValidMixin):
                     allocated_risk_wealth.sum() +  allocated_risk_free_wealth
                     )
             )
-            
+
             # update allocated wealth
             allocated_risk_wealth = self.decision_xarr.loc[
                 today, 'main', self.candidate_symbols, 'wealth']
