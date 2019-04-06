@@ -203,12 +203,13 @@ def spsp_cvar(candidate_symbols,
     amounts = xr.DataArray(
         [(instance.buy_amounts[mdx].value,
           instance.sell_amounts[mdx].value,
-          instance.risk_wealth[mdx],value,
+          instance.risk_wealth[mdx].value,
           -1)
          for mdx in range(n_symbol)],
         dims=('symbol', "action"),
         coords=(candidate_symbols, actions),
     )
+    # print(amounts)
 
     # value at risk (estimated)
     cdef double estimated_var = instance.Z.value
@@ -751,24 +752,11 @@ class NER_SPSP_CVaR(ValidMixin):
         self.expert_group_name = expert_group_name
         self.experts = experts
         # experts (rolling_window_size, alpha)
-        rolling_window_sizes, alphas = zip(*experts)
-
-        # external regret minimizing strategy
-        self.expert_names = ["h{}a{:2f}".format(h, a)
-                       for h in rolling_window_sizes
-                       for a in alphas]
-
+        self.expert_names = ["h{}a{:.2f}".format(h, a)
+                       for h, a  in experts]
+        print(self.expert_names)
         # parameters, rolling_window_size * alpha
         self.n_expert = len(experts)
-
-        # # verify rolling_window_sizes
-        self.valid_nonnegative_list("rolling_window_sizes",
-                                     rolling_window_sizes)
-        self.rolling_window_sizes = rolling_window_sizes
-
-        # verify alphas
-        self. valid_nonnegative_list("alphas", alphas)
-        self.alphas = alphas
 
         # verify candidate_symbols
         self.valid_dimension("n_symbol", len(candidate_symbols),
@@ -840,7 +828,7 @@ class NER_SPSP_CVaR(ValidMixin):
 
         # load scenario panel, shape:(n_exp_period, n_stock, n_scenario)
         self.scenario_set_idx = scenario_set_idx
-        distinct_rolling_window_sizes = set(rolling_window_sizes)
+        distinct_rolling_window_sizes = set(h for h, _ in experts)
         self.scenario_xarr = xr.DataArray(
             np.zeros((len(distinct_rolling_window_sizes),
                       self.n_exp_period,
@@ -864,19 +852,19 @@ class NER_SPSP_CVaR(ValidMixin):
         # the plus one symbol is the risk-free one
         decisions = ["wealth", "buy", "sell"]
         self.decision_xarr = xr.DataArray(
-            np.zeros((self.n_exp_period, self.n_experts + 1,
+            np.zeros((self.n_exp_period, self.n_expert + 1,
                       self.n_symbol + 1, len(decisions))),
             dims=('trans_date', 'expert', 'symbol', 'decision'),
             coords=(
                 self.exp_trans_dates,
-                self.experts + ['main',],
+                self.expert_names + ['main',],
                 self.pf_symbols,
                 decisions
             )
         )
         # estimated risks, shape(n_exp_period, n_expert+1, portfolio_properties)
         portfolio_properties = [
-            'wealth', 'tax_loss', 'price_relative', "weight"
+            'wealth', 'tax_loss', 'price_relative', "weight",
                     'CVaR', 'VaR', 'EV_CVaR', 'EV_VaR', 'EEV_CVaR', 'VSS']
         self.portfolio_xarr = xr.DataArray(
             np.zeros((self.n_exp_period, self.n_expert + 1,
@@ -884,7 +872,7 @@ class NER_SPSP_CVaR(ValidMixin):
             dims=('trans_date', 'expert', 'property'),
             coords=(
                 self.exp_trans_dates,
-                self.experts  + ['main',],
+                self.expert_names  + ['main',],
                 portfolio_properties
             )
         )
@@ -1020,8 +1008,8 @@ class NER_SPSP_CVaR(ValidMixin):
         results = spsp_cvar(
             self.candidate_symbols,
             "compact",
-            self.max_portfolio_size,
-            self.exp_risk_rois.loc[trans_date, :].values,
+            self.n_symbol,
+            self.exp_risk_rois.loc[trans_date, self.candidate_symbols].values,
             self.risk_free_rois.loc[trans_date],
             kwargs['allocated_risk_wealth'].values,
             kwargs['allocated_risk_free_wealth'],
@@ -1071,7 +1059,7 @@ class NER_SPSP_CVaR(ValidMixin):
             initial_wealth,
             final_wealth,
             nr_strategy,
-            nr_stratrgy_param,
+            nr_strategy_param,
             expert_group_name,
             experts,
             n_scenario,
@@ -1097,7 +1085,7 @@ class NER_SPSP_CVaR(ValidMixin):
         reports['initial_wealth'] = initial_wealth
         reports['final_wealth'] = final_wealth
         reports['nr_strategy']=nr_strategy
-        reports['nr_stratrgy_param']=nr_stratrgy_param
+        reports['nr_strategy_param']=nr_strategy_param
         reports['expert_group_name']=expert_group_name
         reports['experts']=experts
 
@@ -1110,8 +1098,8 @@ class NER_SPSP_CVaR(ValidMixin):
         reports['daily_roi'] = np.power(final_wealth / initial_wealth,
                                         1. / n_exp_period) - 1
 
-        # wealth_arr, Pandas.Series, shape: (n_stock+1,)
-        wealth_arr = decision_xarr.loc[:, :, 'wealth'].sum(axis=1).to_series()
+        # wealth_arr, Pandas.Series, shape: (n_symbol+1,)
+        wealth_arr = portfolio_xarr.loc[:, 'main', 'wealth'].to_series()
         wealth_daily_rois = wealth_arr.pct_change()
         wealth_daily_rois[0] = 0
 
@@ -1151,10 +1139,12 @@ class NER_SPSP_CVaR(ValidMixin):
         for tdx in range(self.n_exp_period):
             t1 = time()
             today = self.exp_trans_dates[tdx]
+            # print('allocated wealth:',  allocated_risk_wealth)
+            # print('allocated_risk_free_wealth:', allocated_risk_free_wealth)
 
             # experts
             for h, a in self.experts:
-                expert_name= "h{}a{:.2f}".format(h,a)
+                expert_name= "h{}a{:.2f}".format(h, a)
                 estimated_risk_rois = self.get_estimated_risk_rois(
                     rolling_window_size=h,
                     trans_date=today)
@@ -1171,7 +1161,7 @@ class NER_SPSP_CVaR(ValidMixin):
                     allocated_risk_wealth=allocated_risk_wealth,
                     allocated_risk_free_wealth=allocated_risk_free_wealth
                 )
-
+                # print(expert_name, pg_results)
                 # amount_xarr, shape"(n_symbol,
                 # ['buy', 'sell', 'wealth', 'chosen']),
                 amount_xarr = pg_results["amounts"]
@@ -1206,11 +1196,12 @@ class NER_SPSP_CVaR(ValidMixin):
                 )
 
                 # record risks
-                for col in ("VaR", "CVaR", "EV_VaR",
-                            "EV_CVaR", "EEV_CVaR", "VSS"):
+                for col in ['CVaR', 'VaR', 'EV_CVaR',
+                            'EV_VaR', 'EEV_CVaR', 'VSS']:
                     self.portfolio_xarr.loc[today, expert_name, col] = (
                         pg_results[col]
                     )
+                # print(self.portfolio_xarr.loc[today, expert_name, :])
 
             # no-regret strategy
             if tdx == 0:
@@ -1220,6 +1211,7 @@ class NER_SPSP_CVaR(ValidMixin):
                 )
                 self.portfolio_xarr.loc[today, self.expert_names,
                                     'price_relative'] = 1
+                self.portfolio_xarr.loc[today, "main", 'weight'] = 1
             else:
                 yesterday = self.exp_trans_dates[tdx-1]
                 # shape: (n_expert,)
@@ -1238,40 +1230,47 @@ class NER_SPSP_CVaR(ValidMixin):
                         today=today,
                     )
                  )
+                self.portfolio_xarr.loc[today, "main", 'weight'] = 1
 
             # risky asset of main portfolio,  buy, sell, and wealth
             acts = ['buy', 'sell', 'wealth']
             self.decision_xarr.loc[today, 'main',
-                                   self.candidate_symbols, acts] = (
-                self.portfolio_xarr.loc[today, self.expert_names, 'weight'] *
-                self.decision_xarr.loc[today, self.expert_names,
-                                   self.candidate_symbols, acts]
-            )
+                               self.candidate_symbols, acts] = (
+            # shape: (n_expert,), (n_expert, n_symbol, acts)
+            # sum=> (n_symbol, acts)
+            self.portfolio_xarr.loc[today, self.expert_names, 'weight'] *
+            self.decision_xarr.loc[today, self.expert_names,
+                               self.candidate_symbols, acts]
+            ).sum(axis=0)
+
             # risk-free asset of the main portfolio
+            # shape: (n_expert,), (n_expert, ) => float
             self.decision_xarr.loc[today, 'main',
                                    self.risk_free_symbol, 'wealth'] = (
                self.portfolio_xarr.loc[today, self.expert_names, 'weight'] *
                 self.decision_xarr.loc[today, self.expert_names,
                                    self.risk_free_symbol, 'wealth']
-            )
+            ).sum()
 
             # main portfolio property
             self.portfolio_xarr.loc[today, 'main', 'wealth'] = (
                  self.decision_xarr.loc[today, 'main',
-                                   self.candidate_symbols, 'wealth'].sum() +
-                  self.decision_xarr.loc[today, 'main',
-                                   self.risk_free_symbol, 'wealth']
+                                   self.pf_symbols, 'wealth'].sum()
             )
+
+            # shape: (n_expert,), (n_expert, ) => float
             self.portfolio_xarr.loc[today, 'main', 'tax_loss'] = (
                  self.portfolio_xarr.loc[today, self.expert_names, 'weight'] *
                   self.portfolio_xarr.loc[today, self.expert_names, 'tax_loss']
-            )
+            ).sum()
+
             # portfolio price relative
-            self.portfolio_xarr.loc[today, 'main', 'price_relaitve'] = float(
+            self.portfolio_xarr.loc[today, 'main', 'price_relative'] = float(
                 self.portfolio_xarr.loc[today, 'main', 'wealth'] / (
                     allocated_risk_wealth.sum() +  allocated_risk_free_wealth
                     )
             )
+            print(self.portfolio_xarr.loc[today, 'main'])
 
             # update allocated wealth
             allocated_risk_wealth = self.decision_xarr.loc[
@@ -1313,6 +1312,7 @@ class NER_SPSP_CVaR(ValidMixin):
             float(final_wealth),
             self.nr_strategy,
             self.nr_strategy_param,
+            self.expert_group_name,
             self.experts,
             self.n_scenario,
             self.decision_xarr,
