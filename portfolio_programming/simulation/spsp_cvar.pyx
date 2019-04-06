@@ -167,7 +167,8 @@ def spsp_cvar(candidate_symbols,
             # portfolio_wealth = (sum(model.allocated_risk_wealth) +
             #                     model.allocated_risk_free_wealth *
             #                     (1. + model.risk_rois[mdx]))
-            return model.risk_wealth[mdx] <= model.chosen[mdx] * portfolio_wealth
+            return (model.risk_wealth[mdx] <=
+                    model.chosen[mdx] * portfolio_wealth)
 
         instance.chosen_constraint = Constraint(instance.symbols,
                                                 rule=chosen_constraint_rule)
@@ -643,10 +644,9 @@ class SPSP_CVaR(SPSP_Base):
 
 class NR_SPSP_CVaR(ValidMixin):
     def __init__(self,
-                 str setting,
+                 str expert_setting,
                  str group_name,
                  candidate_symbols,
-                 int max_portfolio_size,
                  risk_rois,
                  risk_free_rois,
                  initial_risk_wealth,
@@ -665,20 +665,13 @@ class NR_SPSP_CVaR(ValidMixin):
 
         Parameters:
         -------------
-        setting : string,
-            {"compact", "general"}
+        expert_setting: string
 
         group_name: string,
             Name of the portfolio
 
         candidate_symbols : [str],
             The size of the candidate set is n_stock.
-
-        max_portfolio_size : positive integer
-            The max number of stock we can invest in the portfolio.
-            The model is the mixed integer linear programming, however,
-            if the max_portfolio_size == n_stock, it degenerates to the
-            linear programming.
 
         risk_rois : xarray.DataArray,
             dim:(trans_date, symbol),
@@ -721,13 +714,16 @@ class NR_SPSP_CVaR(ValidMixin):
         report_path : string
             The performance report file path of the simulation.
 
-
         Data
         --------------
         decision xarray.DataArray, shape: (n_exp_period, n_stock+1, 5)
         estimated risk_xarr, xarray.DataArray, shape(n_exp_period, 6)
 
         """
+        # expert setting
+        if expert_setting not in ('h100-200', 'a50-70'):
+            raise ValueError('unknown expert setting:', expert_setting)
+        self.expert_setting = expert_setting
 
         # verify candidate_symbols
         self.valid_dimension("n_symbol", len(candidate_symbols),
@@ -742,32 +738,10 @@ class NR_SPSP_CVaR(ValidMixin):
         self.all_trans_dates = risk_rois.get_index('trans_date')
         self.n_all_period = len(self.all_trans_dates)
 
-        # verify setting
-        if setting not in ("compact", "general"):
-            raise (ValueError("Incorrect setting: {}".format(setting)))
-
-        if (setting in ("compact", ) and
-                max_portfolio_size != self.n_symbol):
-            raise (ValueError(
-                "The max portfolio size {} must be the same "
-                "as the number of symbols {} in compact setting".format(
-                    max_portfolio_size, self.n_symbol)))
-        self.setting = setting
-
         # verify group name
         if group_name not in pp.GROUP_SYMBOLS.keys():
             raise ValueError('unknown group name:{}'.format(group_name))
         self.group_name = group_name
-
-        # verify max_portfolio_size
-        self.valid_nonnegative_value("max_portfolio_size", max_portfolio_size)
-        self.max_portfolio_size = max_portfolio_size
-
-        if max_portfolio_size > self.n_symbol:
-            raise (ValueError(
-                "The portfolio size {} cannot large than the "
-                "size of candidate set. {}.".format(
-                    max_portfolio_size, self.n_symbol)))
 
         # verify risky rois and risk_free_rois
         self.risk_rois = risk_rois
@@ -811,7 +785,7 @@ class NR_SPSP_CVaR(ValidMixin):
         self.exp_end_date_idx = self.all_trans_dates.get_loc(
             self.exp_end_date)
 
-        # # verify rolling_window_size
+        # # verify rolling_window_sizes
         self.valid_nonnegative_list("rolling_window_sizes",
                                      rolling_window_sizes)
         self.rolling_window_sizes = int(rolling_window_sizes)
@@ -820,11 +794,16 @@ class NR_SPSP_CVaR(ValidMixin):
         self.valid_nonnegative_value("n_scenario", n_scenario)
         self.n_scenario = int(n_scenario)
 
-        # verify alpha
+        # verify alphas
         self. valid_nonnegative_list("alphas", alphas)
         self.alphas = float(alphas)
 
-        self.n_parameters = len(rolling_window_sizes) * len(alphas)
+        # parameters, rolling_window_size * alpha
+        self.experts = np.array([(h, a)
+                           for h in rolling_window_sizes
+                           for a in alphas
+                           ])
+        self.n_experts = len(self.experts)
 
         self.valid_nonnegative_value("print_interval", print_interval)
         self.print_interval = print_interval
@@ -836,28 +815,34 @@ class NR_SPSP_CVaR(ValidMixin):
         print(self.scenario_xarr)
 
         # results data
-        # decision xarray, shape: (n_exp_period, n_symbol+1, 4)
-        decisions = ["wealth", "buy", "sell", "chosen"]
+        # decision xarray, shape: (n_exp_period, n_expert+1, n_symbol+1, 4)
+        decisions = ["wealth", "buy", "sell", "weight"]
         self.decision_xarr = xr.DataArray(
-            np.zeros((self.n_exp_period, self.n_symbol + 1, len(decisions))),
-            dims=('trans_date', 'symbol', 'decision'),
+            np.zeros((self.n_exp_period, self.n_experts + 1,
+                      self.n_symbol + 1, len(decisions))),
+            dims=('trans_date', 'expert', 'symbol', 'decision'),
             coords=(
                 self.exp_trans_dates,
+                self.experts + ['final',],
                 self.pf_symbols,
                 decisions
             )
         )
 
-        # estimated risks, shape(n_exp_period, 6)
+        # estimated risks, shape(n_exp_period, n_expert, 6)
         risks = ['CVaR', 'VaR', 'EV_CVaR', 'EV_VaR', 'EEV_CVaR', 'VSS']
         self.estimated_risk_xarr = xr.DataArray(
-            np.zeros((self.n_exp_period, len(risks))),
-            dims=('trans_date', 'risk'),
+            np.zeros((self.n_exp_period, self.n_expert, len(risks))),
+            dims=('trans_date', 'expert', 'risk'),
             coords=(
                 self.exp_trans_dates,
+                self.experts,
                 risks
             )
         )
+
+    def no_regret_strategy(self, *args, **kwargs):
+        pass
 
     def load_generated_scenario(self):
         """
@@ -907,6 +892,7 @@ class NR_SPSP_CVaR(ValidMixin):
 
         Returns:
         ----------------------------
+        scenarios on the trans_date
         xarray.DataArray, shape: (n_stock, n_scenario)
         """
         xarr = self.scenario_xarr.loc[kwargs['trans_date']]
@@ -930,8 +916,8 @@ class NR_SPSP_CVaR(ValidMixin):
         Returns:
         --------------
         results: dict
-            "amounts": xarray.DataArray, shape:(n_symbol, 3),
-                coords: (symbol, ('buy', 'sell','chosen'))
+            "amounts": xarray.DataArray, shape:(n_symbol, 4),
+                coords: (symbol, ('wealth', 'buy', 'sell', 'chosen'))
             "estimated_var": float
             "estimated_cvar": float
             "estimated_ev_var": float
@@ -968,14 +954,11 @@ class NR_SPSP_CVaR(ValidMixin):
         """
 
         name = (
-            "SPSP_CVaR_{}_{}_Mc{}_M{}_h{}_s{}_a{:.2f}_sdx{}_{}_{}".format(
-                self.setting,
+            "NR_SPSP_CVaR_{}_{}_M{}_s{}_sdx{}_{}_{}".format(
+                self.expert_setting,
                 self.group_name,
                 self.n_symbol,
-                self.max_portfolio_size,
-                self.rolling_window_size,
                 self.n_scenario,
-                self.alpha,
                 self.scenario_set_idx,
                 self.exp_start_date.strftime("%Y%m%d"),
                 self.exp_end_date.strftime("%Y%m%d"),
@@ -989,8 +972,7 @@ class NR_SPSP_CVaR(ValidMixin):
             group_name,
             candidate_symbols,
             risk_free_symbol,
-            setting,
-            max_portfolio_size,
+            expert_setting,
             exp_start_date,
             exp_end_date,
             n_exp_period,
@@ -999,14 +981,14 @@ class NR_SPSP_CVaR(ValidMixin):
             initial_wealth,
             final_wealth,
             cum_trans_fee_loss,
-            rolling_window_size,
+            rolling_window_sizes,
             n_scenario,
-            alpha,
+            alphas,
             decision_xarr,
             estimated_risk_xarr
     ):
         """
-       simulation reports
+        simulation reports
 
         Parameters:
         ------------------
@@ -1040,7 +1022,7 @@ class NR_SPSP_CVaR(ValidMixin):
         reports['initial_wealth'] = initial_wealth
         reports['final_wealth'] = final_wealth
         reports['cum_trans_fee_loss'] = cum_trans_fee_loss
-        reports['rolling_window_size'] = rolling_window_size
+        reports['rolling_window_sizes'] = rolling_window_sizes
         reports['decision_xarr'] = decision_xarr
         reports['estimated_risk_xarr'] = estimated_risk_xarr
 
