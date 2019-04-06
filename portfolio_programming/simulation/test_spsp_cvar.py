@@ -57,12 +57,6 @@ def spsp_cvar(candidate_symbols: list,
     results: dict
         "amounts": xarray.DataArray, shape:(n_symbol, 3),
             coords: (symbol, ('buy', 'sell','chosen'))
-        "estimated_var": float
-        "estimated_cvar": float
-        "estimated_ev_var": float
-        "estimated_ev_cvar": float
-        "estimated_eev_cvar": float
-        "vss": vss, float
     """
     t0 = time()
 
@@ -195,37 +189,55 @@ def spsp_cvar(candidate_symbols: list,
     instance.solutions.load_from(results)
 
     # logging.DEBUG(display(instance))
-    display(instance)
+    # display(instance)
 
     # buy and sell amounts
-    actions = ['buy', 'sell', 'chosen']
+    actions = ['buy', 'sell', 'chosen', 'wealth']
     amounts = xr.DataArray(
         [(instance.buy_amounts[mdx].value,
           instance.sell_amounts[mdx].value,
-          -1)
+          -1,
+          instance.risk_wealth[mdx].value)
          for mdx in range(n_symbol)],
         dims=('symbol', "action"),
         coords=(candidate_symbols, actions),
     )
 
+    all_scenarios = np.array([instance.Ys[sdx].value
+                                 for sdx in range(n_scenario)])
+
+    all_scenarios.sort()
     return {
         "amounts": amounts,
+        'scenarios': all_scenarios,
+        "risk_free_wealth": instance.risk_free_wealth.value,
+        "VaR": instance.Z.value,
+        "CVaR": instance.cvar_objective(),
+        'alpha': alpha
     }
 
 
 def reverse_spsp_cvar(candidate_symbols,
-                      setting,
-                      max_portfolio_size,
+                      setting: str,
+                      max_portfolio_size: int,
                       risk_rois,
-                      risk_free_roi,
+                      risk_free_roi: float,
                       allocated_risk_wealth,
-                      allocated_risk_free_wealth,
-                      buy_trans_fee,
-                      sell_trans_fee,
+                      allocated_risk_free_wealth: float,
+                      buy_trans_fee: float,
+                      sell_trans_fee: float,
                       predict_risk_rois,
-                      predict_risk_free_roi,
-                      n_scenario,
-                      buy_sell_amounts):
+                      predict_risk_free_roi: float,
+                      n_scenario: int,
+                      buy_sell_amounts,
+                      solver="cplex"
+                      ):
+    """
+    given the buy and sell amounts, to determine the corresponding
+    CVaR and alpha
+    """
+
+
     n_symbol = len(candidate_symbols)
 
     # Model
@@ -253,7 +265,12 @@ def reverse_spsp_cvar(candidate_symbols,
     instance.Ys = Var(instance.scenarios, within=NonNegativeReals)
 
 
-def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
+def test_spsp_cvar(**exp_parameters):
+
+    group_name = exp_parameters['group_name']
+    trans_date = exp_parameters['trans_date']
+    alpha = exp_parameters['alpha']
+
     symbols = pp.GROUP_SYMBOLS[group_name]
     n_symbol = len(symbols)
     setting = "compact"
@@ -266,13 +283,14 @@ def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
     risk_rois = risk_rois.loc[trans_date, :].values
     risk_free_roi = 0
 
-    allocated_risk_wealth = xr.DataArray(np.array([20., 10, 0, 0, 0]),
-                                         dims=('symbol',),
-                                         coords=(symbols,))
+    allocated_risk_wealth = xr.DataArray(exp_parameters['allocated_risk_wealth'],
+                                         dims=('symbol',), coords=(symbols,))
     allocated_risk_wealth = allocated_risk_wealth.values
-    allocated_risk_free_wealth = 70
+    allocated_risk_free_wealth = exp_parameters['allocated_risk_free_wealth']
     buy_trans_fee = 0.001425
     sell_trans_fee = 0.004425
+    # buy_trans_fee = 0
+    # sell_trans_fee = 0
     n_scenario = 1000
 
     # load scenario
@@ -287,8 +305,8 @@ def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
     )
     scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
     scenario_xarr = xr.open_dataarray(scenario_path)
-    predict_risk_rois = scenario_xarr.loc[trans_date, :, :].values
-    print(predict_risk_rois)
+    predict_risk_rois = scenario_xarr.loc[trans_date, symbols, :].values
+    # print(predict_risk_rois)
     predict_risk_free_roi = 0
 
     res = spsp_cvar(symbols, setting, max_portfolio_size,
@@ -297,7 +315,181 @@ def test_spsp_cvar(group_name, trans_date=dt.date(2014, 1, 2), alpha=0.6):
                     alpha, predict_risk_rois, predict_risk_free_roi, n_scenario)
     print("alpha=", alpha)
     print(res['amounts'])
+    print(res['amounts'].sum(axis=0))
+    print("VaR", res['VaR'])
+    print("CVaR", res['CVaR'])
+    # print(res['risk_free_wealth'])
+    # print(res['scenarios'])
     return res
+
+def valid_spsp_amount(**exp_parameters):
+    """
+    amounts: xarray.Array
+        "amounts": xarray.DataArray, shape:(n_symbol, 4),
+            coords: (symbol, ('buy', 'sell','chosen', 'wealth))
+    """
+    group_name = exp_parameters['group_name']
+    trans_date = exp_parameters['trans_date']
+    alpha = exp_parameters['alpha']
+
+    res = exp_parameters['res']
+    amounts = res['amounts']
+    z = res['VaR']
+    CVaR = res['CVaR']
+    alpha = res['alpha']
+    all_ys = res['scenarios']
+
+    symbols = pp.GROUP_SYMBOLS[group_name]
+    n_symbol = len(symbols)
+    setting = "compact"
+    max_portfolio_size = len(symbols)
+
+    # load data arr
+    risky_roi_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+    risk_rois = risky_roi_xarr.loc[
+                pp.EXP_START_DATE: pp.EXP_END_DATE, symbols, 'simple_roi']
+    risk_free_roi = 0
+
+    # load scenario
+    n_scenario = 1000
+    scenario_file = pp.SCENARIO_NAME_FORMAT.format(
+        group_name=group_name,
+        n_symbol=n_symbol,
+        rolling_window_size=100,
+        n_scenario=n_scenario,
+        sdx=1,
+        scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+        scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+    )
+    scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
+    scenario_xarr = xr.open_dataarray(scenario_path)
+    predict_risk_rois = scenario_xarr.loc[trans_date, symbols, :]
+    # print(predict_risk_rois)
+    predict_risk_free_roi = 0
+
+    # valid results
+    allocated_risk_wealth = xr.DataArray(exp_parameters['allocated_risk_wealth'],
+                                         dims=('symbol',), coords=(symbols,))
+    allocated_risk_free_wealth = exp_parameters['allocated_risk_free_wealth']
+    buy_trans_fee = 0.001425
+    sell_trans_fee = 0.004425
+    # buy_trans_fee = 0
+    # sell_trans_fee = 0
+
+    wealths = xr.DataArray(
+        np.zeros(n_symbol),
+        dims=('symbol'),
+        coords=(symbols,),
+    )
+
+    for symbol in symbols:
+        wealths.loc[symbol] = (
+                    (1 + risk_rois.loc[trans_date, symbol]) *
+                               allocated_risk_wealth.loc[symbol] +
+                               amounts.loc[symbol, 'buy'] -
+                               amounts.loc[symbol, 'sell']
+                               )
+
+    deposit = (allocated_risk_free_wealth -
+               (1+buy_trans_fee) * amounts.loc[symbols, 'buy'].sum() +
+               (1-sell_trans_fee) * amounts.loc[symbols, 'sell'].sum())
+
+    print("wealths:", wealths)
+    print("deposit:", float(deposit))
+
+    ys =xr.DataArray(
+        np.zeros(n_scenario),
+    )
+    for sdx in range(n_scenario):
+        val = (z - (wealths.loc[symbols] *
+                       (1 + predict_risk_rois.loc[symbols, sdx])).sum()
+                       )
+        ys.loc[sdx] = val if val > 0 else 0
+
+    our_cvar = float(z - 1/(1-alpha)/n_scenario*ys.sum())
+    print("our CVaR:{:.14}, model CVaR:{:.14}".format(our_cvar, CVaR))
+
+
+def weighted_spsp(**exp_parameters):
+    group_name = exp_parameters['group_name']
+    trans_date = exp_parameters['trans_date']
+
+    res = [exp_parameters['res1'], exp_parameters['res2']]
+    amounts = [r['amounts'] for r in res]
+    zs = [r['VaR'] for r in res]
+    CVaRs = [r['CVaR'] for r in res]
+    alphas = [r['alpha'] for r in res]
+    print(alphas)
+    symbols = pp.GROUP_SYMBOLS[group_name]
+    n_symbol = len(symbols)
+    setting = "compact"
+    max_portfolio_size = len(symbols)
+
+    # load data arr
+    risky_roi_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+    risk_rois = risky_roi_xarr.loc[
+                pp.EXP_START_DATE: pp.EXP_END_DATE, symbols, 'simple_roi']
+    risk_free_roi = 0
+
+    # load scenario
+    n_scenario = 1000
+    scenario_file = pp.SCENARIO_NAME_FORMAT.format(
+        group_name=group_name,
+        n_symbol=n_symbol,
+        rolling_window_size=100,
+        n_scenario=n_scenario,
+        sdx=1,
+        scenario_start_date=pp.SCENARIO_START_DATE.strftime("%Y%m%d"),
+        scenario_end_date=pp.SCENARIO_END_DATE.strftime("%Y%m%d"),
+    )
+    scenario_path = os.path.join(pp.SCENARIO_SET_DIR, scenario_file)
+    scenario_xarr = xr.open_dataarray(scenario_path)
+    predict_risk_rois = scenario_xarr.loc[trans_date, symbols, :]
+    # print(predict_risk_rois)
+    predict_risk_free_roi = 0
+
+    # valid results
+    allocated_risk_wealth = xr.DataArray(
+        exp_parameters['allocated_risk_wealth'],
+        dims=('symbol',), coords=(symbols,))
+    allocated_risk_free_wealth = exp_parameters['allocated_risk_free_wealth']
+    buy_trans_fee = 0.001425
+    sell_trans_fee = 0.004425
+
+    wealths = xr.DataArray(
+        np.zeros((2, n_symbol)),
+        dims=('exp', 'symbol',),
+        coords=([0,1], symbols,),
+    )
+    deposits = np.zeros(2)
+
+    for exp in range(2):
+        for symbol in symbols:
+            wealths.loc[exp, symbol] = (
+                    (1 + risk_rois.loc[trans_date, symbol]) *
+                               allocated_risk_wealth.loc[symbol] +
+                               amounts[exp].loc[symbol, 'buy'] -
+                               amounts[exp].loc[symbol, 'sell']
+                               )
+
+        deposits[exp] = (allocated_risk_free_wealth -
+               (1 + buy_trans_fee) * amounts[exp].loc[symbols, 'buy'].sum() +
+               (1 - sell_trans_fee) * amounts[exp].loc[symbols, 'sell'].sum())
+
+    print(wealths, deposits)
+
+    ys = xr.DataArray(
+        np.zeros((2, n_scenario)),
+    )
+    for exp in range(2):
+        for sdx in range(n_scenario):
+            val = (zs[exp] - (wealths.loc[exp, symbols] *
+                    (1 + predict_risk_rois.loc[symbols, sdx])).sum()
+               )
+            ys.loc[exp, sdx] = val if val > 0 else 0
+        our_cvar = zs[exp] - 1 / (1 - alphas[exp]) / n_scenario * ys.loc[exp, :].sum()
+        print("our CVaR:{}, model CVaR:{}".format(
+            float(our_cvar), CVaRs[exp]))
 
 
 def cvar_alpha_plot():
@@ -310,7 +502,7 @@ def cvar_alpha_plot():
     buys = []
     sells = []
     for alpha in alphas:
-        res = test_spsp_cvar(alpha)
+        res = test_spsp_cvar('TWG1', alpha)
         cvars.append(res['CVaR'])
         vars.append(res['VaR'])
         buys.append(float(res['amounts'].loc['test', 'buy']))
@@ -351,5 +543,31 @@ def cvar_alpha_plot():
 
 
 if __name__ == '__main__':
-    test_spsp_cvar("TWG1", trans_date=dt.date(2014, 10, 2), alpha=0.8)
+    group_name = 'TWG1'
+    trans_date = dt.date(2014, 10, 2)
+    alpha = 0.5
+    allocated_risk_wealth = np.array([10, 20, 30, 30, 0])
+    allocated_risk_free_wealth = 100 - allocated_risk_wealth.sum()
+
+    res = test_spsp_cvar(group_name=group_name, trans_date=trans_date,
+                         alpha=alpha,
+                         allocated_risk_wealth= allocated_risk_wealth,
+                         allocated_risk_free_wealth=allocated_risk_free_wealth)
+    #
+    # res2 = test_spsp_cvar(group_name=group_name, trans_date=trans_date,
+    #                      alpha=alpha + 0.2,
+    #                      allocated_risk_wealth= allocated_risk_wealth,
+    #
+    #                      allocated_risk_free_wealth=allocated_risk_free_wealth)
+
+    # weighted_spsp(group_name=group_name, trans_date=trans_date,
+    #                   alpha=alpha, res1=res, res2=res2,
+    #                   allocated_risk_wealth=allocated_risk_wealth,
+    #                   allocated_risk_free_wealth=allocated_risk_free_wealth)
+
+
+    # valid_spsp_amount(group_name=group_name, trans_date=trans_date,
+    #                   alpha=alpha, res=res,
+    #                   allocated_risk_wealth=allocated_risk_wealth,
+    #                   allocated_risk_free_wealth=allocated_risk_free_wealth)
     # cvar_alpha_plot()

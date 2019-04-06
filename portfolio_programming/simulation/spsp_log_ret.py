@@ -16,7 +16,7 @@ import portfolio_programming as pp
 from portfolio_programming.statistics.risk_adjusted import (
     Sharpe, Sortino_full, Sortino_partial)
 
-from portfolio_programming.simulation.spsp_base import SPSP_Base
+from portfolio_programming.simulation.spsp_base import SPSPBase
 
 
 def spsp_log_return(candidate_symbols,
@@ -183,7 +183,7 @@ def spsp_log_return(candidate_symbols,
     }
 
 
-class SPSP_LogRet(SPSP_Base):
+class SPSP_LogRet(SPSPBase):
     def __init__(self,
                  setting,
                  group_name,

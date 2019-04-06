@@ -112,12 +112,12 @@ class ValidMixin(object):
                              "end:{})".format(start_date, end_date))
 
 
-class SPSP_Base(ValidMixin):
+class SPSPBase(ValidMixin):
 
     def __init__(self,
                  str setting,
                  str group_name,
-                 candidate_symbols,
+                 list candidate_symbols,
                  int max_portfolio_size,
                  risk_rois,
                  risk_free_rois,
@@ -130,7 +130,8 @@ class SPSP_Base(ValidMixin):
                  int rolling_window_size=200,
                  int n_scenario=200,
                  int scenario_set_idx=1,
-                 int print_interval=10):
+                 int print_interval=10,
+                 str report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         """
         stage-wise portfolio stochastic programming basic model
 
@@ -307,6 +308,12 @@ class SPSP_Base(ValidMixin):
                 decisions
             )
         )
+
+        # report path
+        if not os.path.exists(report_dir):
+            os.makedirs(report_dir)
+        self.report_dir = report_dir
+
 
     def load_generated_scenario(self):
         """
