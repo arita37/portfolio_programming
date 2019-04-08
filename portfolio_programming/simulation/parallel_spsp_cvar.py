@@ -53,7 +53,7 @@ def _all_spsp_cvar_params(exp_name, setting, yearly=False):
 
     #set_indices = (1, 2, 3)
 
-    set_indices = (1,2,3)
+    set_indices = (1,)
 
     if exp_name == "dissertation":
         if not yearly:
@@ -348,7 +348,7 @@ def aggregating_reports(exp_name, setting, yearly=False):
                     years[0][0].strftime("%Y%m%d"),
                     years[0][1].strftime("%Y%m%d")))
         else:
-        # yearly interval
+            # yearly interval
             years = [[dt.date(2005, 1, 3), dt.date(2005, 12, 30)],
                      [dt.date(2006, 1, 2), dt.date(2006, 12, 29)],
                      [dt.date(2007, 1, 2), dt.date(2007, 12, 31)],

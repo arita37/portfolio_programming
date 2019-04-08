@@ -2,7 +2,6 @@
 """
 Author: Hung-Hsin Chen <chen1116@gmail.com>
 
-
 The SPSP CVaR experiments are not able to run in parallel setting(ipyparallel)
 because ofthe complex setting of pyomo.
 """
@@ -449,7 +448,7 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
     n_scenarios = [1000, ]
     alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
     years = [(dt.date(2005, 1, 3), dt.date(2018, 12, 28))]
-    set_indices = [1,]
+    set_indices = [1, 2, 3]
     report_files = [
         REPORT_FORMAT.format(
             setting="compact",

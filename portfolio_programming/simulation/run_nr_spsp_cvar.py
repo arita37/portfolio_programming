@@ -42,7 +42,7 @@ def run_NER_SPSP_CVaR(exp_name, nr_strategy, nr_param, expert_group_name,
     risky_rois = risky_roi_xarr.loc[exp_start_date:exp_end_date,
                  candidate_symbols, 'simple_roi']
     exp_trans_dates = risky_rois.get_index('trans_date')
-    print('exp_trans_dates:', exp_trans_dates)
+    # print('exp_trans_dates:', exp_trans_dates)
     n_exp_dates = len(exp_trans_dates)
     risk_free_rois = xr.DataArray(np.zeros(n_exp_dates),
                                   coords=(exp_trans_dates,))
