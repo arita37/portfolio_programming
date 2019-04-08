@@ -2,7 +2,6 @@
 """
 Author: Hung-Hsin Chen <chen1116@gmail.com>
 
-
 The SPSP CVaR experiments are not able to run in parallel setting(ipyparallel)
 because ofthe complex setting of pyomo.
 """
