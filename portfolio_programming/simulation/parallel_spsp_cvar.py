@@ -425,6 +425,7 @@ def aggregating_reports(exp_name, setting, yearly=False):
     for idx, (name, param) in enumerate(report_dict.items()):
         t1 = time()
         path = os.path.join(parent_dir, name)
+        print(path)
         exp_name, setting, grp, m, h, s, a, sdx, s_date, e_date = param
         interval = "{}_{}".format(s_date.strftime("%Y%m%d"),
                                   e_date.strftime("%Y%m%d"))
@@ -466,7 +467,7 @@ def aggregating_reports(exp_name, setting, yearly=False):
                     interval, grp, sdx, m, h, alpha, attr] = val
 
             report_count += 1
-            print("[{}/{}] {} {:.2%} elapsed:{:2.f}/{:.2f} secs".format(
+            print("[{}/{}] {} {:.2%} elapsed:{:.2f}/{:.2f} secs".format(
                 idx + 1, len(report_dict),
                 report['simulation_name'],
                 report['cum_roi'],
