@@ -106,7 +106,7 @@ if EXP_NAME == "dissertation":
         SCENARIO_SET_DIR = os.path.join(DATA_DIR, "scenario")
     else:
         SCENARIO_SET_DIR = r'/home/chenhh/workspace_pycharm_local/scenario'
-        
+
     SCENARIO_NAME_FORMAT = (
         "{group_name}_"
         "Mc{n_symbol}_"
