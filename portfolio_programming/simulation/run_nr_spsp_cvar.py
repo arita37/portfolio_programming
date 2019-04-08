@@ -71,7 +71,7 @@ def run_NER_SPSP_CVaR(exp_name, nr_strategy, nr_param, expert_group_name,
         end_date=exp_trans_dates[-1],
         n_scenario=n_scenario,
         scenario_set_idx=scenario_set_idx,
-        print_interval=5
+        print_interval=1
     )
     instance.run()
 
