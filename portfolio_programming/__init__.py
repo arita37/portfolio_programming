@@ -102,7 +102,11 @@ if EXP_NAME == "dissertation":
 
     # scenario
     # SCENARIO_SET_DIR = TMP_DIR
-    SCENARIO_SET_DIR = os.path.join(DATA_DIR, "scenario")
+    if node_name in ('X220', "tanh2-480s", 'eva00'):
+        SCENARIO_SET_DIR = os.path.join(DATA_DIR, "scenario")
+    else:
+        SCENARIO_SET_DIR = r'/home/chenhh/workspace_pycharm_local/scenario'
+        
     SCENARIO_NAME_FORMAT = (
         "{group_name}_"
         "Mc{n_symbol}_"
