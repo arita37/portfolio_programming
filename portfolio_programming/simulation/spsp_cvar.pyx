@@ -26,6 +26,7 @@ from portfolio_programming.statistics.risk_adjusted import (
     Sharpe, Sortino_full, Sortino_partial)
 
 from portfolio_programming.simulation.spsp_base import (ValidMixin, SPSPBase)
+from portfolio_programming.simulation.wp_base import (NIRUtility,)
 
 def spsp_cvar(candidate_symbols,
               str setting,
@@ -670,7 +671,7 @@ class NER_SPSP_CVaR(ValidMixin):
                  report_dir=pp.NRSPSPCVaR_DIR,
                  ):
         """
-        no regret stage-wise portfolio stochastic programming  model
+        no external regret stage-wise portfolio stochastic programming model
 
         Parameters:
         -------------
@@ -888,7 +889,6 @@ class NER_SPSP_CVaR(ValidMixin):
         self.report_dir = report_dir
 
 
-
     def no_regret_strategy(self, *args, **kwargs):
         """
         determine the weight on each expert.
@@ -931,12 +931,6 @@ class NER_SPSP_CVaR(ValidMixin):
                 self.portfolio_xarr.loc[:today, "main", 'price_relative'])
             # shape: (n_expert,)
             diffs = (time_payoffs - main_payoffs).sum(axis=0)
-            # print("main price relaitve:",  self.portfolio_xarr.loc[:today, "main",
-            #     'price_relative'])
-            # print('time payoff:', time_payoffs)
-            # print("main_payoffs:", main_payoffs)
-            # print("diffs:", diffs)
-            # print(np.maximum(diffs, np.zeros_like(diffs)))
             new_weights = np.power(np.maximum(diffs, np.zeros_like(diffs)),
                                    self.nr_strategy_param - 1)
             return new_weights / new_weights.sum()
@@ -1060,6 +1054,11 @@ class NER_SPSP_CVaR(ValidMixin):
         )
         return name
 
+    def pre_trading_operation(self, *args, **kargs):
+        """
+        operations after initialization and before trading
+        """
+
     @staticmethod
     def get_performance_report(
             simulation_name,
@@ -1150,6 +1149,8 @@ class NER_SPSP_CVaR(ValidMixin):
         # shape: (n_symbol,), float
         allocated_risk_wealth = self.initial_risk_wealth
         allocated_risk_free_wealth = self.initial_risk_free_wealth
+
+        self.pre_trading_operation()
 
         for tdx in range(self.n_exp_period):
             t1 = time()
@@ -1411,3 +1412,161 @@ class NER_SPSP_CVaR(ValidMixin):
         )
 
         return reports
+
+
+class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
+    def __init__(self,
+                 str nr_strategy,
+                 double nr_strategy_param,
+                 str expert_group_name,
+                 list experts,
+                 str group_name,
+                 list candidate_symbols,
+                 risk_rois,
+                 risk_free_rois,
+                 initial_risk_wealth,
+                 double initial_risk_free_wealth,
+                 double buy_trans_fee=pp.BUY_TRANS_FEE,
+                 double sell_trans_fee=pp.SELL_TRANS_FEE,
+                 start_date=pp.EXP_START_DATE,
+                 end_date=pp.EXP_END_DATE,
+                 int n_scenario=1000,
+                 int scenario_set_idx=1,
+                 int print_interval=2,
+                 report_dir=pp.NRSPSPCVaR_DIR,
+                 ):
+        """
+        no internal regret stage-wise portfolio stochastic programming model
+        """
+        super(NIR_SPSP_CVaR, self).__init__(
+            nr_strategy,
+                 nr_strategy_param,
+                 expert_group_name,
+                 experts,
+                 group_name,
+                 candidate_symbols,
+                 risk_rois,
+                 risk_free_rois,
+                 initial_risk_wealth,
+                 initial_risk_free_wealth,
+                 buy_trans_fee,
+                 sell_trans_fee,
+                 start_date,
+                 end_date,
+                 n_scenario,
+                 scenario_set_idx,
+                 print_interval,
+                 report_dir
+        )
+        # fictitious experts,
+        self.virtual_experts = ["{}-{}".format(s1, s2)
+                                for s1 in  self.expert_names
+                                for s2 in  self.expert_names
+                                if s1 != s2]
+        # shape: n_exp_period * (n_symbol * (n_symbol - 1)) * n_symbol *
+        # decisions
+        decisions = ["weight", 'price_relative']
+        self.virtual_expert_decision_xarr = xr.DataArray(
+            np.zeros((self.n_exp_period,
+                      len(self.virtual_experts),
+                      self.n_symbol,
+                      len(decisions)
+                      )),
+            dims=('trans_date', 'virtual_experts', 'symbol', 'decision'),
+            coords=(
+                self.exp_trans_dates,
+                self.virtual_experts,
+                self.symbols,
+                decisions
+            )
+        )
+
+    def no_regret_strategy(self, *args, **kwargs):
+        tdx = kwargs['tdx']
+        yesterday = kwargs['yesterday']
+        today = kwargs['today']
+
+        if self.nr_strategy == 'EXP':
+            # record virtual experts' payoff,
+            # shape: n_virtual_expert, n_symbol
+            self.virtual_expert_decision_xarr.loc[
+            today, self.virtual_experts, self.symbols, 'price_relative'] = (
+                self.virtual_expert_decision_xarr.loc[
+                yesterday, self.virtual_experts, self.symbols, 'weight']  *
+                today_price_relative
+            )
+
+            # cumulative returns of all virtual experts
+            # first sum: shape: tdx * n_virtual_expert
+            # second sum: shape: n_virtual_expert
+            virtual_cum_payoffs = np.log(
+                self.virtual_expert_decision_xarr.loc[
+                    :today,self.virtual_experts,
+                self.symbols, 'portfolio_payoff'].sum(axis=2)
+            ).sum(axis=0)
+
+            # exponential predictors
+            new_weights = np.exp(self.eta * virtual_cum_payoffs)
+
+            # normalized weights of virtual experts
+            virtual_expert_weights = new_weights / new_weights.sum()
+
+            # build column stochastic matrix to get weights of today
+            S = self.column_stochastic_matrix(self.n_symbol,
+                                               virtual_expert_weights.values)
+            eigs, eigvs = np.linalg.eig(S)
+            normalized_new_weights = eigvs[:, 0] / eigvs[:, 0].sum()
+
+            # record modified strategies of today
+            self.virtual_expert_decision_xarr.loc[
+                today, self.virtual_experts, self.symbols, 'weight'
+            ] = self.modified_probabilities(normalized_new_weights)
+
+            return normalized_new_weights
+
+        elif self.nr_strategy == 'POLY':
+            pass
+
+    def get_simulation_name(self, *args, **kwargs):
+        """
+        Returns:
+        ------------
+        string
+           simulation name of this experiment
+        """
+
+        name = (
+            "NIR_SPSP_CVaR_{}_{:.2f}_{}_{}_s{}_sdx{}_{}_{}".format(
+                self.nr_strategy,
+                self.nr_strategy_param,
+                self.group_name,
+                self.expert_group_name,
+                self.n_scenario,
+                self.scenario_set_idx,
+                self.exp_start_date.strftime("%Y%m%d"),
+                self.exp_end_date.strftime("%Y%m%d"),
+            )
+        )
+        return name
+
+    def pre_trading_operation(self, *args, **kargs):
+        """
+        operations after initialization and before trading
+        """
+        today = self.exp_start_date
+        initial_weights = np.ones(self.n_expert)/self.n_expert
+        self.virtual_expert_decision_xarr.loc[
+            today,
+            self.virtual_experts,
+            self.symbols,
+            'weight'
+        ] = self.modified_probabilities(initial_weights)
+
+        # the portfolio payoff of first decision
+        self.virtual_expert_decision_xarr.loc[
+            today,
+            self.virtual_experts,
+            self.symbols,
+            'price_relative'
+        ] = self.modified_probabilities(initial_weights)
+
