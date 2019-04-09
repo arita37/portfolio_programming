@@ -5,12 +5,151 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 
 import logging
 import sys
-
+import platform
 import numpy as np
 import xarray as xr
 
 import portfolio_programming as pp
 import portfolio_programming.simulation.spsp_cvar
+
+
+def get_zmq_version():
+    node = platform.node()
+    print("Node:{} libzmq version is {}".format(node, zmq.zmq_version()))
+    print("Node:{} pyzmq version is {}".format(node, zmq.__version__))
+
+
+
+def _all_nr_spsp_cvar_params(exp_name, setting, yearly=False):
+    pass
+
+
+def parameter_server(exp_name, setting, yearly):
+    node = platform.node()
+    pid = os.getpid()
+    server_node_pid = "{}[pid:{}]".format(node, pid)
+    context = zmq.Context()
+
+    # zmq.sugar.socket.Socket
+    socket = context.socket(zmq.REP)
+
+    # Protocols supported include tcp, udp, pgm, epgm, inproc and ipc.
+    socket.bind("tcp://*:25555")
+
+    # multiprocessing queue is thread-safe.
+    params = mp.Queue()
+    [params.put(v) for v in
+     checking_existed_spsp_cvar_report(exp_name, setting, yearly).values()]
+    progress_node_pid = set()
+    progress_node_count = {}
+    finished = {}
+    print("Ready to serving, {} {} remaining {} n_parameter.".format(
+        exp_name, setting, params.qsize()))
+
+    svr_start_time = dt.datetime.now()
+    t0 = time()
+
+    while not params.empty():
+        # Wait for request from client
+        client_node_pid = socket.recv_string()
+        print("{:<15}, {} Received request: {}".format(
+            str(dt.datetime.now()),
+            server_node_pid,
+            client_node_pid))
+
+        #  Send reply back to client
+        work = params.get()
+        print("send {} to {}".format(work, client_node_pid))
+        socket.send_pyobj(work)
+
+        c_node, c_pid = client_node_pid.split('_')
+        finished.setdefault(c_node, 0)
+        if client_node_pid in progress_node_pid:
+            # the node have done a work
+            finished[c_node] += 1
+            progress_node_count[c_node]['req_time'] = dt.datetime.now()
+        else:
+            progress_node_count.setdefault(
+                c_node, {"req_time": dt.datetime.now(), "cnt": 0})
+            progress_node_count[c_node]['req_time'] = dt.datetime.now()
+            progress_node_count[c_node]['cnt'] += 1
+
+        # the progress set is not robust, because we don't track
+        # if a process on a node is crashed or not.
+        progress_node_pid.add(client_node_pid)
+
+        print("server start time:{}, elapsed:{}\nremaining n_parameter:{}, "
+              "".format(svr_start_time.strftime("%Y%m%d-%H:%M:%S"),
+                        time() - t0, params.qsize()))
+
+        print("progressing: {}".format(len(progress_node_pid)))
+        for c_node, cnt in finished.items():
+            print("node:{:<8} progress:{:>3} ,finish:{:>3} last req:{}".format(
+                c_node, progress_node_count[c_node]['cnt'], cnt,
+                progress_node_count[c_node]['req_time'].strftime(
+                    "%Y%m%d-%H:%M:%S"))
+            )
+
+    print("end of serving, remaining {} parameters.".format(params.qsize()))
+    socket.close()
+    context.term()
+    params.close()
+
+
+def parameter_client(server_ip="140.117.168.49", max_reconnect_count=30):
+    node = platform.node()
+    pid = os.getpid()
+
+    context = zmq.Context()
+    socket = context.socket(zmq.REQ)
+    url = "tcp://{}:25555".format(server_ip)
+    socket.connect(url)
+
+    # for IO monitoring
+    poll = zmq.Poller()
+    poll.register(socket, zmq.POLLIN)
+
+    node_pid = "{}_{}".format(node, pid)
+    reconnect_count = 0
+    while True:
+        # send request to server
+        socket.send_string(node_pid)
+
+        # wait 10 seconds for server responding
+        socks = dict(poll.poll(10000))
+
+        if socks.get(socket) == zmq.POLLIN:
+            # still connected
+            reconnect_count = 0
+
+            # receive parameters from server
+            work = socket.recv_pyobj()
+            print("{:<15} receiving: {}".format(
+                str(dt.datetime.now()),
+                work))
+            run_SPSP_CVaR(*work)
+
+        else:
+            # no response from server, reconnected
+            reconnect_count += 1
+            sleep(10)
+            if reconnect_count >= max_reconnect_count:
+                break
+
+            socket.setsockopt(zmq.LINGER, 0)
+            socket.close()
+            poll.unregister(socket)
+
+            # reconnection
+            socket = context.socket(zmq.REQ)
+            socket.connect(url)
+            poll.register(socket, zmq.POLLIN)
+
+            # socket.send_string(node_pid)
+            print('{}, reconnect to {}'.format(dt.datetime.now(), url))
+
+    socket.close()
+    context.term()
 
 
 def get_experts(expert_group_name):
