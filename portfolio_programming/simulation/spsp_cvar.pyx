@@ -1227,10 +1227,6 @@ class NER_SPSP_CVaR(ValidMixin):
             prev_main_wealth =  (allocated_risk_wealth.sum() +
                                 allocated_risk_free_wealth)
             if tdx == 0:
-                # initial weight
-                self.portfolio_xarr.loc[today, self.expert_names, 'weight'] = (
-                        1. / self.n_expert
-                )
                 # expert price relatives
                 self.portfolio_xarr.loc[today, self.expert_names,
                                         'price_relative'] = (
@@ -1249,6 +1245,10 @@ class NER_SPSP_CVaR(ValidMixin):
                     ))/prev_main_wealth
                 )
 
+                # initial weight
+                self.portfolio_xarr.loc[today, self.expert_names, 'weight'] = (
+                        1. / self.n_expert
+                )
                 self.portfolio_xarr.loc[today, "main", 'weight'] = 1
             else:
                 yesterday = self.exp_trans_dates[tdx - 1]
@@ -1398,8 +1398,8 @@ class NER_SPSP_CVaR(ValidMixin):
         reports['simulation_time'] = time() - t0
 
         # write report
-        report_path = os.path.join(self.report_dir,
-                                   "report_{}.pkl".format(simulation_name))
+        report_path = os.path.join(
+            self.report_dir, "report_{}.pkl".format(simulation_name))
 
         with open(report_path, 'wb') as fout:
             pickle.dump(reports, fout, pickle.HIGHEST_PROTOCOL)
@@ -1440,39 +1440,39 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
         """
         super(NIR_SPSP_CVaR, self).__init__(
             nr_strategy,
-                 nr_strategy_param,
-                 expert_group_name,
-                 experts,
-                 group_name,
-                 candidate_symbols,
-                 risk_rois,
-                 risk_free_rois,
-                 initial_risk_wealth,
-                 initial_risk_free_wealth,
-                 buy_trans_fee,
-                 sell_trans_fee,
-                 start_date,
-                 end_date,
-                 n_scenario,
-                 scenario_set_idx,
-                 print_interval,
-                 report_dir
+            nr_strategy_param,
+            expert_group_name,
+            experts,
+            group_name,
+            candidate_symbols,
+            risk_rois,
+            risk_free_rois,
+            initial_risk_wealth,
+            initial_risk_free_wealth,
+            buy_trans_fee,
+            sell_trans_fee,
+            start_date,
+            end_date,
+            n_scenario,
+            scenario_set_idx,
+            print_interval,
+            report_dir
         )
         # fictitious experts,
         self.virtual_experts = ["{}-{}".format(s1, s2)
                                 for s1 in  self.expert_names
                                 for s2 in  self.expert_names
                                 if s1 != s2]
-        # shape: n_exp_period * (n_symbol * (n_symbol - 1)) * n_symbol *
-        # decisions
+        self.n_virtual_expert = len( self.virtual_experts)
+        # shape: n_exp_period * n_virtual_expert * n_symbol * decisions
         decisions = ["weight", 'price_relative']
         self.virtual_expert_decision_xarr = xr.DataArray(
             np.zeros((self.n_exp_period,
-                      len(self.virtual_experts),
+                      self.n_virtual_expert,
                       self.n_symbol,
                       len(decisions)
                       )),
-            dims=('trans_date', 'virtual_experts', 'symbol', 'decision'),
+            dims=('trans_date', 'virtual_expert', 'symbol', 'decision'),
             coords=(
                 self.exp_trans_dates,
                 self.virtual_experts,
@@ -1480,6 +1480,21 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
                 decisions
             )
         )
+        # shape: (n_exp_period, n_virtual_expert, virtual properties)
+        virtual_portfolio_properties = [
+            'wealth', 'tax_loss', 'price_relative', "weight",
+            ]
+        self.portfolio_xarr = xr.DataArray(
+            np.zeros((self.n_exp_period, self.n_virtual_expert,
+                      len(virtual_portfolio_properties))),
+            dims=('trans_date', 'virtual_expert', 'property'),
+            coords=(
+                self.exp_trans_dates,
+                self.virtual_experts,
+                virtual_portfolio_properties
+            )
+        )
+
 
     def no_regret_strategy(self, *args, **kwargs):
         tdx = kwargs['tdx']
