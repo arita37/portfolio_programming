@@ -931,6 +931,10 @@ class NER_SPSP_CVaR(ValidMixin):
                 self.portfolio_xarr.loc[:today, "main", 'price_relative'])
             # shape: (n_expert,)
             diffs = (time_payoffs - main_payoffs).sum(axis=0)
+
+            print("time_payoffs:", time_payoffs)
+            print("main_payoffs:", main_payoffs)
+            print(" diffs:",  diffs)
             new_weights = np.power(np.maximum(diffs, np.zeros_like(diffs)),
                                    self.nr_strategy_param - 1)
             return new_weights / new_weights.sum()
@@ -1161,6 +1165,8 @@ class NER_SPSP_CVaR(ValidMixin):
             # experts
             for h, a in self.experts:
                 expert_name = "h{}a{:.2f}".format(h, a)
+
+                # fetch scenarios, shape: (n_symbol, n_scenario)
                 estimated_risk_rois = self.get_estimated_risk_rois(
                     rolling_window_size=h,
                     trans_date=today)
@@ -1189,6 +1195,7 @@ class NER_SPSP_CVaR(ValidMixin):
                     amount_xarr.loc[self.candidate_symbols, acts]
                 )
                 # symbol wealth, shape: (n_symbol, )
+                # the wealth considered the buy and sell trans fee.
                 self.decision_xarr.loc[today, expert_name,
                                        self.candidate_symbols, 'wealth'] = (
                     amount_xarr.loc[self.candidate_symbols, 'wealth']
@@ -1198,7 +1205,7 @@ class NER_SPSP_CVaR(ValidMixin):
                     pg_results['risk_free_wealth']
                 )
 
-                # portfolio wealth
+                # portfolio wealth of the expert (considered the trans fee)
                 self.portfolio_xarr.loc[today, expert_name, 'wealth'] = (
                         amount_xarr.loc[
                             self.candidate_symbols, 'wealth'].sum()
@@ -1216,7 +1223,7 @@ class NER_SPSP_CVaR(ValidMixin):
                         sell_sum * self.sell_trans_fee
                 )
 
-                # record risks
+                # risk estimators
                 for col in ['CVaR', 'VaR', 'EV_CVaR',
                             'EV_VaR', 'EEV_CVaR', 'VSS']:
                     self.portfolio_xarr.loc[today, expert_name, col] = (
@@ -1227,15 +1234,17 @@ class NER_SPSP_CVaR(ValidMixin):
             prev_main_wealth =  (allocated_risk_wealth.sum() +
                                 allocated_risk_free_wealth)
             if tdx == 0:
-                # expert price relatives
+                # price relatives of all experts (considered trans. fee)
                 self.portfolio_xarr.loc[today, self.expert_names,
-                                        'price_relative'] = (
-                    self.portfolio_xarr.loc[
-                        today, self.expert_names, 'wealth'] /
-                    prev_main_wealth
+                                         'price_relative'] = (
+                    ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
+                            today, self.candidate_symbols])
+                    ).sum() +
+                    allocated_risk_free_wealth * (
+                            1 + self.risk_free_rois.loc[today]
+                    ))/prev_main_wealth
                 )
-
-                # main price relative
+                # price relative of the main portfolio
                 self.portfolio_xarr.loc[today, 'main', 'price_relative'] = (
                     ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
                             today, self.candidate_symbols])
@@ -1245,15 +1254,17 @@ class NER_SPSP_CVaR(ValidMixin):
                     ))/prev_main_wealth
                 )
 
-                # initial weight
+                # initial weights
                 self.portfolio_xarr.loc[today, self.expert_names, 'weight'] = (
                         1. / self.n_expert
                 )
                 self.portfolio_xarr.loc[today, "main", 'weight'] = 1
+
+
             else:
                 yesterday = self.exp_trans_dates[tdx - 1]
 
-                # expert price relatives
+                # price relatives of all experts
                 # shape: (n_expert, n_symbol)
                 prev_risky_wealths = self.decision_xarr.loc[
                     yesterday, self.expert_names,
@@ -1272,14 +1283,15 @@ class NER_SPSP_CVaR(ValidMixin):
                     prev_riskfree_wealths *
                     (1 + self.risk_free_rois.loc[today])
                 )
-                # print("curr_risky_wealths:", curr_risky_wealths)
-                # print("curr_riskfree_wealths:",  curr_riskfree_wealths)
+
                 # shape: (n_expert,)
                 expert_price_relatives = (
                     (curr_risky_wealths.sum(axis=1) + curr_riskfree_wealths)/
                     (prev_risky_wealths.sum(axis=1) + prev_riskfree_wealths)
                 )
-                # print("expert_price_relatives:", expert_price_relatives)
+                print("curr_risky_wealths:", curr_risky_wealths)
+                print("curr_riskfree_wealths:",  curr_riskfree_wealths)
+                print("expert_price_relatives:", expert_price_relatives)
 
                 self.portfolio_xarr.loc[today, self.expert_names,
                                 'price_relative'] = expert_price_relatives
