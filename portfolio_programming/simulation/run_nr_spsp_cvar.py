@@ -8,6 +8,11 @@ import sys
 import platform
 import numpy as np
 import xarray as xr
+import zmq
+import os
+import multiprocess as mp
+import datetime as dt
+from time import (time, sleep)
 
 import portfolio_programming as pp
 import portfolio_programming.simulation.spsp_cvar
@@ -19,8 +24,73 @@ def get_zmq_version():
     print("Node:{} pyzmq version is {}".format(node, zmq.__version__))
 
 
+def all_nr_spsp_cvar_params(exp_name, regret_type='ER'):
+    """
+    "report_NR_SPSP_CVaR_{}_{:.2f}_{}_{}_s{}_sdx{}_{}_{}.pkl".format(
+        self.nr_strategy,
+        self.nr_strategy_param,
+        self.group_name,
+        self.expert_group_name,
+        self.n_scenario,
+        self.scenario_set_idx,
+        self.exp_start_date.strftime("%Y%m%d"),
+        self.exp_end_date.strftime("%Y%m%d"),
+    )
+    """
+    if regret_type=='ER':
+        REPORT_FORMAT = "report_NR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
+    elif regret_type=='IR':
+        REPORT_FORMAT = "report_NIR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
+    else:
+        raise ValueError('unknown regret type:', regret_type)
 
-def _all_nr_spsp_cvar_params(exp_name, setting, yearly=False):
+    if exp_name not in ('dissertation', ):
+        raise ValueError('unknown exp_name:{}'.format(exp_name))
+
+    group_params = {
+        'TWG1': 'h140-200-10_a85-95-5',
+        'TWG2': 'h190-240-10_a55-75-5',
+        'TWG3': 'h60-100-10_a75-90-',
+        'TWG4': 'h100-140-10_a55-75-5',
+        'TWG5': 'h60-90-10_a50-75-5',
+        'TWG6': 'h200-240-10_a50-70-5',
+        'USG1': 'h200-240-10_a50-65-5',
+        'USG2': 'h170-240-10_a50-70-5',
+        'USG3': 'h170-220-10_a80-95-5',
+        'USG4': 'h60-90-10_a75-90-5',
+        'USG5': 'h80-130-10_a75-90-5',
+        'USG6': 'h180-240-10_a50-70-5'
+    }
+    strategy_params = [[s, p] for s in ('EG', 'EXP') for p in (0.01, 0.1, 1)]
+    strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, 3)])
+
+    set_indices = (1,)
+    n_scenarios = (1000,)
+    if exp_name == "dissertation":
+        years = [(dt.date(2005, 1, 3), dt.date(2018, 12, 28))]
+
+    # parameters
+    params = {
+        REPORT_FORMAT.format(
+            nr_strategy=s,
+            nr_strategy_param=p,
+            group_name=group_name,
+            expert_group_name=exp_group_name,
+            n_scenario=n_scenario,
+            scenario_set_idx=sdx,
+            exp_start_date=s_date,
+            exp_end_date=e_date
+        ): (s, p, group_name, exp_group_name, n_scenario, sdx, s_date, e_date)
+        for s, p in strategy_params
+        for group_name, exp_group_name in group_params
+        for n_scenario in n_scenarios
+        for sdx in set_indices
+        for s_date, e_date in years
+    }
+    return params
+
+
+def checking_existed_spsp_cvar_report(exp_name):
     pass
 
 
@@ -127,7 +197,7 @@ def parameter_client(server_ip="140.117.168.49", max_reconnect_count=30):
             print("{:<15} receiving: {}".format(
                 str(dt.datetime.now()),
                 work))
-            run_SPSP_CVaR(*work)
+            run_NER_SPSP_CVaR(*work)
 
         else:
             # no response from server, reconnected
