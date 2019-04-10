@@ -1658,9 +1658,9 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
         ] = self.modified_probabilities(normalized_new_weights)
 
         # print('{} v_weight:{}'.format(today,
-        #         #     self.virtual_portfolio_xarr.loc[today, self.virtual_expert_names,
-        #         #     self.expert_names, 'weight'] )
-        #         # )
+        #    self.virtual_portfolio_xarr.loc[today, self.virtual_expert_names,
+        #    self.expert_names, 'weight'] )
+        # )
 
         return normalized_new_weights
 

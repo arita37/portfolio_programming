@@ -10,14 +10,16 @@ import numpy as np
 import xarray as xr
 import zmq
 import os
+import glob
 import multiprocess as mp
 import datetime as dt
 from time import (time, sleep)
 
 import portfolio_programming as pp
 import portfolio_programming.simulation.spsp_cvar
-from  portfolio_programming.simulation.spsp_cvar import (
+from portfolio_programming.simulation.spsp_cvar import (
     NER_SPSP_CVaR, NIR_SPSP_CVaR)
+
 
 def get_zmq_version():
     node = platform.node()
@@ -25,7 +27,7 @@ def get_zmq_version():
     print("Node:{} pyzmq version is {}".format(node, zmq.__version__))
 
 
-def all_nr_spsp_cvar_params(exp_name, regret_type='ER'):
+def all_nr_spsp_cvar_params(exp_name, regret_type):
     """
     "report_NR_SPSP_CVaR_{}_{:.2f}_{}_{}_s{}_sdx{}_{}_{}.pkl".format(
         self.nr_strategy,
@@ -38,14 +40,22 @@ def all_nr_spsp_cvar_params(exp_name, regret_type='ER'):
         self.exp_end_date.strftime("%Y%m%d"),
     )
     """
-    if regret_type=='ER':
+    if regret_type == 'external':
         REPORT_FORMAT = "report_NR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
-    elif regret_type=='IR':
+
+        strategy_params = [[s, p] for s in ('EG', 'EXP')
+                           for p in (0.01, 0.1, 1)]
+        strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, 3)])
+
+    elif regret_type == 'internal':
         REPORT_FORMAT = "report_NIR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
+        strategy_params = [[s, p] for s in ('EXP',)
+                           for p in (0.01, 0.1, 1)]
+        strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, 3)])
     else:
         raise ValueError('unknown regret type:', regret_type)
 
-    if exp_name not in ('dissertation', ):
+    if exp_name not in ('dissertation',):
         raise ValueError('unknown exp_name:{}'.format(exp_name))
 
     group_params = {
@@ -62,10 +72,8 @@ def all_nr_spsp_cvar_params(exp_name, regret_type='ER'):
         'USG5': 'h80-130-10_a75-90-5',
         'USG6': 'h180-240-10_a50-70-5'
     }
-    strategy_params = [[s, p] for s in ('EG', 'EXP') for p in (0.01, 0.1, 1)]
-    strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, 3)])
 
-    set_indices = (1,)
+    set_indices = (1, )
     n_scenarios = (1000,)
     if exp_name == "dissertation":
         years = [(dt.date(2005, 1, 3), dt.date(2018, 12, 28))]
@@ -91,9 +99,19 @@ def all_nr_spsp_cvar_params(exp_name, regret_type='ER'):
     return params
 
 
-def checking_existed_spsp_cvar_report(exp_name):
-    pass
+def checking_existed_spsp_cvar_report(exp_name, regret_type):
+    all_reports = all_nr_spsp_cvar_params(exp_name, regret_type)
 
+    report_dir = pp.NRSPSPCVaR_DIR
+    print("{} {} totally n_parameter: {}".format(
+        exp_name, regret_type, len(all_reports)))
+
+    os.chdir(report_dir)
+    existed_reports = glob.glob("*.pkl")
+    for report in existed_reports:
+        all_reports.pop(report, None)
+
+    return all_reports
 
 def parameter_server(exp_name, setting, yearly):
     node = platform.node()
@@ -239,9 +257,9 @@ def get_experts(expert_group_name):
 
 
 def run_NR_SPSP_CVaR(exp_name, regret_type,
-                      nr_strategy, nr_param, expert_group_name,
-                      group_name, n_scenario, scenario_set_idx,
-                      exp_start_date, exp_end_date):
+                     nr_strategy, nr_param, expert_group_name,
+                     group_name, n_scenario, scenario_set_idx,
+                     exp_start_date, exp_end_date):
     market = group_name[:2]
     if market == "TW":
         risky_roi_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
@@ -317,5 +335,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     run_NR_SPSP_CVaR('dissertation', args.regret, args.nr_strategy,
-        args.nr_param, args.expert_group_name, args.group_name,
-        args.n_scenario, args.sdx, '20050103', '20181228')
+                     args.nr_param, args.expert_group_name, args.group_name,
+                     args.n_scenario, args.sdx, '20050103', '20181228')
