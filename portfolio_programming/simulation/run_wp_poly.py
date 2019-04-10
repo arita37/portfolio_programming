@@ -16,6 +16,28 @@ from portfolio_programming.simulation.wp_poly import (PolynomialPortfolio,
 
 
 def run_poly(poly_power, exp_type, group_name, exp_start_date, exp_end_date):
+
+    buy_trans_fee = pp.BUY_TRANS_FEE
+    sell_trans_fee = pp.SELL_TRANS_FEE
+    report_dir = pp.WEIGHT_PORTFOLIO_REPORT_DIR
+
+    if exp_type == 'poly':
+        exp_class = PolynomialPortfolio
+    elif exp_type == 'nir':
+        exp_class = NIRPolynomialPortfolio
+    elif exp_type == 'nofee_poly':
+        exp_class = PolynomialPortfolio
+        buy_trans_fee = 0
+        sell_trans_fee = 0
+        report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
+    elif exp_type =='nofee_nir':
+        exp_class = NIRPolynomialPortfolio
+        buy_trans_fee = 0
+        sell_trans_fee = 0
+        report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
+    else:
+        raise ValueError('unknown exp_type:', exp_type)
+
     group_symbols = pp.GROUP_SYMBOLS
     if group_name not in group_symbols.keys():
         raise ValueError('Unknown group name:{}'.format(group_name))
@@ -37,13 +59,6 @@ def run_poly(poly_power, exp_type, group_name, exp_start_date, exp_end_date):
         coords=(symbols,)
     )
 
-    if exp_type == 'poly':
-        exp_class = PolynomialPortfolio
-    elif exp_type == 'nir':
-        exp_class = NIRPolynomialPortfolio
-    else:
-        raise ValueError('unknown exp_type:', exp_type)
-
     obj = exp_class(
         poly_power,
         group_name,
@@ -53,7 +68,10 @@ def run_poly(poly_power, exp_type, group_name, exp_start_date, exp_end_date):
         initial_wealth,
         start_date=exp_start_date,
         end_date=exp_end_date,
-        print_interval=10
+        buy_trans_fee=buy_trans_fee,
+        sell_trans_fee=sell_trans_fee,
+        print_interval=10,
+        report_dir=report_dir
     )
     obj.run()
 
