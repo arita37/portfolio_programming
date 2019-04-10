@@ -443,8 +443,10 @@ class NIRExpPortfolio(WeightPortfolio, NIRUtility):
         S = self.column_stochastic_matrix(self.n_symbol,
                                            virtual_expert_weights.values)
         eigs, eigvs = np.linalg.eig(S)
-        normalized_new_weights = (eigvs[:, 0] / eigvs[:, 0].sum()).astype(
-            np.float64)
+        # the largest eigvenvalue is 1
+        one_index = eigs.argmax()
+        normalized_new_weights = (eigvs[:,  one_index] /
+                                  eigvs[:, one_index].sum()).astype(np.float64)
 
         # record modified strategies of today
         self.virtual_expert_decision_xarr.loc[
