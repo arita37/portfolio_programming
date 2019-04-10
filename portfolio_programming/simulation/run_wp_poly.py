@@ -70,7 +70,7 @@ def run_poly(poly_power, exp_type, group_name, exp_start_date, exp_end_date):
         end_date=exp_end_date,
         buy_trans_fee=buy_trans_fee,
         sell_trans_fee=sell_trans_fee,
-        print_interval=1,
+        print_interval=20,
         report_dir=report_dir
     )
     obj.run()
