@@ -4,7 +4,7 @@ Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 """
 
 import sys
-
+from time import time
 import numpy as np
 
 
@@ -24,19 +24,17 @@ def swap_regret():
     print(experts)
 
 
-def ir_example():
-    size = 3
+def ir_example(n_expert=3):
     # p = np.array([0.2, 0.3, 0.5])
-    p = np.random.dirichlet([1 / 3, 1 / 3, 1 / 3])
+    p = np.random.dirichlet(np.random.rand(n_expert))
 
     virtual_experts = modified_probabilities(p)
 
     # rel = np.array([1.05, 0.9, 0.98])
-    rel = np.random.rand(3) + 1
+    rel = np.random.rand(n_expert) + 1
     new_weights = np.exp(np.log((virtual_experts * rel).sum(axis=1)))
-    # print(new_weights)
     virtual_expert_weights = new_weights / new_weights.sum()
-
+    print(virtual_expert_weights)
     # A = np.array([
     #     [-virtual_expert_weights[0] - virtual_expert_weights[1],
     #      virtual_expert_weights[0],
@@ -54,20 +52,20 @@ def ir_example():
     #
     # # print('*'*10 + 'col stochastic matrix')
     # Q = A.T / np.max(np.abs(A)) + np.identity(3)
-    Q = column_stochastic_matrix(size, virtual_expert_weights)
+    Q = column_stochastic_matrix(n_expert, virtual_expert_weights)
     # print(Q)
     # print(Q.sum(axis=0))
     eigs2, eigvs2 = np.linalg.eig(Q)
     # print('eigen values:', eigs2)
     # print("eigen vector:", eigvs2)
 
-    prob = eigvs2[:, 0] / eigvs2[:, 0].sum()
+    prob = (eigvs2[:, 0] / eigvs2[:, 0].sum()).astype(np.float64)
     print(prob, prob.sum())
 
-    experts2 = np.tile(prob, (size * (size - 1), 1))
+    experts2 = np.tile(prob, (n_expert * (n_expert - 1), 1))
     row = 0
-    for idx in range(size):
-        for jdx in range(size):
+    for idx in range(n_expert):
+        for jdx in range(n_expert):
             if idx != jdx:
                 # print(idx, jdx, row)
                 experts2[row, jdx] += experts2[row, idx]
@@ -75,8 +73,8 @@ def ir_example():
                 row += 1
     # print(experts2)
 
-    result = np.zeros(3)
-    for idx in range(6):
+    result = np.zeros(n_expert)
+    for idx in range(n_expert * (n_expert-1)):
         result += experts2[idx, :] * virtual_expert_weights[idx]
     # print(result)
 
@@ -145,7 +143,7 @@ def run_column_stochastic_matrix():
 
 if __name__ == '__main__':
     # swap_regret()
-    ir_example()
+    ir_example(10)
     # for _ in range(50000):
     #     ir_example()
     # run_column_stochastic_matrix()
