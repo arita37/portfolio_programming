@@ -211,7 +211,39 @@ def get_eg_report(exp_type):
                 for eta in etas
                 for gdx, group_name in enumerate(group_names)
             ]
+        elif exp_type == 'nofee_eg':
+            etas = [0.01, 0.1, 1]
+            report_pkls = [
+                (group_name,
+                 "report_EG_{:.2f}_{}_20050103_20181228.pkl".format(
+                     eta, group_name)
+                 )
+                for eta in etas
+                for gdx, group_name in enumerate(group_names)
+            ]
 
+        elif exp_type =='nofee_exp':
+            etas = [0.01, 0.1, 1]
+            report_pkls = [
+                (group_name,
+                 "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
+                     eta, group_name)
+                 )
+                for eta in etas
+                for gdx, group_name in enumerate(group_names)
+            ]
+        elif exp_type == 'nofee_nir':
+            etas = [0.01, 0.1, 1]
+            report_pkls = [
+                (group_name,
+                 "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(
+                     eta, group_name)
+                 )
+                for eta in etas
+                for gdx, group_name in enumerate(group_names)
+            ]
+
+        print(report_dir)
         for group_name, report_name in report_pkls:
             report_file = os.path.join(report_dir,
                                        report_name)
