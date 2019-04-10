@@ -203,7 +203,6 @@ class NIRPolynomialPortfolio(WeightPortfolio, NIRUtility):
             :today, self.virtual_experts,
             self.symbols, 'portfolio_payoff'].sum(axis=2)
         )
-
         # shape: n_virtual_expert
         diff = (virtual_payoffs - portfolio_payoffs).sum(axis=0)
         new_weights = np.power(np.maximum(diff, np.zeros_like(diff)),
@@ -214,9 +213,10 @@ class NIRPolynomialPortfolio(WeightPortfolio, NIRUtility):
         S = self.column_stochastic_matrix(self.n_symbol,
                                           virtual_expert_weights.values)
         eigs, eigvs = np.linalg.eig(S)
-        normalized_new_weights = (eigvs[:, 0] / eigvs[:, 0].sum()).astype(
-            np.float64)
-
+        # the largest eigvenvalue is 1
+        one_index = eigs.argmax()
+        normalized_new_weights = (eigvs[:, one_index] /
+                                  eigvs[:, one_index].sum()).astype(np.float64)
         # record modified strategies of today
         self.virtual_expert_decision_xarr.loc[
             today, self.virtual_experts, self.symbols, 'weight'
