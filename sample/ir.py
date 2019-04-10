@@ -59,7 +59,7 @@ def ir_example(n_expert=3):
     # print('eigen values:', eigs2)
     # print("eigen vector:", eigvs2)
 
-    prob = eigvs2[:, 0] / eigvs2[:, 0].sum()
+    prob = (eigvs2[:, 0] / eigvs2[:, 0].sum()).astype(np.float64)
     print(prob, prob.sum())
 
     experts2 = np.tile(prob, (n_expert * (n_expert - 1), 1))
@@ -143,7 +143,7 @@ def run_column_stochastic_matrix():
 
 if __name__ == '__main__':
     # swap_regret()
-    ir_example(30)
+    ir_example(10)
     # for _ in range(50000):
     #     ir_example()
     # run_column_stochastic_matrix()

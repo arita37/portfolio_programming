@@ -1129,10 +1129,6 @@ class NER_SPSP_CVaR(ValidMixin):
         )
         return name
 
-    def pre_trading_operation(self, *args, **kargs):
-        """
-        operations after initialization and before trading
-        """
 
     @staticmethod
     def get_performance_report(
@@ -1224,8 +1220,6 @@ class NER_SPSP_CVaR(ValidMixin):
         # shape: (n_symbol,), float
         allocated_risk_wealth = self.initial_risk_wealth
         allocated_risk_free_wealth = self.initial_risk_free_wealth
-
-        self.pre_trading_operation()
 
         for tdx in range(self.n_exp_period):
             t1 = time()
@@ -1467,87 +1461,167 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
             report_dir
         )
         # fictitious experts,
-        self.virtual_experts = ["{}-{}".format(s1, s2)
-                                for s1 in self.expert_names
-                                for s2 in self.expert_names
-                                if s1 != s2]
-        self.n_virtual_expert = len(self.virtual_experts)
-        # shape: n_exp_period * n_virtual_expert * n_symbol * decisions
-        decisions = ["weight", 'price_relative']
-        self.virtual_expert_decision_xarr = xr.DataArray(
+        self.virtual_expert_names = ["{}-{}".format(s1, s2)
+                                     for s1 in self.expert_names
+                                     for s2 in self.expert_names
+                                     if s1 != s2]
+        self.n_virtual_expert = len(self.virtual_expert_names)
+        # shape: n_exp_period * n_virtual_expert * n_symbol *  v_properties
+        v_properties = ['wealth', 'price_relative', "weight"]
+        self.virtual_portfolio_xarr = xr.DataArray(
             np.zeros((self.n_exp_period,
                       self.n_virtual_expert,
                       self.n_symbol,
-                      len(decisions)
+                      len(v_properties)
                       )),
-            dims=('trans_date', 'virtual_expert', 'symbol', 'decision'),
+            dims=('trans_date', 'expert', 'symbol', 'decision'),
             coords=(
                 self.exp_trans_dates,
-                self.virtual_experts,
-                self.symbols,
-                decisions
-            )
-        )
-        # shape: (n_exp_period, n_virtual_expert, virtual properties)
-        virtual_portfolio_properties = [
-            'wealth', 'tax_loss', 'price_relative', "weight",
-        ]
-        self.portfolio_xarr = xr.DataArray(
-            np.zeros((self.n_exp_period, self.n_virtual_expert,
-                      len(virtual_portfolio_properties))),
-            dims=('trans_date', 'virtual_expert', 'property'),
-            coords=(
-                self.exp_trans_dates,
-                self.virtual_experts,
-                virtual_portfolio_properties
+                self.virtual_expert_names,
+                self.candidate_symbols,
+                v_properties
             )
         )
 
+
     def no_regret_strategy(self, *args, **kwargs):
+
         tdx = kwargs['tdx']
         yesterday = kwargs['yesterday']
         today = kwargs['today']
+        allocated_risk_wealth = kwargs['allocated_risk_wealth']
+        allocated_risk_free_wealth = kwargs['allocated_risk_free_wealth']
 
-        if self.nr_strategy == 'EXP':
-            # record virtual experts' payoff,
-            # shape: n_virtual_expert, n_symbol
-            self.virtual_expert_decision_xarr.loc[
-                today, self.virtual_experts, self.symbols, 'price_relative'] = (
-                    self.virtual_expert_decision_xarr.loc[
-                        yesterday, self.virtual_experts, self.symbols, 'weight'] *
-                    today_price_relative
+        prev_main_wealth = (allocated_risk_wealth.sum() +
+                            allocated_risk_free_wealth)
+        if tdx == 0:
+            # price relatives of all experts (considered trans. fee)
+            self.portfolio_xarr.loc[today, self.expert_names,
+                                    'price_relative'] = (
+                ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
+                    today, self.candidate_symbols])
+                  ).sum() +
+                 allocated_risk_free_wealth * (
+                         1 + self.risk_free_rois.loc[today]
+                 )) / prev_main_wealth
             )
 
-            # cumulative returns of all virtual experts
-            # first sum: shape: tdx * n_virtual_expert
-            # second sum: shape: n_virtual_expert
-            virtual_cum_payoffs = np.log(
-                self.virtual_expert_decision_xarr.loc[
-                :today, self.virtual_experts,
-                self.symbols, 'portfolio_payoff'].sum(axis=2)
-            ).sum(axis=0)
+            # price relatives of all virtual experts
+            self.virtual_portfolio_xarr.loc[today, self.expert_names,
+                                    'price_relative'] = (
+                ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
+                    today, self.candidate_symbols])
+                  ).sum() +
+                 allocated_risk_free_wealth * (
+                         1 + self.risk_free_rois.loc[today]
+                 )) / prev_main_wealth
+            )
 
-            # exponential predictors
-            new_weights = np.exp(self.eta * virtual_cum_payoffs)
+            # price relative of the main portfolio
+            self.portfolio_xarr.loc[today, 'main', 'price_relative'] = (
+                ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
+                    today, self.candidate_symbols])
+                  ).sum() +
+                 allocated_risk_free_wealth * (
+                         1 + self.risk_free_rois.loc[today]
+                 )) / prev_main_wealth
+            )
 
-            # normalized weights of virtual experts
-            virtual_expert_weights = new_weights / new_weights.sum()
+            # initial weights of virtual experts
+            self.virtual_expert_decision_xarr.loc[today,
+                self.virtual_expert_names, self.candidate_symbols, 'weight'] = (
+                self.modified_probabilities(
+                    np.ones(self.n_expert)/self.n_expert
+                )
+            )
 
-            # build column stochastic matrix to get weights of today
-            S = self.column_stochastic_matrix(self.n_symbol,
-                                              virtual_expert_weights.values)
-            eigs, eigvs = np.linalg.eig(S)
-            normalized_new_weights = eigvs[:, 0] / eigvs[:, 0].sum()
+            # initial weights
+            return 1. / self.n_expert
 
-            # record modified strategies of today
-            self.virtual_expert_decision_xarr.loc[
-                today, self.virtual_experts, self.symbols, 'weight'
-            ] = self.modified_probabilities(normalized_new_weights)
+        else:
+            # tdx >= 1
+            # price relatives of all experts, shape: (n_expert, n_symbol)
+            prev_risky_wealths = self.decision_xarr.loc[
+                yesterday, self.expert_names,
+                self.candidate_symbols, 'wealth']
+            # shape: (n_expert,)
+            prev_riskfree_wealths = self.decision_xarr.loc[
+                yesterday, self.expert_names,
+                self.risk_free_symbol, 'wealth']
 
-            return normalized_new_weights
+            curr_risky_wealths = (
+                    prev_risky_wealths *
+                    (1 + self.exp_risk_rois.loc[
+                        today, self.candidate_symbols])
+            )
+            curr_riskfree_wealths = (
+                    prev_riskfree_wealths *
+                    (1 + self.risk_free_rois.loc[today])
+            )
 
-        elif self.nr_strategy == 'POLY':
-            pass
+            # shape: (n_expert,)
+            expert_price_relatives = (
+                    (curr_risky_wealths.sum(axis=1) + curr_riskfree_wealths) /
+                    (prev_risky_wealths.sum(axis=1) + prev_riskfree_wealths)
+            )
+            # print("curr_risky_wealths:", curr_risky_wealths)
+            # print("curr_riskfree_wealths:",  curr_riskfree_wealths)
+            # print("expert_price_relatives:", expert_price_relatives)
+
+            self.portfolio_xarr.loc[today, self.expert_names,
+                                    'price_relative'] = expert_price_relatives
+
+            # main price relative
+            self.portfolio_xarr.loc[today, 'main', 'price_relative'] = (
+                    ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
+                        today, self.candidate_symbols])
+                      ).sum() +
+                     allocated_risk_free_wealth * (
+                             1 + self.risk_free_rois.loc[today]
+                     )) / prev_main_wealth
+            )
+
+
+        # if self.nr_strategy == 'EXP':
+        #     # record virtual experts' payoff,
+        #     # shape: n_virtual_expert, n_symbol
+        #     self.virtual_expert_decision_xarr.loc[
+        #         today, self.virtual_experts, self.symbols, 'price_relative'] = (
+        #             self.virtual_expert_decision_xarr.loc[
+        #                 yesterday, self.virtual_experts, self.symbols, 'weight'] *
+        #             today_price_relative
+        #     )
+        #
+        #     # cumulative returns of all virtual experts
+        #     # first sum: shape: tdx * n_virtual_expert
+        #     # second sum: shape: n_virtual_expert
+        #     virtual_cum_payoffs = np.log(
+        #         self.virtual_expert_decision_xarr.loc[
+        #         :today, self.virtual_experts,
+        #         self.symbols, 'portfolio_payoff'].sum(axis=2)
+        #     ).sum(axis=0)
+        #
+        #     # exponential predictors
+        #     new_weights = np.exp(self.eta * virtual_cum_payoffs)
+        #
+        #     # normalized weights of virtual experts
+        #     virtual_expert_weights = new_weights / new_weights.sum()
+        #
+        #     # build column stochastic matrix to get weights of today
+        #     S = self.column_stochastic_matrix(self.n_symbol,
+        #                                       virtual_expert_weights.values)
+        #     eigs, eigvs = np.linalg.eig(S)
+        #     normalized_new_weights = eigvs[:, 0] / eigvs[:, 0].sum()
+        #
+        #     # record modified strategies of today
+        #     self.virtual_expert_decision_xarr.loc[
+        #         today, self.virtual_experts, self.symbols, 'weight'
+        #     ] = self.modified_probabilities(normalized_new_weights)
+        #
+        #     return normalized_new_weights
+        #
+        # elif self.nr_strategy == 'POLY':
+        #     pass
 
     def get_simulation_name(self, *args, **kwargs):
         """
