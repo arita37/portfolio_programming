@@ -442,6 +442,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-e", "--exp_name", type=str, default="dissertation",
+        choices=["dissertation",], help="name of the experiment",
+    )
     parser.add_argument("-r", "--regret", type=str, help="regret type")
     parser.add_argument("--nr_strategy", type=str, help="no-regret strategy")
     parser.add_argument("--nr_param", type=float,
@@ -454,6 +457,10 @@ if __name__ == '__main__':
                         help="pre-generated scenario set index.")
     parser.add_argument("--stat", default=False, action='store_true',
                         help="NR_SPSP_cVaR experiment statistics")
+    parser.add_argument("-s", "--server", default=False, action='store_true',
+                        help="parameter server mode")
+    parser.add_argument("-c", "--client", default=False, action='store_true',
+                        help="run NR_SPSP_CVaR client mode")
 
     args = parser.parse_args()
 
@@ -461,6 +468,17 @@ if __name__ == '__main__':
         get_nr_spsp_cvar_report(args.regret)
         sys.exit()
 
-    run_NR_SPSP_CVaR('dissertation', args.regret, args.nr_strategy,
+    if args.server:
+        print("run NR_SPSP_CVaR parameter server mode")
+        print("exp_name: {},regret:{}".format(
+            args.exp_name,  args.regret))
+        parameter_server(args.exp_name, args.exp_name,  args.regret)
+        sys.exit()
+    elif args.client:
+        print("run NR_SPSP_CVaR client mode")
+        parameter_client()
+        sys.exit()
+    else:
+        run_NR_SPSP_CVaR('dissertation', args.regret, args.nr_strategy,
                      args.nr_param, args.expert_group_name, args.group_name,
                      args.n_scenario, args.sdx, '20050103', '20181228')
