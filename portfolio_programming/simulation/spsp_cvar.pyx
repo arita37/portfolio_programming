@@ -1461,24 +1461,26 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
             report_dir
         )
         # fictitious experts,
-        self.virtual_expert_names = ["{}-{}".format(s1, s2)
-                                     for s1 in self.expert_names
-                                     for s2 in self.expert_names
-                                     if s1 != s2]
+        self.virtual_expert_names = [
+            "{}-{}".format(s1, s2)
+            for s1 in self.expert_names
+            for s2 in self.expert_names
+            if s1 != s2
+        ]
         self.n_virtual_expert = len(self.virtual_expert_names)
         # shape: n_exp_period * n_virtual_expert * n_symbol *  v_properties
-        v_properties = ['wealth', 'price_relative', "weight"]
+        v_properties = ['price_relative', "weight"]
         self.virtual_portfolio_xarr = xr.DataArray(
             np.zeros((self.n_exp_period,
                       self.n_virtual_expert,
-                      self.n_symbol,
+                      self.expert_names,
                       len(v_properties)
                       )),
-            dims=('trans_date', 'expert', 'symbol', 'decision'),
+            dims=('trans_date', 'virtual_expert', 'expert', 'decision'),
             coords=(
                 self.exp_trans_dates,
                 self.virtual_expert_names,
-                self.candidate_symbols,
+                self.expert_names,
                 v_properties
             )
         )
@@ -1496,6 +1498,7 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
                             allocated_risk_free_wealth)
         if tdx == 0:
             # price relatives of all experts (considered trans. fee)
+            # shape: (n_expert,)
             self.portfolio_xarr.loc[today, self.expert_names,
                                     'price_relative'] = (
                 ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
@@ -1505,10 +1508,14 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
                          1 + self.risk_free_rois.loc[today]
                  )) / prev_main_wealth
             )
+            print('{} portfolio_xarr expert relative:{}'.format(today,
+                self.portfolio_xarr.loc[today, self.expert_names,
+                                        'price_relative']))
 
             # price relatives of all virtual experts
-            self.virtual_portfolio_xarr.loc[today, self.expert_names,
-                                    'price_relative'] = (
+            # shape: (n_virtual_expert, n_expert)
+            self.virtual_portfolio_xarr.loc[today, self.virtual_expert_names,
+                self.expert_names, 'price_relative'] = (
                 ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
                     today, self.candidate_symbols])
                   ).sum() +
@@ -1516,8 +1523,12 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
                          1 + self.risk_free_rois.loc[today]
                  )) / prev_main_wealth
             )
+            print('{} virtual_portfolio_xarr v_expert relative:{}'.format(today,
+                self.virtual_portfolio_xarr.loc[
+                    today, self.virtual_expert_names, self.expert_names,
+                    'price_relative'] ))
 
-            # price relative of the main portfolio
+            # price relative of the main portfolio, float
             self.portfolio_xarr.loc[today, 'main', 'price_relative'] = (
                 ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
                     today, self.candidate_symbols])
@@ -1526,16 +1537,22 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
                          1 + self.risk_free_rois.loc[today]
                  )) / prev_main_wealth
             )
+            print('{} portfolio_xarr main relative:{}'.format(today,
+                 self.portfolio_xarr.loc[today, 'main', 'price_relative']))
 
-            # initial weights of virtual experts
-            self.virtual_expert_decision_xarr.loc[today,
-                self.virtual_expert_names, self.candidate_symbols, 'weight'] = (
+            # initial weights of virtual experts,
+            # shape: (n_virtual_expert, n_expert)
+            self.virtual_portfolio_xarr[today,
+                self.virtual_expert_names, self.expert_names, 'weight'] = (
                 self.modified_probabilities(
                     np.ones(self.n_expert)/self.n_expert
                 )
             )
+            print('{} v_expert weight:{}'.format(today,
+                self.virtual_expert_decision_xarr.loc[today,
+                self.virtual_expert_names, self.expert_names, 'weight'] ))
 
-            # initial weights
+            # initial weights of all experts
             return 1. / self.n_expert
 
         else:
@@ -1544,34 +1561,37 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
             prev_risky_wealths = self.decision_xarr.loc[
                 yesterday, self.expert_names,
                 self.candidate_symbols, 'wealth']
+
             # shape: (n_expert,)
             prev_riskfree_wealths = self.decision_xarr.loc[
                 yesterday, self.expert_names,
                 self.risk_free_symbol, 'wealth']
 
             curr_risky_wealths = (
-                    prev_risky_wealths *
-                    (1 + self.exp_risk_rois.loc[
-                        today, self.candidate_symbols])
-            )
-            curr_riskfree_wealths = (
-                    prev_riskfree_wealths *
-                    (1 + self.risk_free_rois.loc[today])
+                prev_risky_wealths *
+                (1 + self.exp_risk_rois.loc[today, self.candidate_symbols])
             )
 
-            # shape: (n_expert,)
-            expert_price_relatives = (
-                    (curr_risky_wealths.sum(axis=1) + curr_riskfree_wealths) /
-                    (prev_risky_wealths.sum(axis=1) + prev_riskfree_wealths)
+            curr_riskfree_wealths = (
+                prev_riskfree_wealths *
+                (1 + self.risk_free_rois.loc[today])
             )
+
+            # price relative of all experts, shape: (n_expert,)
+            expert_price_relatives = (
+                (curr_risky_wealths.sum(axis=1) + curr_riskfree_wealths) /
+                (prev_risky_wealths.sum(axis=1) + prev_riskfree_wealths)
+            )
+
+            # price relatives of all experts (considered trans. fee)
+            self.portfolio_xarr.loc[today, self.expert_names,
+                                    'price_relative'] = expert_price_relatives
+
             # print("curr_risky_wealths:", curr_risky_wealths)
             # print("curr_riskfree_wealths:",  curr_riskfree_wealths)
             # print("expert_price_relatives:", expert_price_relatives)
 
-            self.portfolio_xarr.loc[today, self.expert_names,
-                                    'price_relative'] = expert_price_relatives
-
-            # main price relative
+            # price relative of the main portfolio
             self.portfolio_xarr.loc[today, 'main', 'price_relative'] = (
                     ((allocated_risk_wealth * (1 + self.exp_risk_rois.loc[
                         today, self.candidate_symbols])
@@ -1581,47 +1601,62 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
                      )) / prev_main_wealth
             )
 
+            # price relative of all virtual experts
+            # shape: (n_virtual_expert, n_expert)
+            self.virtual_portfolio_xarr.loc[today, self.virtual_expert_names,
+                self.expert_names, 'price_relative'] = (
+                    self.virtual_expert_decision_xarr.loc[yesterday,
+                        self.virtual_experts, self.symbols, 'weight'] *
+                    expert_price_relatives
+            )
 
-        # if self.nr_strategy == 'EXP':
-        #     # record virtual experts' payoff,
-        #     # shape: n_virtual_expert, n_symbol
-        #     self.virtual_expert_decision_xarr.loc[
-        #         today, self.virtual_experts, self.symbols, 'price_relative'] = (
-        #             self.virtual_expert_decision_xarr.loc[
-        #                 yesterday, self.virtual_experts, self.symbols, 'weight'] *
-        #             today_price_relative
-        #     )
-        #
-        #     # cumulative returns of all virtual experts
-        #     # first sum: shape: tdx * n_virtual_expert
-        #     # second sum: shape: n_virtual_expert
-        #     virtual_cum_payoffs = np.log(
-        #         self.virtual_expert_decision_xarr.loc[
-        #         :today, self.virtual_experts,
-        #         self.symbols, 'portfolio_payoff'].sum(axis=2)
-        #     ).sum(axis=0)
-        #
-        #     # exponential predictors
-        #     new_weights = np.exp(self.eta * virtual_cum_payoffs)
-        #
-        #     # normalized weights of virtual experts
-        #     virtual_expert_weights = new_weights / new_weights.sum()
-        #
-        #     # build column stochastic matrix to get weights of today
-        #     S = self.column_stochastic_matrix(self.n_symbol,
-        #                                       virtual_expert_weights.values)
-        #     eigs, eigvs = np.linalg.eig(S)
-        #     normalized_new_weights = eigvs[:, 0] / eigvs[:, 0].sum()
-        #
-        #     # record modified strategies of today
-        #     self.virtual_expert_decision_xarr.loc[
-        #         today, self.virtual_experts, self.symbols, 'weight'
-        #     ] = self.modified_probabilities(normalized_new_weights)
-        #
-        #     return normalized_new_weights
-        #
-        # elif self.nr_strategy == 'POLY':
-        #     pass
+        if self.nr_strategy == 'EXP':
+            # cumulative returns of all virtual experts
+            # first sum: shape: tdx * n_virtual_expert
+            # second sum: shape: n_virtual_expert
+            virtual_cum_payoffs = np.log(
+                self.virtual_portfolio_xarr.loc[ :today,
+                self.virtual_expert_names, self.expert_names,
+                'price_relative'].sum(axis=2)
+            ).sum(axis=0)
+
+            # exponential predictors
+            new_weights = np.exp(self.eta * virtual_cum_payoffs)
+
+            # normalized weights of virtual experts
+            virtual_expert_weights = new_weights / new_weights.sum()
+
+        elif self.nr_strategy == 'POLY':
+            # shape:  (tdx, n_virtual_expert)
+            virtual_time_payoffs = np.log(
+                self.virtual_portfolio_xarr.loc[ :today,
+                self.virtual_expert_names, self.expert_names,
+                'price_relative'].sum(axis=2)
+            )
+            # shape: (tdx,
+            portfoliio_time_payoffs = np.log(self.portfolio_xarr.loc[:today,
+                                        'main', 'price_relative'])
+
+            # shape: (n_virtual_expert,)
+            diff = (virtual_time_payoffs - portfoliio_time_payoffs).sum(axis=0)
+
+            new_weights = np.power(np.maximum(diff, np.zeros_like(diff)),
+                               self.poly_power - 1)
+            virtual_expert_weights = new_weights / new_weights.sum()
+
+        # build column stochastic matrix to get weights of today
+        S = self.column_stochastic_matrix(self.n_symbol,
+                                          virtual_expert_weights.values)
+        eigs, eigvs = np.linalg.eig(S)
+        normalized_new_weights = (eigvs[:, 0] / eigvs[:, 0].sum()).astype(
+            np.float64)
+
+        # record modified strategies of today
+        self.virtual_portfolio_xarr.loc[
+            today, self.virtual_experts, self.expert_names, 'weight'
+        ] = self.modified_probabilities(normalized_new_weights)
+
+        return normalized_new_weights
 
     def get_simulation_name(self, *args, **kwargs):
         """
@@ -1645,23 +1680,3 @@ class NIR_SPSP_CVaR(NER_SPSP_CVaR, NIRUtility):
         )
         return name
 
-    def pre_trading_operation(self, *args, **kargs):
-        """
-        operations after initialization and before trading
-        """
-        today = self.exp_start_date
-        initial_weights = np.ones(self.n_expert) / self.n_expert
-        self.virtual_expert_decision_xarr.loc[
-            today,
-            self.virtual_experts,
-            self.symbols,
-            'weight'
-        ] = self.modified_probabilities(initial_weights)
-
-        # the portfolio payoff of first decision
-        self.virtual_expert_decision_xarr.loc[
-            today,
-            self.virtual_experts,
-            self.symbols,
-            'price_relative'
-        ] = self.modified_probabilities(initial_weights)
