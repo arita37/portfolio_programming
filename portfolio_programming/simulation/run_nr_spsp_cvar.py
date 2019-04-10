@@ -457,7 +457,7 @@ if __name__ == '__main__':
                         help="pre-generated scenario set index.")
     parser.add_argument("--stat", default=False, action='store_true',
                         help="NR_SPSP_cVaR experiment statistics")
-    parser.add_argument("-s", "--server", default=False, action='store_true',
+    parser.add_argument("--server", default=False, action='store_true',
                         help="parameter server mode")
     parser.add_argument("-c", "--client", default=False, action='store_true',
                         help="run NR_SPSP_CVaR client mode")
