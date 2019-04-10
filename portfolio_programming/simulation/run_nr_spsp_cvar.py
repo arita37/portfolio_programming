@@ -472,7 +472,7 @@ if __name__ == '__main__':
         print("run NR_SPSP_CVaR parameter server mode")
         print("exp_name: {},regret:{}".format(
             args.exp_name,  args.regret))
-        parameter_server(args.exp_name, args.exp_name,  args.regret)
+        parameter_server(args.exp_name,  args.regret)
         sys.exit()
     elif args.client:
         print("run NR_SPSP_CVaR client mode")
