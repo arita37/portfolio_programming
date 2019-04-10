@@ -60,7 +60,7 @@ def all_nr_spsp_cvar_params(exp_name, regret_type):
     group_params = {
         'TWG1': 'h140-200-10_a85-95-5',
         'TWG2': 'h190-240-10_a55-75-5',
-        'TWG3': 'h60-100-10_a75-90-',
+        'TWG3': 'h60-100-10_a75-90-5',
         'TWG4': 'h100-140-10_a55-75-5',
         'TWG5': 'h60-90-10_a50-75-5',
         'TWG6': 'h200-240-10_a50-70-5',
@@ -334,7 +334,7 @@ def get_nr_spsp_cvar_report(regret_type, report_dir=pp.NRSPSPCVaR_DIR):
     group_params = {
         'TWG1': 'h140-200-10_a85-95-5',
         'TWG2': 'h190-240-10_a55-75-5',
-        'TWG3': 'h60-100-10_a75-90-',
+        'TWG3': 'h60-100-10_a75-90-5',
         'TWG4': 'h100-140-10_a55-75-5',
         'TWG5': 'h60-90-10_a50-75-5',
         'TWG6': 'h200-240-10_a50-70-5',
