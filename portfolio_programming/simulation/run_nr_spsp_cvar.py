@@ -316,6 +316,6 @@ if __name__ == '__main__':
                         help="pre-generated scenario set index.")
 
     args = parser.parse_args()
-    run_NR_SPSP_CVaR('dissertation', args.regret, args.nr_strategy, args.nr_param,
-                      args.expert_group_name, args.group_name, args.n_scenario,
-                      args.sdx, '20050103', '20181228')
+    run_NR_SPSP_CVaR('dissertation', args.regret, args.nr_strategy,
+        args.nr_param, args.expert_group_name, args.group_name,
+        args.n_scenario, args.sdx, '20050103', '20181228')
