@@ -88,7 +88,7 @@ def all_nr_spsp_cvar_params(exp_name, regret_type):
             scenario_set_idx=sdx,
             exp_start_date=s_date.strftime("%Y%m%d"),
             exp_end_date=e_date.strftime("%Y%m%d")
-        ): (exp_name, regret_type, s, p, group_name, exp_group_name,
+        ): (exp_name, regret_type, s, p, exp_group_name,  group_name,
             n_scenario, sdx, s_date, e_date)
         for s, p in strategy_params
         for group_name, exp_group_name in group_params.items()
