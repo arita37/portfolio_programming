@@ -16,7 +16,8 @@ from time import (time, sleep)
 
 import portfolio_programming as pp
 import portfolio_programming.simulation.spsp_cvar
-
+from  portfolio_programming.simulation.spsp_cvar import (
+    NER_SPSP_CVaR, NIR_SPSP_CVaR)
 
 def get_zmq_version():
     node = platform.node()
@@ -197,7 +198,7 @@ def parameter_client(server_ip="140.117.168.49", max_reconnect_count=30):
             print("{:<15} receiving: {}".format(
                 str(dt.datetime.now()),
                 work))
-            run_NER_SPSP_CVaR(*work)
+            run_NR_SPSP_CVaR(*work)
 
         else:
             # no response from server, reconnected
@@ -237,7 +238,8 @@ def get_experts(expert_group_name):
     return experts
 
 
-def run_NER_SPSP_CVaR(exp_name, nr_strategy, nr_param, expert_group_name,
+def run_NR_SPSP_CVaR(exp_name, regret_type,
+                      nr_strategy, nr_param, expert_group_name,
                       group_name, n_scenario, scenario_set_idx,
                       exp_start_date, exp_end_date):
     market = group_name[:2]
@@ -265,7 +267,12 @@ def run_NER_SPSP_CVaR(exp_name, nr_strategy, nr_param, expert_group_name,
 
     experts = get_experts(expert_group_name)
 
-    instance = portfolio_programming.simulation.spsp_cvar.NER_SPSP_CVaR(
+    if regret_type == "external":
+        obj = NER_SPSP_CVaR
+    elif regret_type == 'internal':
+        obj = NIR_SPSP_CVaR
+
+    instance = obj(
         nr_strategy,
         nr_param,
         expert_group_name,
@@ -297,6 +304,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-r", "--regret", type=str, help="regret type")
     parser.add_argument("--nr_strategy", type=str, help="no-regret strategy")
     parser.add_argument("--nr_param", type=float,
                         help="no-regret strategy parameter")
@@ -308,6 +316,6 @@ if __name__ == '__main__':
                         help="pre-generated scenario set index.")
 
     args = parser.parse_args()
-    run_NER_SPSP_CVaR('dissertation', args.nr_strategy, args.nr_param,
+    run_NR_SPSP_CVaR('dissertation', args.regret, args.nr_strategy, args.nr_param,
                       args.expert_group_name, args.group_name, args.n_scenario,
                       args.sdx, '20050103', '20181228')
