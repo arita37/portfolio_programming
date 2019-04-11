@@ -913,6 +913,101 @@ def run_plot_group_line_chart():
     plt.show()
 
 
+def run_plot_grouped_bar_chart():
+    """
+    TAIEX, DJIA, TWG1 ~ TWG6, USG1 ~ USG6 group
+    """
+    import matplotlib.pyplot as plt
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = (['Times New Roman'] +
+                                  plt.rcParams['font.serif'])
+    group_names = pp.GROUP_SYMBOLS.keys()
+
+    for group_name in group_names:
+        # bah
+        bah_name = "report_BAH_{}_20050103_20181228.pkl".format(group_name)
+        bah_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR, bah_name)
+        bah_rp = pd.read_pickle(bah_file)
+
+        # eg
+        eg_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+            "report_EG_{}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in ["0.01", "0.1", "1.0"]]
+        for eg_file in eg_files:
+            eg_rp = pd.read_picke(eg_file)
+
+        # nofee_eg
+        nfeg_files = [os.path.join(pp.DATA_DIR,
+            'report_weight_portfolio_nofee',
+            "report_EG_{}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in [0.01, 0.1, 1]]
+        for nfeg_file in nfeg_files:
+            nfeg_rp = pd.read_picke(nfeg_file)
+
+        # exp
+        exp_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+            "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in [0.01, 0.1, 1]]
+        for exp_file in exp_files:
+            exp_rp = pd.read_picke(exp_file)
+
+        # nofee_exp
+         nfexp_files = [os.path.join(pp.DATA_DIR,
+           'report_weight_portfolio_nofee',
+           "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in [0.01, 0.1, 1]]
+        for nfexp_file in nfexp_files:
+            nfexp_rp = pd.read_picke(nfexp_file)
+
+        # poly
+        pol_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+            "report_Poly_{:.2f}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in [2, 3, 4]]
+        for pol_file in pol_files:
+            pol_rp = pd.read_picke(pol_file)
+
+        # nofee_poly
+        nfpol_files = [os.path.join(pp.DATA_DIR,
+            'report_weight_portfolio_nofee',
+            "report_Poly_{:.2f}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in [2, 3, 4]]
+        for nfpol_file in nfpol_files:
+            nfpol_rp = pd.read_picke(nfpol_file)
+
+        # b1exp
+        b1exp_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+            "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(
+              eta, group_name)) for eta in [0.01, 0.1, 1]]
+        for b1exp_file in b1exp_files:
+            b1exp_rp = pd.read_picke(b1exp_file)
+
+        # nofee_b1exp
+        nfb1exp_files = [os.path.join(pp.DATA_DIR,
+            'report_weight_portfolio_nofee',
+            "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in [0.01, 0.1, 1]]
+        for nfb1exp_file in nfb1exp_files:
+            nfb1exp_rp = pd.read_picke(nfb1exp_file)
+
+        # b1pol
+        b1pol_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
+            "report_NIRPoly_{:.2f}_{}_20050103_20181228.pkl".format(
+            eta, group_name)) for eta in [2, 3, 4]]
+        for b1pol_file in b1pol_files:
+            b1pol_rp = pd.read_picke(b1pol_file)
+
+        # nofee_b1pol
+        nfb1pol_files = [os.path.join(pp.DATA_DIR,
+            'report_weight_portfolio_nofee',
+            "report_NIRPoly_{:.2f}_{}_20050103_20181228.pkl".format(
+          eta, group_name)) for eta in [2, 3, 4]]
+        for nfb1pol_file in nfb1pol_files:
+            nfb1pol_rp = pd.read_picke(nfb1pol_file)
+
+        # spsp
+
+        # nr_spsp
+
 if __name__ == "__main__":
     import argparse
 
