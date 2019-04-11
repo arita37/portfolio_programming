@@ -16,7 +16,6 @@ from portfolio_programming.simulation.wp_poly import (PolynomialPortfolio,
 
 
 def run_poly(poly_power, exp_type, group_name, exp_start_date, exp_end_date):
-
     buy_trans_fee = pp.BUY_TRANS_FEE
     sell_trans_fee = pp.SELL_TRANS_FEE
     report_dir = pp.WEIGHT_PORTFOLIO_REPORT_DIR
@@ -30,7 +29,7 @@ def run_poly(poly_power, exp_type, group_name, exp_start_date, exp_end_date):
         buy_trans_fee = 0
         sell_trans_fee = 0
         report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
-    elif exp_type =='nofee_nir':
+    elif exp_type == 'nofee_nir':
         exp_class = NIRPolynomialPortfolio
         buy_trans_fee = 0
         sell_trans_fee = 0
@@ -82,8 +81,17 @@ def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
     import csv
     import arch.bootstrap.multiple_comparison as arch_comp
 
+    if exp_type not in ('poly', 'nir',
+                        'nofee_poly', 'nofee_nir'):
+        raise ValueError('unknown exp_type:', exp_type)
+
+    if exp_type in ('nofee_poly', 'nofee_nir'):
+        report_dir = os.path.join(pp.DATA_DIR, 'report_weight_portfolio_nofee')
+    else:
+        report_dir = pp.WEIGHT_PORTFOLIO_REPORT_DIR
+
     group_names = pp.GROUP_SYMBOLS.keys()
-    output_file = os.path.join(pp.TMP_DIR, "poly_stat.csv")
+    output_file = os.path.join(pp.TMP_DIR, "{}_stat.csv".format(exp_type))
     with open(output_file, "w", newline='') as csv_file:
         fields = [
             "simulation_name",
@@ -107,8 +115,8 @@ def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         writer.writeheader()
 
-        if exp_type == 'poly':
-            polys = ["{:.2f}".format(val) for val in (1.1, 1.5, 2, 3, 4)]
+        if exp_type in ('poly', 'nofee_poly'):
+            polys = ["{:.2f}".format(val) for val in (1.5, 2, 3, 4)]
             report_pkls = [
                 (group_name,
                  "report_Poly_{}_{}_20050103_20181228.pkl".format(
@@ -117,8 +125,8 @@ def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 for poly in polys
                 for gdx, group_name in enumerate(group_names)
             ]
-        elif exp_type == 'nir':
-            polys = ["{:.2f}".format(val) for val in (1.1, 1.5, 2, 3, 4)]
+        elif exp_type in ('nir', 'nofee_nir'):
+            polys = ["{:.2f}".format(val) for val in (1.5, 2, 3, 4)]
             report_pkls = [
                 (group_name,
                  "report_NIRPoly_{}_{}_20050103_20181228.pkl".format(
@@ -128,17 +136,8 @@ def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 for gdx, group_name in enumerate(group_names)
             ]
 
-        elif exp_type == 'adaptive':
-            report_pkls = [
-                (group_name,
-                 "report_Poly_Adaptive_{}_20050103_20181228.pkl".format(group_name)
-                 )
-                for group_name in group_names
-            ]
-
         for group_name, report_name in report_pkls:
-            report_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
-                                             report_name)
+            report_file = os.path.join(report_dir, report_name)
             rp = pd.read_pickle(report_file)
             # SPA value
             if "SPA_c" not in rp.keys():
@@ -179,7 +178,7 @@ def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                     "Sharpe": rp['Sharpe'],
                     "Sortino_full": rp['Sortino_full'],
                     "Sortino_partial": rp['Sortino_partial'],
-                    "SPA_c":  rp['SPA_c']
+                    "SPA_c": rp['SPA_c']
                 }
             )
             print(
@@ -218,15 +217,17 @@ if __name__ == '__main__':
     if args.simulation:
         if args.group_name:
             run_poly(args.poly, args.exp_type, args.group_name,
-                    dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                     dt.date(2005, 1, 1), dt.date(2018, 12, 28))
 
         else:
             import multiprocess as mp
+
             n_cpu = mp.cpu_count() // 2 if mp.cpu_count() >= 2 else 1
             pool = mp.Pool(processes=n_cpu)
             results = [pool.apply_async(run_poly,
                                         (args.poly, args.exp_type, group_name,
-                                         dt.date(2005, 1, 1), dt.date(2018, 12, 28))
+                                         dt.date(2005, 1, 1),
+                                         dt.date(2018, 12, 28))
                                         )
                        for group_name in pp.GROUP_SYMBOLS.keys()
                        ]
@@ -236,4 +237,3 @@ if __name__ == '__main__':
 
     if args.stat:
         get_poly_report(args.exp_type)
-
