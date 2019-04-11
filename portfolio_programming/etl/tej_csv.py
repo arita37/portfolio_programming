@@ -175,12 +175,8 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
     trans_dates = df[start_date:end_date].index
     trans_dates.name = "trans_date"
     minor_indices = [
-        "open_price",
-        "high_price",
-        "low_price",
-        "close_price",
-        "volume",
-        "simple_roi",
+        "open_price", "high_price", "low_price", "close_price",
+        "volume", "simple_roi",
     ]
 
     # setting xarray (date, symbol, indices)
@@ -208,12 +204,8 @@ def dataframe_to_xarray(symbols, df_dir, start_date, end_date, fout_path):
         xarr.loc[dates, symbol, :] = trimmed_df.loc[
             dates,
             (
-                "open_price",
-                "high_price",
-                "low_price",
-                "close_price",
-                "volume",
-                "simple_roi",
+                "open_price", "high_price", "low_price", "close_price",
+                "volume", "simple_roi",
             ),
         ]
 
@@ -412,23 +404,10 @@ def symbol_statistics(exp_name):
 
             with open(stat_file, "w",) as csv_file:
                 fields = [
-                    "rank",
-                    'group',
-                    "symbol",
-                    "start_date",
-                    "end_date",
-                    "n_data",
-                    "cum_roi",
-                    "annual_roi",
-                    "roi_mu",
-                    "std",
-                    "skew",
-                    "ex_kurt",
-                    "Sharpe",
-                    "Sortino",
-                    "SPA_c",
-                    "JB",
-                    "worst_ADF"
+                    "rank", 'group', "symbol", "start_date", "end_date",
+                    "n_data", "cum_roi", "annual_roi", "roi_mu", "std",
+                    "skew", "ex_kurt", "Sharpe", "Sortino",
+                    "SPA_c", "JB", "worst_ADF"
                 ]
                 writer = csv.DictWriter(csv_file, fieldnames=fields)
                 writer.writeheader()
@@ -496,6 +475,100 @@ def symbol_statistics(exp_name):
                     )
     else:
         raise ValueError("unknown exp_name:{}".format(exp_name))
+
+
+def market_index_statistics():
+    import csv
+    import json
+    import statsmodels.tsa.stattools as tsa_tools
+    import scipy.stats as spstats
+    import portfolio_programming.statistics.risk_adjusted as risk_adj
+    import arch.bootstrap.multiple_comparison as arch_comp
+
+    start_date = dt.date(2005, 1, 1)
+    end_date = dt.date(2018, 12, 31)
+
+    with open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON) as tw_fin:
+        tw_symbols = json.load(tw_fin)
+
+    tw_xarr = xr.open_dataarray(pp.TAIEX_2005_MKT_CAP_NC)
+    taiex_mkt_idx = tw_symbols[-1]
+
+    with open(pp.DJIA_2005_SYMBOL_JSON) as us_fin:
+        djia_symbols = json.load(us_fin)
+
+    djia_xarr = xr.open_dataarray(pp.DJIA_2005_NC)
+    djia_mkt_idx = djia_symbols[-1]
+
+    mkt_stats_file = os.path.join(pp.TMP_DIR, "market_index_stat.csv")
+
+    with open(mkt_stats_file, "w", ) as csv_file:
+        fields = [
+            "symbol", "start_date", "end_date",
+            "n_data", "cum_roi", "annual_roi", "roi_mu", "std",
+            "skew", "ex_kurt", "Sharpe", "Sortino",
+            "SPA_c", "JB", "worst_ADF"
+        ]
+        writer = csv.DictWriter(csv_file, fieldnames=fields)
+        writer.writeheader()
+
+        for mkt_symbol, data_xarr in zip([taiex_mkt_idx, djia_mkt_idx],
+                                         [tw_xarr, djia_xarr]):
+            t0 = time()
+            print(mkt_symbol)
+            rois = data_xarr.loc[start_date:end_date, mkt_symbol, "simple_roi"]
+            trans_dates = rois.get_index("trans_date")
+            n_roi = int(rois.count())
+            rois[0] = 0
+            cumulative_roi = float((1 + rois).prod() - 1)
+            annual_roi = float(np.power(cumulative_roi + 1, 1.0 / (
+                    end_date.year - start_date.year + 1)) - 1)
+
+            sharpe = risk_adj.Sharpe(rois)
+            sortino = risk_adj.Sortino_full(rois)[0]
+            jb = spstats.jarque_bera(rois)[1]
+
+            # worse case of adf
+            adf_c = tsa_tools.adfuller(rois, regression="c")[1]
+            adf_ct = tsa_tools.adfuller(rois, regression="ct")[1]
+            adf_ctt = tsa_tools.adfuller(rois, regression="ctt")[1]
+            adf_nc = tsa_tools.adfuller(rois, regression="nc")[1]
+            adf = max(adf_c, adf_ct, adf_ctt, adf_nc)
+
+            # worse case of SPA
+            spa_value = 0
+            for _ in range(10):
+                spa = arch_comp.SPA(rois.data, np.zeros(rois.size),
+                                    reps=1000)
+                spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                spa.compute()
+                # preserve the worse p_value
+                if spa.pvalues[1] > spa_value:
+                    spa_value = spa.pvalues[1]
+
+            writer.writerow({
+                "symbol": mkt_symbol,
+                "start_date": trans_dates[0].strftime("%Y-%m-%d"),
+                "end_date": trans_dates[-1].strftime("%Y-%m-%d"),
+                "n_data": n_roi,
+                "cum_roi": cumulative_roi,
+                "annual_roi": annual_roi,
+                "roi_mu": float(rois.mean()),
+                "std": float(rois.std(ddof=1)),
+                "skew": spstats.skew(rois, bias=False),
+                "ex_kurt": spstats.kurtosis(rois, bias=False),
+                "Sharpe": sharpe,
+                "Sortino": sortino,
+                "SPA_c": spa_value,
+                "JB": jb,
+                "worst_ADF": adf,
+                }
+            )
+            print(
+                "{}  cum_roi:{:.2%} {:.4f} secs".format(
+                    mkt_symbol, cumulative_roi, time() - t0
+                )
+            )
 
 
 def plot_fft(symbol, start_date=dt.date(2005, 1, 1),
@@ -745,6 +818,10 @@ def plot_wavelet(
 
 
 def run_plot_group_line_chart():
+    """
+    TAIEX, DJIA, TWG1 ~ TWG6, USG1 ~ USG6 grouped line chart
+    """
+
     import matplotlib.pyplot as plt
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['font.serif'] = (['Times New Roman'] +
@@ -849,6 +926,10 @@ if __name__ == "__main__":
         help="symbol statistics"
     )
     parser.add_argument(
+        "--mkt_stat", default=False, action="store_true",
+        help="market symbol statistics"
+    )
+    parser.add_argument(
         "-p", "--plot",  default=False, action="store_true"
     )
 
@@ -858,5 +939,7 @@ if __name__ == "__main__":
         run_tej_csv_to_xarray(pp.EXP_NAME)
     elif args.stat:
         symbol_statistics(pp.EXP_NAME)
+    elif args.mkt_stat:
+        market_index_statistics()
     elif args.plot:
         run_plot_group_line_chart()

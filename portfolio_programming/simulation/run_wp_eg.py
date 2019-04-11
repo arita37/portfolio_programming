@@ -170,10 +170,11 @@ def get_eg_report(exp_type):
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         writer.writeheader()
         if exp_type == 'eg':
-            etas = ["{:.1f}".format(eta / 10) for eta in range(1, 10 + 1)]
-            etas.extend(
-                ["{:.2f}".format(eta) for eta in (0.01, 0.02, 0.03, 0.05)])
-            etas.extend(["{:.1f}".format(eta) for eta in (2, 3, 4)])
+            # etas = ["{:.1f}".format(eta / 10) for eta in range(1, 10 + 1)]
+            # etas.extend(
+            #     ["{:.2f}".format(eta) for eta in (0.01, 0.02, 0.03, 0.05)])
+            # etas.extend(["{:.1f}".format(eta) for eta in (2, 3, 4)])
+            etas = ["0.01", "0.1", "1.0"]
 
             report_pkls = [
                 (group_name,
@@ -191,7 +192,8 @@ def get_eg_report(exp_type):
                 for group_name in group_names
             ])
         elif exp_type == 'exp':
-            etas = [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
+            # etas = [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
+            etas = [0.01, 0.1, 1]
             report_pkls = [
                 (group_name,
                  "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
@@ -202,7 +204,8 @@ def get_eg_report(exp_type):
             ]
 
         elif exp_type == 'nir':
-            etas = [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
+            # etas = [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
+            etas = [0.01, 0.1, 1]
             report_pkls = [
                 (group_name,
                  "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(

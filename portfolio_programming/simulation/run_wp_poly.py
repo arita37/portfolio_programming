@@ -116,7 +116,7 @@ def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
         writer.writeheader()
 
         if exp_type in ('poly', 'nofee_poly'):
-            polys = ["{:.2f}".format(val) for val in (1.5, 2, 3, 4)]
+            polys = ["{:.2f}".format(val) for val in (2, 3, 4)]
             report_pkls = [
                 (group_name,
                  "report_Poly_{}_{}_20050103_20181228.pkl".format(
@@ -126,7 +126,7 @@ def get_poly_report(exp_type, report_dir=pp.WEIGHT_PORTFOLIO_REPORT_DIR):
                 for gdx, group_name in enumerate(group_names)
             ]
         elif exp_type in ('nir', 'nofee_nir'):
-            polys = ["{:.2f}".format(val) for val in (1.5, 2, 3, 4)]
+            polys = ["{:.2f}".format(val) for val in (2, 3, 4)]
             report_pkls = [
                 (group_name,
                  "report_NIRPoly_{}_{}_20050103_20181228.pkl".format(

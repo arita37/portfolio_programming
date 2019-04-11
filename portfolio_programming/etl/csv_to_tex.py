@@ -54,20 +54,71 @@ def symbol_statistics_to_latex(exp_name):
         raise ValueError("unknown exp_name:{}".format(exp_name))
 
 
-def BAH_to_latex(exp_name):
+def market_index_statistics_to_latex(exp_name):
     if exp_name == 'dissertation':
         csv_tex_files = [
             [
-                os.path.join(pp.TMP_DIR, "BAH_stat.csv"),
-                os.path.join(pp.TMP_DIR, "BAH_stat.txt"),
-            ]
+                os.path.join(pp.TMP_DIR, "market_index_stat.csv"),
+                os.path.join(pp.TMP_DIR, "market_index_stat.txt")
+            ],
         ]
+
+        # ['symbol', 'start_date', 'end_date', 'n_data',
+        # 'cum_roi', 'annual_roi', 'roi_mu', 'std', 'skew', 'ex_kurt',
+        # 'Sharpe', 'Sortino', 'SPA_c', 'JB', 'worst_ADF']
+
+        line_style = "{:>4} & {:>8.2f} & {:>8.2f} & {:>10.4f} & " \
+                     "{:>6.4f} & {:>6.2f} & {:6.2f} & {:6.2f} & {:6.2f} &  " \
+                     "{:>8} & {:>8} & {:>8} \\\\ \\hline \n"
+        for csv_file, tex_file in csv_tex_files:
+            rows = csv.DictReader(open(csv_file))
+            with open(tex_file, 'w') as fout:
+                for row in rows:
+                    fout.writelines(line_style.format(
+
+                        row['symbol'],
+                        float(row['cum_roi']) * 100,
+                        float(row['annual_roi']) * 100,
+                        float(row['roi_mu']) * 100,
+                        float(row['std']) * 100,
+                        float(row['skew']),
+                        float(row['ex_kurt']),
+                        float(row['Sharpe']) * 100,
+                        float(row['Sortino']) * 100,
+                        star_p_value(float(row['SPA_c']) * 100),
+                        star_p_value(float(row['JB']) * 100),
+                        star_p_value(float(row['worst_ADF']) * 100)
+                    ))
+            print("{} complete".format(csv_file))
+    else:
+        raise ValueError("unknown exp_name:{}".format(exp_name))
+
+def strategy_to_latex(exp_name, strategy='eg'):
+    if exp_name == 'dissertation':
+
         # ['simulation_name', 'group_name', 'start_date', 'end_date',
         # 'n_data', 'cum_roi', 'annual_roi', 'roi_mu', 'std', 'skew',
         # 'ex_kurt', 'Sharpe', 'Sortino_full', 'Sortino_partial',
         # 'SPA_c']
+        if strategy == 'BAH':
+            csv_tex_files = [
+                [
+                    os.path.join(pp.TMP_DIR, "BAH_stat.csv"),
+                    os.path.join(pp.TMP_DIR, "BAH_stat.txt"),
+                ],
+            ]
 
-        line_style = "{:>6}  & {:>8.2f} & {:>8.2f} & {:>10.4f} & " \
+        elif strategy in ('eg', 'exp', 'nofee_eg', 'nofee_exp', 'poly',
+                          'nofee_poly', 'b1exp', 'nofee_b1exp', 'b1pol',
+                          'nofee_b1pol'):
+            csv_tex_files = [
+                [
+                    os.path.join(pp.TMP_DIR, "{}_stat.csv".format(strategy)),
+                    os.path.join(pp.TMP_DIR, "{}_stat.txt".format(strategy)),
+                ],
+            ]
+
+        line_style = "{:>6.2f} & {:>6} & {:>8.2f} & {:>8.2f} & {:>10.4f} & " \
                      "{:>6.4f} & {:>6.2f} & {:6.2f} & {:6.2f} & {:6.2f} " \
                      "& {:>8}  \\\\ \\hline \n"
 
@@ -75,7 +126,17 @@ def BAH_to_latex(exp_name):
             rows = csv.DictReader(open(csv_file))
             with open(tex_file, 'w') as fout:
                 for row in rows:
+                    print(row)
+                    if strategy == 'BAH':
+                        param = 0
+                    elif strategy in ('eg', 'exp', 'nofee_eg', 'nofee_exp',
+                                      'b1exp', 'nofee_b1exp'):
+                        param = float(row['eta'])
+                    elif strategy in ('poly', 'nofee_poly', 'b1pol',
+                                      'nofee_b1pol'):
+                        param = float(row['poly_power'])
                     fout.writelines(line_style.format(
+                        param,
                         row['group_name'],
                         float(row['cum_roi']) * 100,
                         float(row['annual_roi']) * 100,
@@ -105,4 +166,5 @@ def star_p_value(p_value):
 
 if __name__ == '__main__':
     # symbol_statistics_to_latex('dissertation')
-    BAH_to_latex('dissertation')
+    # market_index_statistics_to_latex('dissertation')
+    strategy_to_latex('dissertation', 'nofee_b1pol')
