@@ -920,24 +920,30 @@ def run_plot_grouped_bar_chart(mkt='TW'):
     import matplotlib.pyplot as plt
     # figure size in inches
     fig = plt.figure(figsize=(16, 12), facecolor='white')
+    fig2 =  plt.figure(figsize=(16, 12), facecolor='white')
 
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['font.serif'] = (['Times New Roman'] +
                                   plt.rcParams['font.serif'])
     group_names = ["{}G{}".format(mkt, idx) for idx in range(1, 7)]
 
+    # spsp results
+    spsp_rp = xr.open_dataarray(os.path.join(pp.DATA_DIR,
+        'report_SPSP_CVaR_whole_dissertation_compact_20050103_20181228.nc'))
+
     years = 2018-2005+1
     'rgbkymc'  # red, green, blue, black, etc.
     for gdx, group_name in enumerate(group_names):
         rois = []
         colors = []
-        ax = fig.add_subplot(2, 3, gdx + 1)
+        stds = []
         # bah
         bah_name = "report_BAH_{}_20050103_20181228.pkl".format(group_name)
         bah_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR, bah_name)
         bah_rp = pd.read_pickle(bah_file)
         print('{} {:.2%}'.format(group_name, bah_rp['cum_roi']))
-        rois.append(("BAH", np.power(bah_rp['cum_roi']+1, 1/years)-1) )
+        rois.append(("BAH", np.power(bah_rp['cum_roi']+1, 1/years)-1,
+                    bah_rp['daily_std_roi']))
         colors.append('r')
 
         # eg
@@ -949,7 +955,9 @@ def run_plot_grouped_bar_chart(mkt='TW'):
             eg_rp = pd.read_pickle(eg_file)
             print('{} {:.2%}'.format(eg_file, eg_rp['cum_roi']))
             rois.append(("EG{:.2f}".format(
-                float(eg_etas[idx])), np.power(eg_rp['cum_roi']+1, 1/years)-1))
+                float(eg_etas[idx])), np.power(eg_rp['cum_roi']+1, 1/years)-1,
+               eg_rp['daily_std_roi'])
+            )
             colors.append('g')
 
         # # nofee_eg
@@ -972,7 +980,9 @@ def run_plot_grouped_bar_chart(mkt='TW'):
             exp_rp = pd.read_pickle(exp_file)
             print('{} {:.2%}'.format(exp_file, exp_rp['cum_roi']))
             rois.append(("EXP{:.2f}".format(
-                float(eg_etas[idx])), np.power(exp_rp['cum_roi']+1, 1/years)-1))
+                float(eg_etas[idx])), np.power(exp_rp['cum_roi']+1,
+                                               1/years)-1,
+            exp_rp['daily_std_roi']))
             colors.append('b')
 
         # # nofee_exp
@@ -997,7 +1007,8 @@ def run_plot_grouped_bar_chart(mkt='TW'):
             print('{} {:.2%}'.format(pol_file, pol_rp['cum_roi']))
             rois.append(("POL{}".format(
                 float(poly_params[idx])), np.power(pol_rp['cum_roi']+1,
-                                                   1/years)-1))
+                                                   1/years)-1,
+            pol_rp['daily_std_roi']))
             colors.append('k')
 
         # # nofee_poly
@@ -1021,7 +1032,8 @@ def run_plot_grouped_bar_chart(mkt='TW'):
             print('{} {:.2%}'.format(b1exp_file, b1exp_rp['cum_roi']))
             rois.append(("B1EXP{}".format(
                 float(eg_etas[idx])),  np.power(b1exp_rp['cum_roi']+1,
-                                                1/years)-1))
+                                                1/years)-1,
+            b1exp_rp['daily_std_roi']))
             colors.append('m')
 
         # # nofee_b1exp
@@ -1045,7 +1057,8 @@ def run_plot_grouped_bar_chart(mkt='TW'):
             print('{} {:.2%}'.format(b1pol_file, b1pol_rp['cum_roi']))
             rois.append(("B1POL{}".format(
                 float(poly_params[idx])),np.power(b1pol_rp['cum_roi']+1,
-                                                  1/years)-1))
+                                                  1/years)-1,
+            b1pol_rp['daily_std_roi']))
             colors.append('y')
 
         # # nofee_b1pol
@@ -1060,18 +1073,41 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         #         float(poly_params[idx])), nfb1pol_rp['cum_roi']))
         #     colors.append('y')
 
-        # spsp
+        # spsp, best
+        # [interval, group_name, sdx, p_size, h, a, attr]
+        ann_rois = spsp_rp.loc[:, group_name, 1, 5, :, :, 'annual_roi']
+        spsp = ann_rois.where(ann_rois == ann_rois.max(), drop=True).squeeze()
+        h = spsp.rolling_window_size.values
+        alpha = spsp.alpha.values
+        # print(spsp, h, alpha)
+        std = spsp_rp.loc[:, group_name, 1, 5, h, alpha, 'daily_std_roi']
+        # print(std)
+        rois.append( ("SPSP-({}, {:.0%})".format(
+            int(h), float(alpha)), float(spsp.values), float(std)))
+        colors.append('r')
+
         # nr_spsp
+
+
         # plot
+        ax = fig.add_subplot(2, 3, gdx + 1)
         ax.set_title(group_name, y=1.02, fontsize=18)
         # if group_name in ('TWG1', 'TWG4', 'USG1', 'USG4'):
         ax.set_ylabel('Annual return (%)', fontsize=16, labelpad=-2)
-        names, values = zip(*rois)
+        names, values, stds = zip(*rois)
         pct_values = [v*100 for v in values]
         ax.bar(names, pct_values, color="".join(colors))
         ax.set_xticklabels(names, rotation='vertical')
 
+        ax2 = fig2.add_subplot(2, 3, gdx + 1)
+        ax2.set_title(group_name, y=1.02, fontsize=18)
+        ax2.set_ylabel('Daily Standard deviation (%)', fontsize=16, labelpad=-2)
+        pct_stds = [v* 100 for v in stds]
+        ax2.bar(names, pct_stds, color="".join(colors))
+        ax2.set_xticklabels(names, rotation='vertical')
+
     fig.tight_layout()
+    fig2.tight_layout()
     plt.show()
 
 if __name__ == "__main__":
@@ -1108,4 +1144,4 @@ if __name__ == "__main__":
     elif args.plot:
         run_plot_group_line_chart()
     elif args.plotbar:
-        run_plot_grouped_bar_chart('US')
+        run_plot_grouped_bar_chart('TW')
