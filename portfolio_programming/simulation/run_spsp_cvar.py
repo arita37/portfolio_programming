@@ -321,7 +321,7 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
         raise ValueError("unknown setting: {}".format(setting))
 
     # verify z_dim
-    if z_dim not in ('cum_roi', 'daily_VSS', 'annual_roi'):
+    if z_dim not in ('SPA_c', 'daily_VSS', 'annual_roi'):
         raise ValueError('unknown z_dim:{}'.format(z_dim))
 
     # parameters
@@ -395,6 +395,7 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
                 mean = z_values.mean()
                 Zs[rdx, cdx] = float(mean) * 100.
 
+
         # print(Zs)
         lower, high = np.floor(np.min(Zs)), np.ceil(np.max(Zs))
         print(group_name, " z_range:", lower, high)
@@ -414,7 +415,11 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
             cm_norm = mpl.colors.Normalize(
                 vmin=lower - 0.1, vmax=high + 0.1, clip=False)
             color_range = np.arange(lower, high, 0.4)
-
+        elif z_dim == 'SPA_c':
+            print('z_dim:', z_dim)
+            Zs[Zs > 10] = 11
+            cm_norm = mpl.colors.Normalize(vmin=0, vmax=12, clip=False)
+            color_range = np.arange(0, 12)
 
         # contour, projecting on z
         cset = ax.contourf(Xs, Ys, Zs,
@@ -422,32 +427,25 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
                            norm=cm_norm,
                            levels=color_range)
         # color bar
-        cbar = fig.colorbar(cset, ax=ax)
-        cbar.ax.tick_params(labelsize=12)
+
         if z_dim == 'annual_roi':
-            cbar_label_name = "Annual returns (%)"
+            cbar = fig.colorbar(cset, ax=ax)
+            cbar.ax.tick_params(labelsize=12)
+            cbar_label_name = "Annual return (%)"
         elif z_dim == 'daily_VSS':
+            cbar = fig.colorbar(cset, ax=ax)
+            cbar.ax.tick_params(labelsize=12)
             cbar_label_name = "Daily VSS (%)"
+        elif z_dim == 'SPA_c':
+            ticks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ">10"]
+            cbar = fig.colorbar(cset, ax=ax, ticks=np.arange(12))
+            cbar.ax.tick_params(labelsize=12)
+            cbar_label_name = "SPA (%)"
+            cbar.set_ticklabels(ticks)
 
         cbar.set_label(cbar_label_name, labelpad=1, size=18)
 
-        # share color bar, rect [left, bottom, width, height]
-    # cbar_ax = fig.add_axes([0.92, 0.125, 0.015, 0.75])
-    # # print fig.get_axes()
-    # cbar = fig.colorbar(cset, ax=fig.get_axes(), cax=cbar_ax,
-    #                     ticks=color_range)
-    #
-    # cbar.ax.tick_params(labelsize=12)
-    # if z_dim == "cum_roi":
-    #     cbar_label_name = "Average cumulative returns (%)"
-    # elif z_dim == "daily_VSS":
-    #     cbar_label_name = "Average daily VSS (%)"
-    # elif z_dim == 'annual_roi':
-    #     cbar_label_name = "Average annual returns (%)"
-    #
-    # cbar.set_label(cbar_label_name, labelpad=1, size=20)
-
-    fig_path = os.path.join(pp.TMP_DIR, "{}_{}.pdf".format(mkt, name))
+    fig_path = os.path.join(pp.TMP_DIR, "{}_{}.pdf".format(mkt, z_dim))
     plt.savefig(fig_path, dpi=240, format='pdf')
     plt.show()
 

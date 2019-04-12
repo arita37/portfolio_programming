@@ -441,9 +441,10 @@ def aggregating_reports(exp_name, setting, yearly=False):
             for attr in additionals:
                 if attr == 'annual_roi':
                     val = np.power(report['cum_roi'] + 1, 1. / year_count) - 1
-                elif attr == 'VSS':
+                elif attr == 'daily_VSS':
                     risks = report['estimated_risk_xarr']
-                    val = float(risks.loc[:, 'VSS'].mean()) 
+                    val = float(risks.loc[:, 'VSS'].mean() / report[
+                        'initial_wealth'])
                 elif attr == 'SPA_c':
                     dec_xarr = report['decision_xarr']
                     wealth_arr = dec_xarr.loc[:, :, 'wealth'].sum(
@@ -452,7 +453,7 @@ def aggregating_reports(exp_name, setting, yearly=False):
                     rois[0] = 0
                     # print(rois.values)
                     spa_value = 0
-                    for _ in range(5):
+                    for _ in range(3):
                         spa = arch_comp.SPA(rois.values,
                                             np.zeros(rois.size),
                                             reps=1000)

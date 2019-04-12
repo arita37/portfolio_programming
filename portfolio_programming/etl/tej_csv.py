@@ -913,100 +913,166 @@ def run_plot_group_line_chart():
     plt.show()
 
 
-def run_plot_grouped_bar_chart():
+def run_plot_grouped_bar_chart(mkt='TW'):
     """
     TAIEX, DJIA, TWG1 ~ TWG6, USG1 ~ USG6 group
     """
     import matplotlib.pyplot as plt
+    # figure size in inches
+    fig = plt.figure(figsize=(16, 12), facecolor='white')
+
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['font.serif'] = (['Times New Roman'] +
                                   plt.rcParams['font.serif'])
-    group_names = pp.GROUP_SYMBOLS.keys()
+    group_names = ["{}G{}".format(mkt, idx) for idx in range(1, 7)]
 
-    for group_name in group_names:
+    years = 2018-2005+1
+    'rgbkymc'  # red, green, blue, black, etc.
+    for gdx, group_name in enumerate(group_names):
+        rois = []
+        colors = []
+        ax = fig.add_subplot(2, 3, gdx + 1)
         # bah
         bah_name = "report_BAH_{}_20050103_20181228.pkl".format(group_name)
         bah_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR, bah_name)
         bah_rp = pd.read_pickle(bah_file)
+        print('{} {:.2%}'.format(group_name, bah_rp['cum_roi']))
+        rois.append(("BAH", np.power(bah_rp['cum_roi']+1, 1/years)-1) )
+        colors.append('r')
 
         # eg
+        eg_etas = ["0.01", "0.1", "1.0"]
         eg_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
             "report_EG_{}_{}_20050103_20181228.pkl".format(
-            eta, group_name)) for eta in ["0.01", "0.1", "1.0"]]
-        for eg_file in eg_files:
-            eg_rp = pd.read_picke(eg_file)
+            eta, group_name)) for eta in  eg_etas]
+        for idx, eg_file in enumerate(eg_files):
+            eg_rp = pd.read_pickle(eg_file)
+            print('{} {:.2%}'.format(eg_file, eg_rp['cum_roi']))
+            rois.append(("EG{:.2f}".format(
+                float(eg_etas[idx])), np.power(eg_rp['cum_roi']+1, 1/years)-1))
+            colors.append('g')
 
-        # nofee_eg
-        nfeg_files = [os.path.join(pp.DATA_DIR,
-            'report_weight_portfolio_nofee',
-            "report_EG_{}_{}_20050103_20181228.pkl".format(
-            eta, group_name)) for eta in [0.01, 0.1, 1]]
-        for nfeg_file in nfeg_files:
-            nfeg_rp = pd.read_picke(nfeg_file)
+        # # nofee_eg
+        # nfeg_files = [os.path.join(pp.DATA_DIR,
+        #     'report_weight_portfolio_nofee',
+        #     "report_EG_{:.2f}_{}_20050103_20181228.pkl".format(
+        #     eta, group_name)) for eta in [0.01, 0.1, 1]]
+        # for idx, nfeg_file in enumerate(nfeg_files):
+        #     nfeg_rp = pd.read_pickle(nfeg_file)
+        #     print('{} {:.2%}'.format(eg_file, nfeg_rp['cum_roi']))
+        #     rois.append(("nf-EG{:.2f}".format(
+        #         float(eg_etas[idx])), nfeg_rp['cum_roi']))
+        #     colors.append('g')
 
         # exp
         exp_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
             "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
             eta, group_name)) for eta in [0.01, 0.1, 1]]
-        for exp_file in exp_files:
-            exp_rp = pd.read_picke(exp_file)
+        for idx, exp_file in enumerate(exp_files):
+            exp_rp = pd.read_pickle(exp_file)
+            print('{} {:.2%}'.format(exp_file, exp_rp['cum_roi']))
+            rois.append(("EXP{:.2f}".format(
+                float(eg_etas[idx])), np.power(exp_rp['cum_roi']+1, 1/years)-1))
+            colors.append('b')
 
-        # nofee_exp
-         nfexp_files = [os.path.join(pp.DATA_DIR,
-           'report_weight_portfolio_nofee',
-           "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
-            eta, group_name)) for eta in [0.01, 0.1, 1]]
-        for nfexp_file in nfexp_files:
-            nfexp_rp = pd.read_picke(nfexp_file)
+        # # nofee_exp
+        # nfexp_files = [os.path.join(pp.DATA_DIR,
+        #    'report_weight_portfolio_nofee',
+        #    "report_Exp_{:.2f}_{}_20050103_20181228.pkl".format(
+        #     eta, group_name)) for eta in [0.01, 0.1, 1]]
+        # for idx, nfexp_file in enumerate(nfexp_files):
+        #     nfexp_rp = pd.read_pickle(nfexp_file)
+        #     print('{} {:.2%}'.format(nfexp_file, nfexp_rp['cum_roi']))
+        #     rois.append(("nf-EXP{:.2f}".format(
+        #         float(eg_etas[idx])), nfexp_rp['cum_roi']))
+        #     colors.append('b')
 
         # poly
+        poly_params = [2, 3, 4]
         pol_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
             "report_Poly_{:.2f}_{}_20050103_20181228.pkl".format(
             eta, group_name)) for eta in [2, 3, 4]]
-        for pol_file in pol_files:
-            pol_rp = pd.read_picke(pol_file)
+        for idx, pol_file in enumerate(pol_files):
+            pol_rp = pd.read_pickle(pol_file)
+            print('{} {:.2%}'.format(pol_file, pol_rp['cum_roi']))
+            rois.append(("POL{}".format(
+                float(poly_params[idx])), np.power(pol_rp['cum_roi']+1,
+                                                   1/years)-1))
+            colors.append('k')
 
-        # nofee_poly
-        nfpol_files = [os.path.join(pp.DATA_DIR,
-            'report_weight_portfolio_nofee',
-            "report_Poly_{:.2f}_{}_20050103_20181228.pkl".format(
-            eta, group_name)) for eta in [2, 3, 4]]
-        for nfpol_file in nfpol_files:
-            nfpol_rp = pd.read_picke(nfpol_file)
+        # # nofee_poly
+        # nfpol_files = [os.path.join(pp.DATA_DIR,
+        #     'report_weight_portfolio_nofee',
+        #     "report_Poly_{:.2f}_{}_20050103_20181228.pkl".format(
+        #     eta, group_name)) for eta in [2, 3, 4]]
+        # for nfpol_file in nfpol_files:
+        #     nfpol_rp = pd.read_pickle(nfpol_file)
+        #     print('{} {:.2%}'.format(nfpol_file, nfpol_rp['cum_roi']))
+        #     rois.append(("nf-POL{}".format(
+        #         float(poly_params[idx])), nfpol_rp['cum_roi']))
+        #     colors.append('k')
 
         # b1exp
         b1exp_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
             "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(
               eta, group_name)) for eta in [0.01, 0.1, 1]]
-        for b1exp_file in b1exp_files:
-            b1exp_rp = pd.read_picke(b1exp_file)
+        for idx, b1exp_file in enumerate(b1exp_files):
+            b1exp_rp = pd.read_pickle(b1exp_file)
+            print('{} {:.2%}'.format(b1exp_file, b1exp_rp['cum_roi']))
+            rois.append(("B1EXP{}".format(
+                float(eg_etas[idx])),  np.power(b1exp_rp['cum_roi']+1,
+                                                1/years)-1))
+            colors.append('m')
 
-        # nofee_b1exp
-        nfb1exp_files = [os.path.join(pp.DATA_DIR,
-            'report_weight_portfolio_nofee',
-            "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(
-            eta, group_name)) for eta in [0.01, 0.1, 1]]
-        for nfb1exp_file in nfb1exp_files:
-            nfb1exp_rp = pd.read_picke(nfb1exp_file)
+        # # nofee_b1exp
+        # nfb1exp_files = [os.path.join(pp.DATA_DIR,
+        #     'report_weight_portfolio_nofee',
+        #     "report_NIRExp_{:.2f}_{}_20050103_20181228.pkl".format(
+        #     eta, group_name)) for eta in [0.01, 0.1, 1]]
+        # for idx, nfb1exp_file in enumerate(nfb1exp_files):
+        #     nfb1exp_rp = pd.read_pickle(nfb1exp_file)
+        #     print('{} {:.2%}'.format(eg_file, nfb1exp_rp['cum_roi']))
+        #     rois.append(("nf-B1EXP{}".format(
+        #         float(eg_etas[idx])), nfb1exp_rp['cum_roi']))
+        #     colors.append('m')
 
         # b1pol
         b1pol_files = [os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR,
             "report_NIRPoly_{:.2f}_{}_20050103_20181228.pkl".format(
             eta, group_name)) for eta in [2, 3, 4]]
-        for b1pol_file in b1pol_files:
-            b1pol_rp = pd.read_picke(b1pol_file)
+        for idx, b1pol_file in enumerate(b1pol_files):
+            b1pol_rp = pd.read_pickle(b1pol_file)
+            print('{} {:.2%}'.format(b1pol_file, b1pol_rp['cum_roi']))
+            rois.append(("B1POL{}".format(
+                float(poly_params[idx])),np.power(b1pol_rp['cum_roi']+1,
+                                                  1/years)-1))
+            colors.append('y')
 
-        # nofee_b1pol
-        nfb1pol_files = [os.path.join(pp.DATA_DIR,
-            'report_weight_portfolio_nofee',
-            "report_NIRPoly_{:.2f}_{}_20050103_20181228.pkl".format(
-          eta, group_name)) for eta in [2, 3, 4]]
-        for nfb1pol_file in nfb1pol_files:
-            nfb1pol_rp = pd.read_picke(nfb1pol_file)
+        # # nofee_b1pol
+        # nfb1pol_files = [os.path.join(pp.DATA_DIR,
+        #     'report_weight_portfolio_nofee',
+        #     "report_NIRPoly_{:.2f}_{}_20050103_20181228.pkl".format(
+        #   eta, group_name)) for eta in [2, 3, 4]]
+        # for idx, nfb1pol_file in enumerate(nfb1pol_files):
+        #     nfb1pol_rp = pd.read_pickle(nfb1pol_file)
+        #     print('{} {:.2%}'.format(nfb1pol_file, nfb1pol_rp['cum_roi']))
+        #     rois.append(("nf-B1POL{}".format(
+        #         float(poly_params[idx])), nfb1pol_rp['cum_roi']))
+        #     colors.append('y')
 
         # spsp
-
         # nr_spsp
+        # plot
+        ax.set_title(group_name, y=1.02, fontsize=18)
+        # if group_name in ('TWG1', 'TWG4', 'USG1', 'USG4'):
+        ax.set_ylabel('Annual return (%)', fontsize=16, labelpad=-2)
+        names, values = zip(*rois)
+        pct_values = [v*100 for v in values]
+        ax.bar(names, pct_values, color="".join(colors))
+        ax.set_xticklabels(names, rotation='vertical')
+
+    fig.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     import argparse
@@ -1027,6 +1093,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--plot",  default=False, action="store_true"
     )
+    parser.add_argument(
+        "--plotbar", default=False, action="store_true"
+    )
 
     args = parser.parse_args()
     print("current experiment name: {}".format(pp.EXP_NAME))
@@ -1038,3 +1107,5 @@ if __name__ == "__main__":
         market_index_statistics()
     elif args.plot:
         run_plot_group_line_chart()
+    elif args.plotbar:
+        run_plot_grouped_bar_chart('US')
