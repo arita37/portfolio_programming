@@ -373,9 +373,9 @@ def aggregating_reports(exp_name, setting, yearly=False):
 
         intervals = ["{}_{}".format(s.strftime("%Y%m%d"), e.strftime("%Y%m%d"))
                      for s, e in years]
-        set_indices = [1, 2, 3]
+        set_indices = [1, ]
         group_names = list(pp.GROUP_SYMBOLS.keys())
-        max_portfolio_sizes = [5,]
+        max_portfolio_sizes = [5, ]
         window_sizes = range(50, 240 + 10, 10)
         n_scenarios = [1000, ]
         alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
@@ -443,7 +443,7 @@ def aggregating_reports(exp_name, setting, yearly=False):
                     val = np.power(report['cum_roi'] + 1, 1. / year_count) - 1
                 elif attr == 'VSS':
                     risks = report['estimated_risk_xarr']
-                    val = float(risks.loc[:, 'VSS'].mean()) / 1e6
+                    val = float(risks.loc[:, 'VSS'].mean()) 
                 elif attr == 'SPA_c':
                     dec_xarr = report['decision_xarr']
                     wealth_arr = dec_xarr.loc[:, :, 'wealth'].sum(

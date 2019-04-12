@@ -188,6 +188,7 @@ def dissertation_plot_2d_contour_by_group(setting, z_dim="annual_roi"):
     """
     The  2 x 6 contour diagrams
     contour: x-axis: alpha, y-axis: rolling window size of a group
+    common bar
     """
 
     # verify setting
@@ -312,6 +313,143 @@ def dissertation_plot_2d_contour_by_group(setting, z_dim="annual_roi"):
     plt.show()
 
 
+def dissertation_plot_contour_by_group_individual_bar(setting,
+                                                      z_dim="annual_roi",
+                                                      mkt='TW'):
+    # verify setting
+    if setting not in ("compact", "general"):
+        raise ValueError("unknown setting: {}".format(setting))
+
+    # verify z_dim
+    if z_dim not in ('cum_roi', 'daily_VSS', 'annual_roi'):
+        raise ValueError('unknown z_dim:{}'.format(z_dim))
+
+    # parameters
+    start_date, end_date = dt.date(2005, 1, 3), dt.date(2018, 12, 28)
+    interval = "{}_{}".format(start_date.strftime("%Y%m%d"),
+                              end_date.strftime("%Y%m%d"))
+
+    max_portfolio_sizes = (5,)
+    window_sizes = range(50, 240 + 10, 10)
+    # alpha
+    alpha_pcts = [v for v in range(50, 100, 5)]
+    # alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
+    set_indices = [1, ]
+    # set_indices = [1, 2, 3]
+
+    name = "report_SPSP_CVaR_whole_dissertation_{}_{}_{}.nc".format(
+        setting, start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d"))
+
+    # read report file
+    xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR, name))
+    print(xarr)
+
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    # set global font
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = (['Times New Roman'] +
+                                  plt.rcParams['font.serif'])
+
+    # figure size in inches
+    fig = plt.figure(figsize=(16, 12), facecolor='white')
+
+    # alpha
+    xlim = (50, 95)
+    # rolling window size
+    ylim = (50, 240)
+
+    group_names = ['{}G{}'.format(mkt, idx + 1) for idx in range(6)]
+    for gdx, group_name in enumerate(group_names):
+        # x-axis, alpha, y-axis:  window_sizes
+        ax = fig.add_subplot(2, 3, gdx + 1, xlim=xlim, ylim=ylim)
+        ax.set_title(group_name, y=1.02, fontsize=18)
+
+        # labelpad - number of points between the axis and its label
+        ax.set_xlabel(r'$\alpha$', fontsize=14, labelpad=-2)
+        ax.set_ylabel(r'$h$', fontsize=14, labelpad=-2)
+        ax.tick_params(labelsize=10, pad=1)
+        ax.set_xticks(alpha_pcts)
+        ax.set_xticklabels(alpha_pcts, fontsize=10)
+        ax.set_yticks(window_sizes)
+        ax.set_yticklabels(window_sizes, fontsize=10)
+
+        # X: alpha_pcts, Y: window size
+        Xs, Ys = np.meshgrid(alpha_pcts, window_sizes)
+        Zs = np.zeros_like(Xs, dtype=np.float)
+        n_row, n_col = Xs.shape
+
+        # get z-value
+        for rdx in range(n_row):
+            for cdx in range(n_col):
+                alpha, win_size = Xs[rdx, cdx], Ys[rdx, cdx]
+                z_values = xarr.loc[
+                    interval,
+                    group_name,
+                    set_indices,  # all scenarios
+                    5,
+                    win_size,
+                    "{:.2f}".format(alpha / 100.),
+                    z_dim
+                ]
+                mean = z_values.mean()
+                Zs[rdx, cdx] = float(mean) * 100.
+
+        # print(Zs)
+        lower, high = np.floor(np.min(Zs)), np.ceil(np.max(Zs))
+        print(group_name, " z_range:", lower, high)
+        if z_dim == 'annual_roi':
+            for _ in range(4):
+                if (lower * 10) % 4:
+                    lower -= 0.1
+            for _ in range(4):
+                if (high * 10) % 4:
+                    high += 0.1
+            print(group_name, "fixed z_range:", lower, high)
+            cm_norm = mpl.colors.Normalize(
+                vmin=lower - 0.1, vmax=high + 0.1, clip=False)
+            color_range = np.arange(lower, high, 0.4)
+        elif z_dim == 'daily_VSS':
+            print('z_dim:', z_dim)
+            cm_norm = mpl.colors.Normalize(
+                vmin=lower - 0.1, vmax=high + 0.1, clip=False)
+            color_range = np.arange(lower, high, 0.4)
+
+
+        # contour, projecting on z
+        cset = ax.contourf(Xs, Ys, Zs,
+                           cmap=plt.cm.coolwarm,
+                           norm=cm_norm,
+                           levels=color_range)
+        # color bar
+        cbar = fig.colorbar(cset, ax=ax)
+        cbar.ax.tick_params(labelsize=12)
+        if z_dim == 'annual_roi':
+            cbar_label_name = "Annual returns (%)"
+        elif z_dim == 'daily_VSS':
+            cbar_label_name = "Daily VSS (%)"
+
+        cbar.set_label(cbar_label_name, labelpad=1, size=18)
+
+        # share color bar, rect [left, bottom, width, height]
+    # cbar_ax = fig.add_axes([0.92, 0.125, 0.015, 0.75])
+    # # print fig.get_axes()
+    # cbar = fig.colorbar(cset, ax=fig.get_axes(), cax=cbar_ax,
+    #                     ticks=color_range)
+    #
+    # cbar.ax.tick_params(labelsize=12)
+    # if z_dim == "cum_roi":
+    #     cbar_label_name = "Average cumulative returns (%)"
+    # elif z_dim == "daily_VSS":
+    #     cbar_label_name = "Average daily VSS (%)"
+    # elif z_dim == 'annual_roi':
+    #     cbar_label_name = "Average annual returns (%)"
+    #
+    # cbar.set_label(cbar_label_name, labelpad=1, size=20)
+
+    fig_path = os.path.join(pp.TMP_DIR, "{}_{}.pdf".format(mkt, name))
+    plt.savefig(fig_path, dpi=240, format='pdf')
+    plt.show()
 
 def plot_yearly_2d_contour_by_alpha(setting, z_dim="cum_roi"):
     # verify setting
@@ -617,7 +755,9 @@ if __name__ == '__main__':
         sys.exit()
 
     if args.plot:
-        dissertation_plot_2d_contour_by_group("compact", z_dim="annual_roi")
+        # dissertation_plot_2d_contour_by_group("compact", z_dim="annual_roi")
+        dissertation_plot_contour_by_group_individual_bar(
+            "compact", z_dim="daily_VSS", mkt='TW')
         sys.exit()
 
     if not args.yearly:
