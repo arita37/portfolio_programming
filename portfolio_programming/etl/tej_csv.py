@@ -916,6 +916,7 @@ def run_plot_group_line_chart():
 def run_plot_grouped_bar_chart(mkt='TW'):
     """
     TAIEX, DJIA, TWG1 ~ TWG6, USG1 ~ USG6 group
+    https://stackoverflow.com/questions/22408237/named-colors-in-matplotlib
     """
     import matplotlib.pyplot as plt
     # figure size in inches
@@ -944,7 +945,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         print('{} {:.2%}'.format(group_name, bah_rp['cum_roi']))
         rois.append(("BAH", np.power(bah_rp['cum_roi']+1, 1/years)-1,
                     bah_rp['daily_std_roi']))
-        colors.append('r')
+        colors.append('chocolate')
 
         # eg
         eg_etas = ["0.01", "0.1", "1.0"]
@@ -958,7 +959,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                 float(eg_etas[idx])), np.power(eg_rp['cum_roi']+1, 1/years)-1,
                eg_rp['daily_std_roi'])
             )
-            colors.append('g')
+            colors.append('green')
 
         # # nofee_eg
         # nfeg_files = [os.path.join(pp.DATA_DIR,
@@ -983,7 +984,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                 float(eg_etas[idx])), np.power(exp_rp['cum_roi']+1,
                                                1/years)-1,
             exp_rp['daily_std_roi']))
-            colors.append('b')
+            colors.append('olive')
 
         # # nofee_exp
         # nfexp_files = [os.path.join(pp.DATA_DIR,
@@ -1009,7 +1010,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                 float(poly_params[idx])), np.power(pol_rp['cum_roi']+1,
                                                    1/years)-1,
             pol_rp['daily_std_roi']))
-            colors.append('k')
+            colors.append('blue')
 
         # # nofee_poly
         # nfpol_files = [os.path.join(pp.DATA_DIR,
@@ -1034,7 +1035,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                 float(eg_etas[idx])),  np.power(b1exp_rp['cum_roi']+1,
                                                 1/years)-1,
             b1exp_rp['daily_std_roi']))
-            colors.append('m')
+            colors.append('darkolivegreen')
 
         # # nofee_b1exp
         # nfb1exp_files = [os.path.join(pp.DATA_DIR,
@@ -1059,7 +1060,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                 float(poly_params[idx])),np.power(b1pol_rp['cum_roi']+1,
                                                   1/years)-1,
             b1pol_rp['daily_std_roi']))
-            colors.append('y')
+            colors.append('navy')
 
         # # nofee_b1pol
         # nfb1pol_files = [os.path.join(pp.DATA_DIR,
@@ -1084,7 +1085,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         # print(std)
         rois.append( ("SPSP-({}, {:.0%})".format(
             int(h), float(alpha)), float(spsp.values), float(std)))
-        colors.append('r')
+        colors.append('red')
 
         # nr_spsp
 
@@ -1096,18 +1097,34 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         ax.set_ylabel('Annual return (%)', fontsize=16, labelpad=-2)
         names, values, stds = zip(*rois)
         pct_values = [v*100 for v in values]
-        ax.bar(names, pct_values, color="".join(colors))
+        print(pct_values)
+        ax.bar(names, pct_values, color=colors)
         ax.set_xticklabels(names, rotation='vertical')
+        val = float(spsp.values)*100
+        ax.axhline(val, color="red", linestyle='--')
+
+        # ax.text(0.95, val, val, va='center', ha="left",
+        #         bbox=dict(facecolor="w", alpha=0.5),
+        #         transform=ax.get_yaxis_transform())
 
         ax2 = fig2.add_subplot(2, 3, gdx + 1)
         ax2.set_title(group_name, y=1.02, fontsize=18)
-        ax2.set_ylabel('Daily Standard deviation (%)', fontsize=16, labelpad=-2)
+        ax2.set_ylabel('Daily Standard deviation of return (%)',
+                       fontsize=16, labelpad=-2)
         pct_stds = [v* 100 for v in stds]
-        ax2.bar(names, pct_stds, color="".join(colors))
+        ax2.bar(names, pct_stds, color=colors)
         ax2.set_xticklabels(names, rotation='vertical')
+        ax2.axhline(float(std)*100, color="red", linestyle='--')
 
     fig.tight_layout()
+    img_file = os.path.join(pp.TMP_DIR,
+                            '{}_annual_roi_bar_chart.pdf'.format(mkt))
+    plt.savefig(img_file, format='pdf')
+
     fig2.tight_layout()
+    img_file2 = os.path.join(pp.TMP_DIR,
+                            '{}_daily_std_roi_bar_chart.pdf'.format(mkt))
+    plt.savefig(img_file2, format='pdf')
     plt.show()
 
 if __name__ == "__main__":

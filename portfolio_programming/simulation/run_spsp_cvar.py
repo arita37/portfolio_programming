@@ -334,8 +334,8 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
     # alpha
     alpha_pcts = [v for v in range(50, 100, 5)]
     # alphas = ["{:.2f}".format(v / 100.) for v in range(50, 100, 5)]
-    set_indices = [1, ]
-    # set_indices = [1, 2, 3]
+    # set_indices = [1, ]
+    set_indices = [1, 2, 3]
 
     name = "report_SPSP_CVaR_whole_dissertation_{}_{}_{}.nc".format(
         setting, start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d"))
@@ -393,7 +393,10 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
                     z_dim
                 ]
                 mean = z_values.mean()
-                Zs[rdx, cdx] = float(mean) * 100.
+                if z_dim == 'daily_VSS':
+                    Zs[rdx, cdx] = float(mean) * 1e5
+                else:
+                    Zs[rdx, cdx] = float(mean) * 1e2
 
 
         # print(Zs)
@@ -413,8 +416,8 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
         elif z_dim == 'daily_VSS':
             print('z_dim:', z_dim)
             cm_norm = mpl.colors.Normalize(
-                vmin=lower - 0.1, vmax=high + 0.1, clip=False)
-            color_range = np.arange(lower, high, 0.4)
+                vmin=lower - 0.5, vmax=high + 0.5, clip=False)
+            color_range = np.arange(lower, high)
         elif z_dim == 'SPA_c':
             print('z_dim:', z_dim)
             Zs[Zs > 10] = 11
@@ -435,7 +438,7 @@ def dissertation_plot_contour_by_group_individual_bar(setting,
         elif z_dim == 'daily_VSS':
             cbar = fig.colorbar(cset, ax=ax)
             cbar.ax.tick_params(labelsize=12)
-            cbar_label_name = "Daily VSS (%)"
+            cbar_label_name = r"Daily VSS (10$^{-5}$)"
         elif z_dim == 'SPA_c':
             ticks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ">10"]
             cbar = fig.colorbar(cset, ax=ax, ticks=np.arange(12))
@@ -755,7 +758,7 @@ if __name__ == '__main__':
     if args.plot:
         # dissertation_plot_2d_contour_by_group("compact", z_dim="annual_roi")
         dissertation_plot_contour_by_group_individual_bar(
-            "compact", z_dim="daily_VSS", mkt='TW')
+            "compact", z_dim="daily_VSS", mkt='US')
         sys.exit()
 
     if not args.yearly:

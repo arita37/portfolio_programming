@@ -367,7 +367,8 @@ def get_nr_spsp_cvar_report(regret_type, report_dir=pp.NRSPSPCVaR_DIR):
         for s_date, e_date in years
     ]
 
-    stat_file = os.path.join(pp.TMP_DIR, "nr_spsp_cvar_stat.csv")
+    stat_file = os.path.join(pp.TMP_DIR,
+                             "nr_{}_spsp_cvar_stat.csv".format(regret_type))
     with open(stat_file, "w", newline='') as csv_file:
         fields = [
             "simulation_name",
@@ -410,7 +411,7 @@ def get_nr_spsp_cvar_report(regret_type, report_dir=pp.NRSPSPCVaR_DIR):
                     "end_date": rp['exp_end_date'].strftime("%Y-%m-%d"),
                     "n_data": rp['n_exp_period'],
                     "cum_roi": rp['cum_roi'],
-                    # "annual_roi": rp['annual_roi'],
+                    "annual_roi": np.power(rp['cum_roi']+1, 1/14) - 1,
                     "roi_mu": rp['daily_mean_roi'],
                     "std": rp['daily_std_roi'],
                     "skew": rp['daily_skew_roi'],
@@ -446,6 +447,8 @@ if __name__ == '__main__':
         choices=["dissertation",], help="name of the experiment",
     )
     parser.add_argument("-r", "--regret", type=str, help="regret type")
+    parser.add_argument("--check", default=False, action='store_true',
+                        help="check results")
     parser.add_argument("--nr_strategy", type=str, help="no-regret strategy")
     parser.add_argument("--nr_param", type=float,
                         help="no-regret strategy parameter")
@@ -466,6 +469,11 @@ if __name__ == '__main__':
 
     if args.stat:
         get_nr_spsp_cvar_report(args.regret)
+        sys.exit()
+
+    if args.check:
+        res = checking_existed_spsp_cvar_report('dissertation', args.regret)
+        print(len(res), res)
         sys.exit()
 
     if args.server:
