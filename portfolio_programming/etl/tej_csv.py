@@ -933,7 +933,22 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         'report_SPSP_CVaR_whole_dissertation_compact_20050103_20181228.nc'))
 
     years = 2018-2005+1
-    'rgbkymc'  # red, green, blue, black, etc.
+
+    nr_group_params = {
+        'TWG1': 'h140-200-10_a85-95-5',
+        'TWG2': 'h190-240-10_a55-75-5',
+        'TWG3': 'h60-100-10_a75-90-5',
+        'TWG4': 'h100-140-10_a55-75-5',
+        'TWG5': 'h60-90-10_a50-75-5',
+        'TWG6': 'h200-240-10_a50-70-5',
+        'USG1': 'h200-240-10_a50-65-5',
+        'USG2': 'h170-240-10_a50-70-5',
+        'USG3': 'h170-220-10_a80-95-5',
+        'USG4': 'h60-90-10_a75-90-5',
+        'USG5': 'h80-130-10_a75-90-5',
+        'USG6': 'h180-240-10_a50-70-5'
+    }
+
     for gdx, group_name in enumerate(group_names):
         rois = []
         colors = []
@@ -1088,7 +1103,56 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         colors.append('red')
 
         # nr_spsp
+        exp_spsp_files= [os.path.join(pp.NRSPSPCVaR_DIR,
+            "report_NR_SPSP_CVaR_EXP_{}_{}_{}_"
+            "s1000_sdx1_20050103_20181228.pkl".format(
+            eta, group_name, nr_group_params[group_name]))
+                           for eta in [0.01, ]]
+        for idx, exp_spsp_file in enumerate(exp_spsp_files):
+            exp_spsp = pd.read_pickle(exp_spsp_file)
+            rois.append(("EXP{}-SPSP".format(
+                float(eg_etas[idx])),
+                np.power(exp_spsp['cum_roi'] + 1, 1 / years) - 1,
+                         exp_spsp['daily_std_roi']))
+            colors.append('fuchsia')
 
+        pol_spsp_files = [os.path.join(pp.NRSPSPCVaR_DIR,
+             "report_NR_SPSP_CVaR_Poly_{:.2f}_{}_{}_"
+             "s1000_sdx1_20050103_20181228.pkl".format(
+                         poly, group_name, nr_group_params[group_name]))
+                            for poly in [2, ]]
+        for idx, pol_spsp_file in enumerate(pol_spsp_files):
+            pol_spsp = pd.read_pickle(pol_spsp_file)
+            rois.append(("POL{}-SPSP".format(poly_params[idx]),
+                         np.power(pol_spsp['cum_roi'] + 1, 1 / years) - 1,
+                         pol_spsp['daily_std_roi']))
+            colors.append('orchid')
+
+        # nir_spsp
+        b1exp_spsp_files = [os.path.join(pp.NRSPSPCVaR_DIR,
+               "report_NIR_SPSP_CVaR_EXP_{}_{}_{}_"
+               "s1000_sdx1_20050103_20181228.pkl".format(
+               eta, group_name, nr_group_params[group_name]))
+                          for eta in [0.01, ]]
+        for idx, b1exp_spsp_file in enumerate(b1exp_spsp_files):
+            b1exp_spsp = pd.read_pickle(b1exp_spsp_file)
+            rois.append(("B1EXP{}-SPSP".format(
+                float(eg_etas[idx])),
+                         np.power(b1exp_spsp['cum_roi'] + 1, 1 / years) - 1,
+                         b1exp_spsp['daily_std_roi']))
+            colors.append('pink')
+
+        b1pol_spsp_files = [os.path.join(pp.NRSPSPCVaR_DIR,
+               "report_NIR_SPSP_CVaR_Poly_{:.2f}_{}_{}_"
+               "s1000_sdx1_20050103_20181228.pkl".format(
+               poly, group_name, nr_group_params[group_name]))
+                          for poly in [2, ]]
+        for idx, b1pol_spsp_file in enumerate(b1pol_spsp_files):
+            b1pol_spsp = pd.read_pickle(b1pol_spsp_file)
+            rois.append(("B1POL{}-SPSP".format(poly_params[idx]),
+                         np.power(b1pol_spsp['cum_roi'] + 1, 1 / years) - 1,
+                         b1pol_spsp['daily_std_roi']))
+            colors.append('orchid')
 
         # plot
         ax = fig.add_subplot(2, 3, gdx + 1)
