@@ -1186,6 +1186,11 @@ def run_plot_grouped_bar_chart(mkt='TW'):
     fig2.savefig(img_file2, format='pdf')
     plt.show()
 
+def run_plot_grouped_line_strategy_chart():
+    """
+    BAH, SPSP, NRSPSP charts
+    """
+
 
 if __name__ == "__main__":
     import argparse
