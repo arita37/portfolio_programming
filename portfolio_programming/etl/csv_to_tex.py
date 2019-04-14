@@ -153,6 +153,48 @@ def strategy_to_latex(exp_name, strategy='eg'):
         raise ValueError("unknown exp_name:{}".format(exp_name))
 
 
+
+def spsp_strategy_to_latex(exp_name, strategy='spsp'):
+    if exp_name == 'dissertation':
+
+        #group	ALPHA	rolling_window_size	cum_roi	annual_roi	daily_mean_roi
+        # daily_std_roi	daily_skew_roi	daily_ex-kurt_roi	Sharpe	Sortino_full	SPA_c
+
+        if strategy == 'spsp':
+            csv_tex_files = [
+                [
+                    os.path.join(pp.TMP_DIR, "spsp_best_3.csv"),
+                    os.path.join(pp.TMP_DIR, "spsp_best_3.txt"),
+                ],
+            ]
+
+        line_style = "{:>8} & {:>8} & {:>8.2f} & {:>8.2f} & {:>10.4f} & " \
+                     "{:>6.4f} & {:>6.2f} & {:6.2f} & {:6.2f} & {:6.2f} " \
+                     "& {:>8}  \\\\ \\hline \n"
+
+        for csv_file, tex_file in csv_tex_files:
+            rows = csv.DictReader(open(csv_file))
+            with open(tex_file, 'w') as fout:
+                for row in rows:
+                    print(row)
+                    fout.writelines(line_style.format(
+                        row['group'],
+                        "({}, {:.0f}\\%)".format(row['rolling_window_size'],
+                                              float(row['alpha'] )* 100),
+                        float(row['cum_roi']) * 100,
+                        float(row['annual_roi']) * 100,
+                        float(row['daily_mean_roi']) * 100,
+                        float(row['daily_std_roi']) * 100,
+                        float(row['daily_skew_roi']),
+                        float(row['daily_ex-kurt_roi']),
+                        float(row['Sharpe']) * 100,
+                        float(row['Sortino_full']) * 100,
+                        star_p_value(float(row['SPA_c']) * 100),
+                    ))
+            print("{} complete".format(csv_file))
+    else:
+        raise ValueError("unknown exp_name:{}".format(exp_name))
+
 def star_p_value(p_value):
     if p_value <= 1:
         return "***{:6.2f}".format(p_value)
@@ -167,4 +209,5 @@ def star_p_value(p_value):
 if __name__ == '__main__':
     # symbol_statistics_to_latex('dissertation')
     # market_index_statistics_to_latex('dissertation')
-    strategy_to_latex('dissertation', 'nofee_b1pol')
+    # strategy_to_latex('dissertation', 'nofee_b1pol')
+    spsp_strategy_to_latex('dissertation', strategy='spsp')

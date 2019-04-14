@@ -325,8 +325,8 @@ def get_nr_spsp_cvar_report(regret_type, report_dir=pp.NRSPSPCVaR_DIR):
     elif regret_type == 'internal':
         REPORT_FORMAT = "report_NIR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
         strategy_params = [[s, p] for s in ('EXP',)
-                           for p in (0.01, 0.1, 1)]
-        strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, 3)])
+                           for p in (0.01, )]
+        strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, )])
 
     else:
         raise ValueError('unknown regret type:', regret_type)

@@ -670,7 +670,7 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
             )
 
 
-def get_spsp_best_results(n_param = 5, mkt='TW'):
+def get_spsp_best_results(n_param = 3):
     xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
         'report_SPSP_CVaR_whole_dissertation_compact_20050103_20181228.nc'))
     # (interval: 1, group_name: 12, scenario_set_idx: 3,
@@ -680,15 +680,19 @@ def get_spsp_best_results(n_param = 5, mkt='TW'):
              'daily_skew_roi', 'daily_ex-kurt_roi', 'Sharpe',
              'Sortino_full', 'SPA_c']
 
+    csv_file = os.path.join(pp.TMP_DIR, 'spsp_best_{}.csv'.format(n_param))
     groups = ["{}G{}".format(mkt, idx) for idx in range(1, 7)
               for mkt in ['TW', 'US']]
+    results = []
     for group in groups:
         pnl = xarr.loc[:, group, 1, 5, :, :, attrs].squeeze().to_pandas()
-        csv_file = os.path.join(pp.TMP_DIR,
-                                '{}_spsp_best_{}.csv'.format(group, n_param))
         df = pnl.swapaxes('items', 'minor_axis').to_frame()
-        df.sort_values(by=['cum_roi',],
-                       ascending=False)[:n_param].to_csv(csv_file)
+        results.append(group)
+        results.append(df.sort_values(by=['cum_roi',],
+                       ascending=False)[:n_param].to_csv())
+
+    with open(csv_file, 'w') as fout:
+            fout.writelines(results)
 
 
 
@@ -775,7 +779,7 @@ if __name__ == '__main__':
             open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
 
     if args.best:
-        get_spsp_best_results(10, 'TW')
+        get_spsp_best_results(3)
         sys.exit()
 
     if args.stat:
