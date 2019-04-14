@@ -921,7 +921,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
     import matplotlib.pyplot as plt
     # figure size in inches
     fig = plt.figure(figsize=(16, 12), facecolor='white')
-    fig2 =  plt.figure(figsize=(16, 12), facecolor='white')
+    fig2 = plt.figure(figsize=(16, 12), facecolor='white')
 
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['font.serif'] = (['Times New Roman'] +
@@ -952,7 +952,6 @@ def run_plot_grouped_bar_chart(mkt='TW'):
     for gdx, group_name in enumerate(group_names):
         rois = []
         colors = []
-        stds = []
         # bah
         bah_name = "report_BAH_{}_20050103_20181228.pkl".format(group_name)
         bah_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR, bah_name)
@@ -995,10 +994,10 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         for idx, exp_file in enumerate(exp_files):
             exp_rp = pd.read_pickle(exp_file)
             print('{} {:.2%}'.format(exp_file, exp_rp['cum_roi']))
-            rois.append(("EXP{:.2f}".format(
-                float(eg_etas[idx])), np.power(exp_rp['cum_roi']+1,
-                                               1/years)-1,
-            exp_rp['daily_std_roi']))
+            rois.append(("EXP{:.2f}".format(float(eg_etas[idx])),
+                         np.power(exp_rp['cum_roi']+1, 1/years)-1,
+                         exp_rp['daily_std_roi'])
+                        )
             colors.append('olive')
 
         # # nofee_exp
@@ -1021,10 +1020,9 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         for idx, pol_file in enumerate(pol_files):
             pol_rp = pd.read_pickle(pol_file)
             print('{} {:.2%}'.format(pol_file, pol_rp['cum_roi']))
-            rois.append(("POL{}".format(
-                float(poly_params[idx])), np.power(pol_rp['cum_roi']+1,
-                                                   1/years)-1,
-            pol_rp['daily_std_roi']))
+            rois.append(("POL{:.1f}".format(float(poly_params[idx])),
+                         np.power(pol_rp['cum_roi']+1, 1/years)-1,
+                         pol_rp['daily_std_roi']))
             colors.append('blue')
 
         # # nofee_poly
@@ -1046,10 +1044,9 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         for idx, b1exp_file in enumerate(b1exp_files):
             b1exp_rp = pd.read_pickle(b1exp_file)
             print('{} {:.2%}'.format(b1exp_file, b1exp_rp['cum_roi']))
-            rois.append(("B1EXP{}".format(
-                float(eg_etas[idx])),  np.power(b1exp_rp['cum_roi']+1,
-                                                1/years)-1,
-            b1exp_rp['daily_std_roi']))
+            rois.append(("B1EXP{}".format(float(eg_etas[idx])),
+                         np.power(b1exp_rp['cum_roi']+1, 1/years)-1,
+                        b1exp_rp['daily_std_roi']))
             colors.append('darkolivegreen')
 
         # # nofee_b1exp
@@ -1071,10 +1068,9 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         for idx, b1pol_file in enumerate(b1pol_files):
             b1pol_rp = pd.read_pickle(b1pol_file)
             print('{} {:.2%}'.format(b1pol_file, b1pol_rp['cum_roi']))
-            rois.append(("B1POL{}".format(
-                float(poly_params[idx])),np.power(b1pol_rp['cum_roi']+1,
-                                                  1/years)-1,
-            b1pol_rp['daily_std_roi']))
+            rois.append(("B1POL{:.1f}".format(float(poly_params[idx])),
+                         np.power(b1pol_rp['cum_roi']+1, 1/years)-1,
+                        b1pol_rp['daily_std_roi']))
             colors.append('navy')
 
         # # nofee_b1pol
@@ -1098,8 +1094,8 @@ def run_plot_grouped_bar_chart(mkt='TW'):
         # print(spsp, h, alpha)
         std = spsp_rp.loc[:, group_name, 1, 5, h, alpha, 'daily_std_roi']
         # print(std)
-        rois.append( ("SPSP-({}, {:.0%})".format(
-            int(h), float(alpha)), float(spsp.values), float(std)))
+        rois.append( ("SPSP-({}, {:.0%})".format(int(h), float(alpha)),
+                      float(spsp.values), float(std)))
         colors.append('red')
 
         # nr_spsp
@@ -1110,8 +1106,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                            for eta in [0.01, ]]
         for idx, exp_spsp_file in enumerate(exp_spsp_files):
             exp_spsp = pd.read_pickle(exp_spsp_file)
-            rois.append(("EXP{}-SPSP".format(
-                float(eg_etas[idx])),
+            rois.append(("EXP{}-SPSP".format(float(eg_etas[idx])),
                 np.power(exp_spsp['cum_roi'] + 1, 1 / years) - 1,
                          exp_spsp['daily_std_roi']))
             colors.append('fuchsia')
@@ -1123,7 +1118,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                             for poly in [2, ]]
         for idx, pol_spsp_file in enumerate(pol_spsp_files):
             pol_spsp = pd.read_pickle(pol_spsp_file)
-            rois.append(("POL{}-SPSP".format(poly_params[idx]),
+            rois.append(("POL{:.1f}-SPSP".format(poly_params[idx]),
                          np.power(pol_spsp['cum_roi'] + 1, 1 / years) - 1,
                          pol_spsp['daily_std_roi']))
             colors.append('orchid')
@@ -1149,7 +1144,7 @@ def run_plot_grouped_bar_chart(mkt='TW'):
                           for poly in [2, ]]
         for idx, b1pol_spsp_file in enumerate(b1pol_spsp_files):
             b1pol_spsp = pd.read_pickle(b1pol_spsp_file)
-            rois.append(("B1POL{}-SPSP".format(poly_params[idx]),
+            rois.append(("B1POL{:.1f}-SPSP".format(poly_params[idx]),
                          np.power(b1pol_spsp['cum_roi'] + 1, 1 / years) - 1,
                          b1pol_spsp['daily_std_roi']))
             colors.append('orchid')
@@ -1183,13 +1178,14 @@ def run_plot_grouped_bar_chart(mkt='TW'):
     fig.tight_layout()
     img_file = os.path.join(pp.TMP_DIR,
                             '{}_annual_roi_bar_chart.pdf'.format(mkt))
-    plt.savefig(img_file, format='pdf')
+    fig.savefig(img_file, format='pdf')
 
     fig2.tight_layout()
     img_file2 = os.path.join(pp.TMP_DIR,
                             '{}_daily_std_roi_bar_chart.pdf'.format(mkt))
-    plt.savefig(img_file2, format='pdf')
+    fig2.savefig(img_file2, format='pdf')
     plt.show()
+
 
 if __name__ == "__main__":
     import argparse
@@ -1225,4 +1221,4 @@ if __name__ == "__main__":
     elif args.plot:
         run_plot_group_line_chart()
     elif args.plotbar:
-        run_plot_grouped_bar_chart('TW')
+        run_plot_grouped_bar_chart('US')

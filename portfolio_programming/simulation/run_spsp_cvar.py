@@ -670,6 +670,28 @@ def get_spsp_cvar_report(report_dir=pp.DATA_DIR):
             )
 
 
+def get_spsp_best_results(n_param = 5, mkt='TW'):
+    xarr = xr.open_dataarray(os.path.join(pp.DATA_DIR,
+        'report_SPSP_CVaR_whole_dissertation_compact_20050103_20181228.nc'))
+    # (interval: 1, group_name: 12, scenario_set_idx: 3,
+    # max_portfolio_size: 1, rolling_window_size: 20, alpha: 10, attribute: 14)
+    print(xarr)
+    attrs = ['cum_roi','annual_roi', 'daily_mean_roi', 'daily_std_roi',
+             'daily_skew_roi', 'daily_ex-kurt_roi', 'Sharpe',
+             'Sortino_full', 'SPA_c']
+
+    groups = ["{}G{}".format(mkt, idx) for idx in range(1, 7)
+              for mkt in ['TW', 'US']]
+    for group in groups:
+        pnl = xarr.loc[:, group, 1, 5, :, :, attrs].squeeze().to_pandas()
+        csv_file = os.path.join(pp.TMP_DIR,
+                                '{}_spsp_best_{}.csv'.format(group, n_param))
+        df = pnl.swapaxes('items', 'minor_axis').to_frame()
+        df.sort_values(by=['cum_roi',],
+                       ascending=False)[:n_param].to_csv(csv_file)
+
+
+
 if __name__ == '__main__':
 
     logging.basicConfig(
@@ -741,6 +763,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help="SPSP_cVaR experiment plot")
 
+    parser.add_argument("--best", default=False, action='store_true')
     args = parser.parse_args()
 
     print("run_SPSP_CVaR in single mode")
@@ -750,6 +773,10 @@ if __name__ == '__main__':
     else:
         candidate_symbols = json.load(
             open(pp.TAIEX_2005_MKT_CAP_50_SYMBOL_JSON))
+
+    if args.best:
+        get_spsp_best_results(10, 'TW')
+        sys.exit()
 
     if args.stat:
         get_spsp_cvar_report()
