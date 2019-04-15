@@ -1186,11 +1186,116 @@ def run_plot_grouped_bar_chart(mkt='TW'):
     fig2.savefig(img_file2, format='pdf')
     plt.show()
 
+
 def run_plot_grouped_line_strategy_chart():
     """
     BAH, SPSP, NRSPSP charts
     """
+    import matplotlib.pyplot as plt
 
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = (['Times New Roman'] +
+                                  plt.rcParams['font.serif'])
+
+    #best spsp_param
+    spsp_params = {
+        'TWG1': (160, 0.95),
+        'TWG2': (240, 0.55),
+        'TWG3': (90, 0.9),
+        'TWG4': (100, 0.9),
+        'TWG5': (60, 0.65),
+        'TWG6': (240, 0.6),
+        'USG1': (240, 0.5),
+        'USG2': (170, 0.5),
+        'USG3': (210, 0.9),
+        'USG4': (60, 0.6),
+        'USG5': (80, 0.75),
+        'USG6': (240, 0.5)
+    }
+
+    nr_group_params = {
+        'TWG1': 'h140-200-10_a85-95-5',
+        'TWG2': 'h190-240-10_a55-75-5',
+        'TWG3': 'h60-100-10_a75-90-5',
+        'TWG4': 'h100-140-10_a55-75-5',
+        'TWG5': 'h60-90-10_a50-75-5',
+        'TWG6': 'h200-240-10_a50-70-5',
+        'USG1': 'h200-240-10_a50-65-5',
+        'USG2': 'h170-240-10_a50-70-5',
+        'USG3': 'h170-220-10_a80-95-5',
+        'USG4': 'h60-90-10_a75-90-5',
+        'USG5': 'h80-130-10_a75-90-5',
+        'USG6': 'h180-240-10_a50-70-5'
+    }
+
+    for mkt in ['TW', 'US']:
+        group_names = ["{}G{}".format(mkt, idx) for idx in range(1, 7)]
+        # figure size in inches
+        fig = plt.figure(figsize=(16, 12), facecolor='white')
+
+        for gdx, group_name in enumerate(group_names):
+            all_prices = {}
+            # BAH
+            bah_name = "report_BAH_{}_20050103_20181228.pkl".format(group_name)
+            bah_file = os.path.join(pp.WEIGHT_PORTFOLIO_REPORT_DIR, bah_name)
+            bah_rp = pd.read_pickle(bah_file)
+
+            bah_prices = (bah_rp['decision_xarr'].loc[:, :, 'wealth'].sum(
+                axis=1)/bah_rp['initial_wealth'])
+            all_prices['BAH'] = bah_prices
+
+            # best SPSP
+            h, a = spsp_params[group_name]
+            spsp_name = 'report_SPSP_CVaR_compact_{}_Mc5_M5_h{}_' \
+                        's1000_a{:.2f}_sdx1_20050103_20181228.pkl'.format(
+                group_name, h, a)
+            spsp_file = os.path.join(pp.REPORT_DIR, spsp_name)
+            spsp_rp = pd.read_pickle(spsp_file)
+            spsp_prices = (spsp_rp['decision_xarr'].loc[:, :, 'wealth'].sum(
+                axis=1)/spsp_rp['initial_wealth'])
+            all_prices['SPSP-({}, {:.0%})'.format(h, a)] = spsp_prices
+
+            # nr-spsp
+            for s_name in ('EXP_0.01', 'POLY_2.00'):
+                nrspsp_name = 'report_NR_SPSP_CVaR_{}_{}_{}_' \
+                              's1000_sdx1_20050103_20181228.pkl'.format(
+                    s_name, group_name,  nr_group_params[group_name])
+                nirspsp_name = 'report_NIR_SPSP_CVaR_{}_{}_{}_' \
+                               's1000_sdx1_20050103_20181228.pkl'.format(
+                    s_name, group_name,   nr_group_params[group_name])
+                nr_file = os.path.join(pp.NRSPSPCVaR_DIR, nrspsp_name)
+                nir_file = os.path.join(pp.NRSPSPCVaR_DIR, nirspsp_name)
+
+                nr_rp = pd.read_pickle(nr_file)
+                nir_rp = pd.read_pickle(nir_file)
+
+                nr_prices = (nr_rp['portfolio_xarr'].loc[:, 'main', 'wealth']/
+                             nr_rp['initial_wealth'])
+                nir_prices = (nir_rp['portfolio_xarr'].loc[
+                              :, 'main', 'wealth'] /
+                              nir_rp['initial_wealth'])
+                all_prices['{}-SPSP'.format("".join(
+                    s_name.split('_')))] = nr_prices
+                all_prices['B1{}-SPSP'.format(
+                    "".join(s_name.split('_')))] = nir_prices
+
+            prices_df = pd.DataFrame(all_prices,
+                                     index=bah_prices.to_series().index)
+            # print(prices_df)
+            interval_grouper = prices_df.groupby(pd.Grouper(freq="M")).mean()
+            # plot
+            ax = fig.add_subplot(2, 3, gdx + 1)
+            interval_grouper.plot.line(ax=ax, grid=True)
+            ax.set_title(group_name, fontsize=20)
+            ax.set_xlabel('', fontsize=14)
+            ax.set_ylabel("Monthly average portfolio value", fontsize=16)
+            # ax.set_xticklabels(list(range(2005, 2019+1)))
+            ax.set_xlim(dt.date(2004, 12, 20), dt.date(2019, 1, 1))
+        img_file = os.path.join(pp.TMP_DIR,
+                            '{}_wealth_line_chart.pdf'.format(mkt))
+        fig.savefig(img_file, format='pdf')
+
+    plt.show()
 
 if __name__ == "__main__":
     import argparse
@@ -1214,6 +1319,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--plotbar", default=False, action="store_true"
     )
+    parser.add_argument(
+        "--plotwealth", default=False, action="store_true"
+    )
 
     args = parser.parse_args()
     print("current experiment name: {}".format(pp.EXP_NAME))
@@ -1227,3 +1335,5 @@ if __name__ == "__main__":
         run_plot_group_line_chart()
     elif args.plotbar:
         run_plot_grouped_bar_chart('US')
+    elif args.plotwealth:
+        run_plot_grouped_line_strategy_chart()
