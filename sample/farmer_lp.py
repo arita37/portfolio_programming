@@ -4,6 +4,8 @@ Author: Hung-Hsin Chen <chen1116@gmail.com>
 
 """
 
+import cvxpy as cp
+import numpy as np
 from pyomo.environ import (ConcreteModel, Var, NonNegativeReals,
                            Constraint, Objective, SolverFactory, display,
                            minimize)
@@ -74,5 +76,45 @@ def farmer_lp(solver="cplex"):
     print("LP objective: {}".format(-instance.min_cost_objective()))
 
 
+def farmer_cvxpy():
+    plants = ("wheat", "corn", "beet")
+    actions = ("buy", "sell")
+    prices = ("high", "low")
+
+    area = cp.Variable(len(plants), 'area', pos=True)
+    wheat_act = cp.Variable(len(actions), 'wheat', pos=True)
+    corn_act = cp.Variable(len(actions), 'corn', pos=True)
+    beet_price = cp.Variable(len(prices), 'beat', pos=True)
+    constraints = [beet_price <= 6000, ]
+    constraints.append(cp.sum(area) <= 500)
+    constraints.append(2.5 * area[0] + wheat_act[0] -
+                       wheat_act[1] >= 200)
+    constraints.append(3 * area[1] + corn_act[0] -
+                       corn_act[1] >= 240)
+    constraints.append(beet_price[0] + beet_price[1]
+                       <= 20 * area[2])
+
+    grow_cost = cp.sum(np.array([150, 230, 260]) * area)
+    wheat_cost = 238 * wheat_act[0] - 170 * wheat_act[1]
+    corn_cost = 210 * corn_act[0] - 150 * corn_act[1]
+    beet_cost = cp.sum(np.array([36, 10]) * beet_price)
+    prob = cp.Problem(cp.Minimize(grow_cost + wheat_cost + corn_cost -
+                                  beet_cost),
+                      constraints)
+    prob.solve()
+    print(prob.value)
+    print(area.value)
+    print(wheat_act.value)
+    print(corn_act.value)
+    print(beet_price.value)
+
+
 if __name__ == '__main__':
+    from time import time
+
+    t = time()
     farmer_lp()
+    print(time() - t, "secs")
+    t1 = time()
+    farmer_cvxpy()
+    print(time() - t1, "secs")
