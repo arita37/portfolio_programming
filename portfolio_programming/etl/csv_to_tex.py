@@ -195,6 +195,47 @@ def spsp_strategy_to_latex(exp_name, strategy='spsp'):
     else:
         raise ValueError("unknown exp_name:{}".format(exp_name))
 
+def nr_spsp_strategy_to_latex():
+
+    # simulation_name; s_name; group_name; expert_group; n_expert;
+    # n_scenario; sdx; start_date; end_date; n_data;
+    # cum_roi; annual_roi; roi_mu; std; skew; ex_kurt;
+    # Sharpe; Sortino_full; Sortino_partial; SPA_c
+
+    csv_tex_files = [
+        [
+            os.path.join(pp.TMP_DIR, "nr_spsp_cvar_stat.csv"),
+            os.path.join(pp.TMP_DIR, "nr_spsp_cvar_stat.txt"),
+        ],
+    ]
+
+    line_style = "{:>8} & {:>16} & {:>8.2f} & " \
+                 "{:>8.2f} & {:>10.4f} & " \
+                 "{:>6.4f} & {:>6.2f} & {:6.2f} & {:6.2f} & {:6.2f} " \
+                 "& {:>8}  \\\\ \\hline \n"
+
+    for csv_file, tex_file in csv_tex_files:
+        rows = csv.DictReader(open(csv_file))
+        with open(tex_file, 'w') as fout:
+            for row in rows:
+                print(row)
+                fout.writelines(line_style.format(
+                    row['group_name'],
+                    # ", ".join(row['expert_group'].split('_')),
+                    row['s_name'],
+                    # row['n_expert'],
+                    float(row['cum_roi']) * 100,
+                    float(row['annual_roi']) * 100,
+                    float(row['roi_mu']) * 100,
+                    float(row['std']) * 100,
+                    float(row['skew']),
+                    float(row['ex_kurt']),
+                    float(row['Sharpe']) * 100,
+                    float(row['Sortino_full']) * 100,
+                    star_p_value(float(row['SPA_c']) * 100),
+                ))
+        print("{} complete".format(csv_file))
+
 def star_p_value(p_value):
     if p_value <= 1:
         return "***{:6.2f}".format(p_value)
@@ -210,4 +251,5 @@ if __name__ == '__main__':
     # symbol_statistics_to_latex('dissertation')
     # market_index_statistics_to_latex('dissertation')
     # strategy_to_latex('dissertation', 'nofee_b1pol')
-    spsp_strategy_to_latex('dissertation', strategy='spsp')
+    # spsp_strategy_to_latex('dissertation', strategy='spsp')
+    nr_spsp_strategy_to_latex()

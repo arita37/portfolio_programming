@@ -311,25 +311,10 @@ def run_NR_SPSP_CVaR(exp_name, regret_type,
     instance.run()
 
 
-def get_nr_spsp_cvar_report(regret_type, report_dir=pp.NRSPSPCVaR_DIR):
+def get_nr_spsp_cvar_report(report_dir=pp.NRSPSPCVaR_DIR):
     import csv
     import pandas as pd
-
-    if regret_type == 'external':
-        REPORT_FORMAT = "report_NR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
-
-        strategy_params = [[s, p] for s in ('EG', 'EXP')
-                       for p in (0.01, 0.1, 1)]
-        strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, 3)])
-
-    elif regret_type == 'internal':
-        REPORT_FORMAT = "report_NIR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
-        strategy_params = [[s, p] for s in ('EXP',)
-                           for p in (0.01, )]
-        strategy_params.extend([[s, p] for s in ('POLY',) for p in (2, )])
-
-    else:
-        raise ValueError('unknown regret type:', regret_type)
+    import arch.bootstrap.multiple_comparison as arch_comp
 
     group_params = {
         'TWG1': 'h140-200-10_a85-95-5',
@@ -345,90 +330,122 @@ def get_nr_spsp_cvar_report(regret_type, report_dir=pp.NRSPSPCVaR_DIR):
         'USG5': 'h80-130-10_a75-90-5',
         'USG6': 'h180-240-10_a50-70-5'
     }
-
     set_indices = (1,)
     n_scenarios = (1000,)
     years = [(dt.date(2005, 1, 3), dt.date(2018, 12, 28))]
 
-    report_files = [REPORT_FORMAT.format(
-        nr_strategy=s,
-        nr_strategy_param=p,
-        group_name=group_name,
-        expert_group_name=exp_group_name,
-        n_scenario=n_scenario,
-        scenario_set_idx=sdx,
-        exp_start_date=s_date.strftime("%Y%m%d"),
-        exp_end_date=e_date.strftime("%Y%m%d")
-    )
-        for s, p in strategy_params
-        for group_name, exp_group_name in group_params.items()
-        for n_scenario in n_scenarios
-        for sdx in set_indices
-        for s_date, e_date in years
-    ]
+    stat_file = os.path.join(pp.TMP_DIR, "nr_spsp_cvar_stat.csv")
 
-    stat_file = os.path.join(pp.TMP_DIR,
-                             "nr_{}_spsp_cvar_stat.csv".format(regret_type))
-    with open(stat_file, "w", newline='') as csv_file:
-        fields = [
-            "simulation_name",
-            "group_name",
-            'expert_group',
-            'n_scenario',
-            'sdx',
-            "start_date",
-            "end_date",
-            "n_data",
-            "cum_roi",
-            "annual_roi",
-            "roi_mu",
-            "std",
-            "skew",
-            "ex_kurt",
-            "Sharpe",
-            "Sortino_full",
-            "Sortino_partial",
-        ]
-        writer = csv.DictWriter(csv_file, fieldnames=fields)
-        writer.writeheader()
+    for regret_type in ('external', 'internal'):
+        if regret_type == 'external':
+            REPORT_FORMAT = "report_NR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
 
-        not_exist_reports = []
-        for gdx, report_file in enumerate(report_files):
-            try:
-                rp = pd.read_pickle(os.path.join(report_dir, report_file))
-            except FileNotFoundError as _:
-                not_exist_reports.append(report_file)
-                continue
-            params = rp["simulation_name"].split('_')
-            writer.writerow(
-                {
-                    "simulation_name": rp["simulation_name"],
-                    'expert_group': rp['expert_group_name'],
-                    "group_name": rp['group_name'],
-                    'n_scenario': params[8][1:],
-                    'sdx': params[9][-1],
-                    "start_date": rp['exp_start_date'].strftime("%Y-%m-%d"),
-                    "end_date": rp['exp_end_date'].strftime("%Y-%m-%d"),
-                    "n_data": rp['n_exp_period'],
-                    "cum_roi": rp['cum_roi'],
-                    "annual_roi": np.power(rp['cum_roi']+1, 1/14) - 1,
-                    "roi_mu": rp['daily_mean_roi'],
-                    "std": rp['daily_std_roi'],
-                    "skew": rp['daily_skew_roi'],
-                    "ex_kurt": rp['daily_ex-kurt_roi'],
-                    "Sharpe": rp['Sharpe'],
-                    "Sortino_full": rp['Sortino_full'],
-                    "Sortino_partial": rp['Sortino_partial']
-                }
-            )
-            print(
-                "[{}/{}] {}, cum_roi:{:.2%}".format(
-                    gdx + 1, len(report_files), rp["simulation_name"],
-                    rp['cum_roi']
+            # strategy_params = [["{}{:.2f}-SPSP".format(s, p), s, p]
+            #                     for s in ('EG', 'EXP')
+            #                for p in (0.01, 0.1, 1)]
+            strategy_params = [["{}{:.2f}-SPSP".format(s, p), s, p]
+                               for s in ('EXP', )
+                               for p in (0.01, )]
+            strategy_params.extend([["POL{:.1f}-SPSP".format(p), s, p]
+                                    for s in ('POLY',) for p in (2, )])
+
+        elif regret_type == 'internal':
+            REPORT_FORMAT = "report_NIR_SPSP_CVaR_{nr_strategy}_{nr_strategy_param:.2f}_{group_name}_{expert_group_name}_s{n_scenario}_sdx{scenario_set_idx}_{exp_start_date}_{exp_end_date}.pkl"
+            strategy_params = [["B1EXP{:.2f}-SPSP".format(p), s, p]
+                               for s in ('EXP',)
+                               for p in (0.01, )]
+            strategy_params.extend([["B1POL{:.1f}-SPSP".format(p), s, p]
+                                    for s in ('POLY',) for p in (2, )])
+
+        else:
+            raise ValueError('unknown regret type:', regret_type)
+
+        report_files = [
+            [s_name,
+                REPORT_FORMAT.format(
+                nr_strategy=s,
+                nr_strategy_param=p,
+                group_name=group_name,
+                expert_group_name=exp_group_name,
+                n_scenario=n_scenario,
+                scenario_set_idx=sdx,
+                exp_start_date=s_date.strftime("%Y%m%d"),
+                exp_end_date=e_date.strftime("%Y%m%d")
                 )
-            )
-        print(report_dir)
-        print (not_exist_reports)
+            ]
+            for s_name, s, p in strategy_params
+            for group_name, exp_group_name in group_params.items()
+            for n_scenario in n_scenarios
+            for sdx in set_indices
+            for s_date, e_date in years
+        ]
+
+        with open(stat_file, "a", newline='') as csv_file:
+            fields = [
+                "simulation_name", "s_name", "group_name", 'expert_group',
+                "n_expert",
+                'n_scenario', 'sdx', "start_date", "end_date",
+                "n_data", "cum_roi", "annual_roi", "roi_mu", "std",
+                "skew", "ex_kurt",
+                "Sharpe", "Sortino_full", "Sortino_partial", "SPA_c",
+            ]
+            writer = csv.DictWriter(csv_file, fieldnames=fields)
+            writer.writeheader()
+
+            not_exist_reports = []
+            for gdx, (s_name, report_file) in enumerate(report_files):
+                try:
+                    rp = pd.read_pickle(os.path.join(report_dir, report_file))
+                except FileNotFoundError as _:
+                    not_exist_reports.append(report_file)
+                    continue
+                params = rp["simulation_name"].split('_')
+
+                rois = rp['portfolio_xarr'].loc[
+                          :, 'main', 'wealth'].to_series().pct_change()
+                rois[0] = 0
+                spa_value = 0
+                for _ in range(3):
+                    spa = arch_comp.SPA(rois.values, np.zeros(rois.size),
+                                        reps=1000)
+                    spa.seed(np.random.randint(0, 2 ** 31 - 1))
+                    spa.compute()
+                    # preserve the worse p_value
+                    if spa.pvalues[1] > spa_value:
+                        spa_value = spa.pvalues[1]
+
+                writer.writerow(
+                    {
+                        "simulation_name": rp["simulation_name"],
+                        "s_name": s_name,
+                        'expert_group': rp['expert_group_name'],
+                        "n_expert": len(rp['experts']),
+                        "group_name": rp['group_name'],
+                        'n_scenario': params[8][1:],
+                        'sdx': params[9][-1],
+                        "start_date": rp['exp_start_date'].strftime("%Y-%m-%d"),
+                        "end_date": rp['exp_end_date'].strftime("%Y-%m-%d"),
+                        "n_data": rp['n_exp_period'],
+                        "cum_roi": rp['cum_roi'],
+                        "annual_roi": np.power(rp['cum_roi']+1, 1/14) - 1,
+                        "roi_mu": rp['daily_mean_roi'],
+                        "std": rp['daily_std_roi'],
+                        "skew": rp['daily_skew_roi'],
+                        "ex_kurt": rp['daily_ex-kurt_roi'],
+                        "Sharpe": rp['Sharpe'],
+                        "Sortino_full": rp['Sortino_full'],
+                        "Sortino_partial": rp['Sortino_partial'],
+                        "SPA_c": spa_value
+                    }
+                )
+                print(
+                    "[{}/{}] {}, cum_roi:{:.2%}".format(
+                        gdx + 1, len(report_files), rp["simulation_name"],
+                        rp['cum_roi']
+                    )
+                )
+            print(report_dir)
+            print(not_exist_reports)
 
 
 if __name__ == '__main__':
@@ -468,7 +485,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.stat:
-        get_nr_spsp_cvar_report(args.regret)
+        get_nr_spsp_cvar_report()
         sys.exit()
 
     if args.check:
