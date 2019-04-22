@@ -15,7 +15,7 @@ https://msdn.microsoft.com/en-us/library/59a3b321.aspx
 """
 
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
     from setuptools import Extension
 except ImportError:
     from distutils.core import setup
@@ -25,6 +25,7 @@ except ImportError:
 from Cython.Build import cythonize
 import numpy as np
 
+# https://docs.python.org/3.6/distutils/setupscript.html#preprocessor-options
 extensions = [
     Extension(
         "spsp_cvar",
@@ -59,9 +60,12 @@ extensions = [
     # ),
 ]
 
+# https://setuptools.readthedocs.io/en/latest/setuptools.html
 setup(
-      name = 'portfolio_programming',
-      author = 'Hung-Hsin Chen',
-      author_email = 'chenhh@par.cse.nsysu.edu.tw',
-      ext_modules = cythonize(extensions),
+    # name, author of the packages
+    name = 'portfolio_programming',
+    author = 'Hung-Hsin Chen',
+    author_email = 'chenhh@par.cse.nsysu.edu.tw',
+    ext_modules = cythonize(extensions),
+
 ) 
