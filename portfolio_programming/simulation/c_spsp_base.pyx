@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #!python
+# cython: language_level=3
 #cython: boundscheck=False
 #cython: wraparound=False
 #cython: infer_types=True
@@ -110,5 +111,15 @@ cdef class ValidMixin:
             raise ValueError("wrong transaction interval, start:{}, "
                              "end:{})".format(start_date, end_date))
 
-if __name__ == '__main__':
-    pass
+
+cdef class Penguin:
+    cdef object food
+
+    def __cinit__(self, food):
+        print('calling cinit')
+        self.food = food
+
+    def __init__(self, food):
+        print("eating!")
+
+

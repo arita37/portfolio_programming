@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# cython: language_level=3
 """
 Authors: Hung-Hsin Chen <chen1116@gmail.com>
 
@@ -21,7 +22,6 @@ except ImportError:
     from distutils.core import setup
     from distutils.extension import Extension
 
-
 from Cython.Build import cythonize
 import numpy as np
 
@@ -29,8 +29,8 @@ import numpy as np
 extensions = [
     Extension(
         "spsp_cvar",
-        ["spsp_cvar.pyx",],
-        include_dirs = [np.get_include()],
+        ["spsp_cvar.pyx", ],
+        include_dirs=[np.get_include()],
     ),
     Extension(
         "spsp_base",
@@ -53,19 +53,19 @@ extensions = [
         ["wp_eg.pyx", ],
         include_dirs=[np.get_include()],
     ),
-    # Extension(
-    #     "wp_poly",
-    #     ["wp_poly.pyx", ],
-    #     include_dirs=[np.get_include()],
-    # ),
+    Extension(
+        "c_spsp_base",
+        ["c_spsp_base.pyx", ],
+        include_dirs=[np.get_include()],
+    ),
 ]
 
 # https://setuptools.readthedocs.io/en/latest/setuptools.html
 setup(
     # name, author of the packages
-    name = 'portfolio_programming',
-    author = 'Hung-Hsin Chen',
-    author_email = 'chenhh@par.cse.nsysu.edu.tw',
-    ext_modules = cythonize(extensions),
+    name='portfolio_programming',
+    author='Hung-Hsin Chen',
+    author_email='chenhh@par.cse.nsysu.edu.tw',
+    ext_modules=cythonize(extensions),
 
-) 
+)
