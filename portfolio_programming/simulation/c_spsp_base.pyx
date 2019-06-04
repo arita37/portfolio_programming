@@ -9,30 +9,31 @@
 """
 Author: Hung-Hsin Chen <chenhh@par.cse.nsysu.edu.tw>
 """
-import os
-import platform
-import sys
 
 import numpy as np
-import xarray as xr
+cimport numpy as cnp
+from cpython.datetime cimport date
 
+cpdef tuple get_valid_exp_name():
+    return ('dissertation', 'stocksp')
+
+cpdef tuple get_valid_setting():
+    return ("compact", "general")
 
 cdef class ValidMixin:
-
     @staticmethod
-    cdef valid_exp_name(str exp_name):
-        if exp_name not in ('dissertation', 'stocksp'):
+    cdef void valid_exp_name(str exp_name):
+        if exp_name not in get_valid_exp_name():
             raise ValueError('unknown exp_name:{}'.format(exp_name))
 
     @staticmethod
-    cdef valid_setting(str setting):
-        if setting not in ("compact", "general"):
+    cdef void valid_setting(str setting):
+        if setting not in get_valid_setting():
             raise ValueError("Unknown setting: {}".format(setting))
 
-
     @staticmethod
-    cdef valid_range_value(str name, double value, double lower_bound,
-                           double upper_bound):
+    cdef void valid_range_value(str name, double value, double lower_bound,
+                                double upper_bound):
         """
         Parameter:
         -------------
@@ -48,7 +49,7 @@ cdef class ValidMixin:
                                            lower_bound))
 
     @staticmethod
-    cdef valid_nonnegative_value(str name, double value):
+    cdef void valid_nonnegative_value(str name, double value):
         """
         Parameter:
         -------------
@@ -57,11 +58,11 @@ cdef class ValidMixin:
         value : integer or float
         """
         if value < 0:
-            raise ValueError("The {}'s value {} should be nonnegative.".format(
+            raise ValueError("The {}'s value {} should be >=0.".format(
                 name, value))
 
     @staticmethod
-    cdef valid_positive_value(str name, double value):
+    cdef void valid_positive_value(str name, double value):
         """
         Parameter:
         -------------
@@ -75,7 +76,7 @@ cdef class ValidMixin:
                 name, value))
 
     @staticmethod
-    cdef valid_nonnegative_list(str name, list values):
+    cdef void valid_nonnegative_list(str name, list values):
         """
         Parameter:
         -------------
@@ -83,13 +84,13 @@ cdef class ValidMixin:
             name of the value
         value : list[int] or list[float]
         """
-        arr = np.asarray(values)
-        if np.any(arr < 0):
+        arr = cnp.asarray(values)
+        if cnp.any(arr < 0):
             raise ValueError("The {} contain negative values.".format(
                 name, arr))
 
     @staticmethod
-    cdef valid_dimension(dim1_name, dim1, dim2):
+    cdef void valid_dimension(str dim1_name, int dim1, int dim2):
         """
         Parameters:
         -------------
@@ -101,7 +102,7 @@ cdef class ValidMixin:
                 dim1_name, dim1, dim2))
 
     @staticmethod
-    cdef valid_trans_date(start_date, end_date):
+    cdef void valid_trans_date(date start_date, date end_date):
         """
         Parameters:
         --------------
@@ -112,14 +113,51 @@ cdef class ValidMixin:
                              "end:{})".format(start_date, end_date))
 
 
-cdef class Penguin:
-    cdef object food
+cdef class SPSPBase(ValidMixin):
+    cdef:
+        # user specifies
+        str setting
+        str group_name
+        list candidate_symbols
+        int max_portfolio_size
+        double initial_risk_free_wealth
+        double buy_trans_fee, sell_trans_fee
+        date start_date, end_date
+        int n_scenario
+        int scenario_set_idx
+        int print_interval
+        str report_dir
 
-    def __cinit__(self, food):
-        print('calling cinit')
-        self.food = food
+        # from data
+        int n_symbol
 
-    def __init__(self, food):
-        print("eating!")
-
-
+    def __cinit__(self,
+                 str setting,
+                 str group_name,
+                 list candidate_symbols,
+                 int max_portfolio_size,
+                 risk_rois,
+                 risk_free_rois,
+                 initial_risk_wealth,
+                 double initial_risk_free_wealth,
+                 double buy_trans_fee=0.001425,
+                 double sell_trans_fee=0.004425,
+                 start_date=date(2005,1,3),
+                 end_date=date(2018,12,28),
+                 int rolling_window_size=200,
+                 int n_scenario=200,
+                 int scenario_set_idx=1,
+                 int print_interval=10,
+                 str report_dir=""):
+        self.setting = setting
+        self.group_name = group_name
+        self.candidate_symbols = candidate_symbols
+        # self.valid_dimension("n_symbol", len(candidate_symbols),
+        #                      risk_rois.shape[1])
+        self.n_symbol = len(candidate_symbols)
+        self.risk_rois =  risk_rois
+        self.risk_free_rois = risk_free_rois
+        self.initial_risk_free_wealth = initial_risk_free_wealth
+        self.buy_trans_fee = buy_trans_fee
+        self.sell_trans_fee = sell_trans_fee
+        self.exp
