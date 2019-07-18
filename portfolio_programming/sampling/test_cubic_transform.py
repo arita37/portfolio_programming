@@ -3,6 +3,7 @@
 Author: Hung-Hsin Chen <chen1116@gmail.com>
 """
 
+import os
 import numpy as np
 import scipy.stats as spstats
 from portfolio_programming.sampling.cubic_transform_sampling import (
@@ -99,8 +100,12 @@ def plot_samples(n_sample=5000):
         plt.setp(axes[idx].get_xticklabels(), visible=False)
 
     # plt.tight_layout()
+
+    fig_path = os.path.join(r"e:", "hemm_{}.png".format(n_sample))
+    fig.set_size_inches(16, 9)
+    plt.savefig(fig_path, dpi=240, format='png')
     plt.show()
 
 
 if __name__ == '__main__':
-    plot_samples(1000)
+    plot_samples(10000)
